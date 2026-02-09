@@ -148,11 +148,30 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * Set timeframe for grid cells (box mode)
    */
   setTimeframeSeconds: (seconds: number) => {
-    set({
+    const { gameMode, activeBets } = get();
+
+    /**
+     * In 'box' mode, the grid (columns/boundaries) is directly tied to timeframeSeconds.
+     * If there are active box bets, we MUST NOT allow changing the duration,
+     * as it would rebuild the grid and make existing bets visually/logically lost.
+     */
+    if (gameMode === 'box' && activeBets.some((bet: ActiveBet) => bet.mode === 'box')) {
+      return;
+    }
+
+    set((state: GameState) => ({
       timeframeSeconds: seconds,
-      activeBets: [], // Clear when timeframe changes
-    });
+      /**
+       * In 'binomo' (classic) mode or when there are no box bets, we update timeframeSeconds.
+       * Classic bets are independent of the current selector (they have strikePrice/endTime),
+       * so we keep them active.
+       */
+      activeBets: state.activeBets,
+    }));
   },
+
+
+
 
   /**
    * Set selected asset for price tracking

@@ -81,8 +81,14 @@ export const GameBoard: React.FC = () => {
       enableBlitzAccess();
     } catch (err: any) {
       console.error("Blitz entry failed:", err);
-      toast.error(err.message || "Failed to enter Blitz Round");
+      const errorMessage = err.message || "";
+      if (errorMessage.includes('rejected') || errorMessage.includes('denied')) {
+        toast.error("User rejected");
+      } else {
+        toast.error(errorMessage || "Failed to enter Blitz Round");
+      }
     } finally {
+
       setIsActivatingBlitz(false);
     }
   };

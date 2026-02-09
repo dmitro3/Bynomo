@@ -148,9 +148,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       console.error('Deposit error:', err);
       let errorMessage = 'Failed to deposit funds';
       if (err instanceof Error) {
-        errorMessage = err.message;
-        if (errorMessage.includes('rejected')) {
-          errorMessage = 'Transaction cancelled by user';
+        const msg = err.message || "";
+        if (msg.includes('rejected') || msg.includes('denied')) {
+          errorMessage = 'User rejected';
+        } else {
+          errorMessage = msg;
         }
       }
       setError(errorMessage);
@@ -159,6 +161,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         onError(errorMessage);
       }
     } finally {
+
       setIsLoading(false);
     }
   };
