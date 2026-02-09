@@ -31,7 +31,7 @@ export interface ActiveBet {
 }
 
 export interface GameState {
-  // State
+  // Core State
   gameMode: GameMode;
   selectedAsset: AssetType;
   currentPrice: number;
@@ -45,6 +45,13 @@ export interface GameState {
   lastResult: { won: boolean; amount: number; payout: number; timestamp: number } | null;
   error: string | null;
   timeframeSeconds: number;
+
+  // Blitz Round State (Premium Feature)
+  isBlitzActive: boolean;
+  blitzEndTime: number | null;
+  nextBlitzTime: number;
+  hasBlitzAccess: boolean;
+  blitzMultiplier: number;
 
   // Actions
   setGameMode: (mode: GameMode) => void;
@@ -60,7 +67,14 @@ export interface GameState {
   setActiveRound: (round: ActiveRound | null) => void;
   loadTargetCells: () => Promise<void>;
   clearError: () => void;
+
+  // Blitz Round Actions
+  enableBlitzAccess: () => void;
+  revokeBlitzAccess: () => void;
+  updateBlitzTimer: () => void;
 }
+
+
 
 // Maximum price history points (5 minutes at 1 second intervals)
 const MAX_PRICE_HISTORY = 300;
@@ -97,6 +111,25 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   error: null,
   timeframeSeconds: 30, // Default for binomo
 
+  // Blitz Initial State
+  isBlitzActive: false,
+  blitzEndTime: null,
+  nextBlitzTime: (() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('binomo_blitz_next');
+      if (stored) {
+        const t = parseInt(stored, 10);
+        if (t > Date.now()) return t;
+      }
+      const next = Date.now() + 2 * 60 * 1000;
+      localStorage.setItem('binomo_blitz_next', next.toString());
+      return next;
+    }
+    return Date.now() + 2 * 60 * 1000;
+  })(),
+  hasBlitzAccess: false,
+  blitzMultiplier: 2.0,
+
   /**
    * Set game mode (binomo or box)
    */
@@ -104,9 +137,12 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     set({
       gameMode: mode,
       activeBets: [], // Clear active bets when switching modes to avoid resolution issues
-      lastResult: null
+      lastResult: null,
+      error: null
     });
+
   },
+
 
   /**
    * Set timeframe for grid cells (box mode)
@@ -475,8 +511,52 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    */
   clearError: () => {
     set({ error: null });
+  },
+
+  // Blitz Actions
+  enableBlitzAccess: () => {
+    set({ hasBlitzAccess: true });
+  },
+
+  revokeBlitzAccess: () => {
+    set({ hasBlitzAccess: false });
+  },
+
+  updateBlitzTimer: () => {
+    const { isBlitzActive, blitzEndTime, nextBlitzTime } = get();
+    const now = Date.now();
+    const BLITZ_DURATION = 60 * 1000; // 1 minute
+    const BLITZ_INTERVAL = 2 * 60 * 1000; // 2 minutes between blitzes
+
+    if (isBlitzActive) {
+      if (blitzEndTime && now >= blitzEndTime) {
+        const newNextTime = now + BLITZ_INTERVAL;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('binomo_blitz_next', newNextTime.toString());
+        }
+        set({
+          isBlitzActive: false,
+          blitzEndTime: null,
+          nextBlitzTime: newNextTime,
+          hasBlitzAccess: false,
+        });
+      }
+    } else {
+      if (now >= nextBlitzTime) {
+        const newNextTime = now + BLITZ_INTERVAL + BLITZ_DURATION;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('binomo_blitz_next', newNextTime.toString());
+        }
+        set({
+          isBlitzActive: true,
+          blitzEndTime: now + BLITZ_DURATION,
+          nextBlitzTime: newNextTime,
+        });
+      }
+    }
   }
 });
+
 
 /**
  * Start price feed polling

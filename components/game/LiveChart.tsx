@@ -41,6 +41,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   const gameMode = useStore((state) => state.gameMode);
   const timeframeSeconds = useStore((state) => state.timeframeSeconds);
+  const isBlitzActive = useStore((state) => state.isBlitzActive);
+  const hasBlitzAccess = useStore((state) => state.hasBlitzAccess);
+  const blitzMultiplier = useStore((state) => state.blitzMultiplier);
+
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -303,14 +307,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const cells = [];
     const colWidth = (gridInterval / 1000) * pixelsPerSecond;
 
-    // Calculate base offset for smooth scrolling
-    const baseOffset = (now % gridInterval) / 1000 * pixelsPerSecond;
-
-    // Generate enough columns to fill screen + buffer
-    const totalGridWidth = dimensions.width - scales.tipX + colWidth * 2;
-    const columnsNeeded = Math.ceil(totalGridWidth / colWidth) + 4;
-
     // STABLE price step calculation - Adjusted to 15 units for BTC as requested
+
     let priceStep = 0.1;
     if (selectedAsset === 'BTC') {
       priceStep = 15; // 15 units for BTC
@@ -331,16 +329,19 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     const priceRange = scales.maxY - scales.minY;
 
-    for (let col = -1; col < columnsNeeded; col++) {
-      const colX = scales.tipX + (col * colWidth) - baseOffset + colWidth;
-      const colTimeOffset = col * gridInterval;
-      const colTimestamp = Math.floor(now / gridInterval) * gridInterval + colTimeOffset + gridInterval;
+    // Time-based generation for stable keys
+    const startTime = Math.floor(now / gridInterval) * gridInterval - gridInterval;
+    const endTime = now + ((dimensions.width - scales.tipX) / pixelsPerSecond) * 1000 + gridInterval * 2;
 
-      if (colX + colWidth < scales.tipX - 100) continue;
+    for (let colTimestamp = startTime; colTimestamp <= endTime; colTimestamp += gridInterval) {
+      const colX = scales.xScale(colTimestamp);
+
+      if (colX + colWidth < 0) continue;
       if (colX > dimensions.width + 100) continue;
 
       const isCrossing = colX <= scales.tipX && colX + colWidth > scales.tipX;
       const isPast = colX + colWidth <= scales.tipX;
+
 
       // Loop through price levels
       for (let rowPriceTop = startPrice; rowPriceTop >= endPrice; rowPriceTop -= priceStep) {
@@ -359,13 +360,16 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         // Determine win/loss for cells crossing or past
         let status: 'future' | 'active' | 'won' | 'lost' = 'future';
 
-        if (isCrossing || isPast) {
+        if (isCrossing) {
           if (currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom) {
             status = 'won';
           } else {
-            status = isPast ? 'lost' : 'active';
+            status = 'active';
           }
+        } else if (isPast) {
+          status = 'lost';
         }
+
 
         const isUp = rowPriceCenter > currentPrice;
         const priceInRow = currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom;
@@ -381,17 +385,35 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         }
 
         const timeBonus = Math.max(0, (colX - scales.tipX) / 800) * 0.25;
-        const multiplier = Math.min(baseMultiplier + timeBonus, 10.0).toFixed(2);
+        let calculatedMultiplier = Math.min(baseMultiplier + timeBonus, 10.0);
+
+        // BLITZ MODE BOOST (x2 Multiplier)
+        const colIndex = Math.floor(colTimestamp / gridInterval);
+        const isHighStake = baseMultiplier > 1.8;
+        const isLuckyDiagonal = (priceLevelIndex + colIndex) % 3 === 0;
+        const isBlitzBoosted = isBlitzActive && hasBlitzAccess && (isHighStake || isLuckyDiagonal);
+
+
+        if (isBlitzBoosted) {
+          calculatedMultiplier = calculatedMultiplier * blitzMultiplier;
+        }
+
+        const multiplier = Math.min(calculatedMultiplier, 20).toFixed(2);
 
         // Visual properties
         const distFromCenter = Math.abs(rowPriceCenter - currentPrice) / priceRange;
         const intensity = Math.min(distFromCenter * 1.5, 1);
-        const hue = 270;
-        const saturation = 50 + intensity * 30;
-        const lightness = 45;
-        const alpha = Math.max(0.05, 0.4 - intensity * 0.35);
-        const cellColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
-        const borderColor = `hsla(${hue}, 70%, 55%, ${Math.max(0.1, 0.5 - intensity * 0.4)})`;
+
+        // Orange hue for Blitz, Purple otherwise
+        const hue = isBlitzBoosted ? 25 : 270;
+        const saturation = isBlitzBoosted ? 80 + intensity * 15 : 50 + intensity * 30;
+        const lightness = isBlitzBoosted ? 55 : 45;
+        const alpha = isBlitzBoosted ? 0.5 - intensity * 0.2 : 0.4 - intensity * 0.35;
+
+        const cellColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${Math.max(0.05, alpha)})`;
+        const borderColor = isBlitzBoosted
+          ? `hsla(${hue}, 90%, 60%, ${0.7 - intensity * 0.3})`
+          : `hsla(${hue}, 70%, 55%, ${Math.max(0.1, 0.5 - intensity * 0.4)})`;
 
         cells.push({
           id: `cell-${colTimestamp}-${priceLevelIndex}`,
@@ -405,13 +427,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           color: cellColor,
           borderColor: borderColor,
           priceTop: rowPriceTop,
-          priceBottom: rowPriceBottom
+          priceBottom: rowPriceBottom,
+          isBlitzBoosted
         });
       }
     }
 
     return cells;
-  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset]);
+  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset, isBlitzActive, hasBlitzAccess, blitzMultiplier]);
+
 
 
 
@@ -632,7 +656,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
               <div
                 key={cell.id}
                 onClick={handleClick}
-                className={`absolute rounded-sm flex items-center justify-center ${canBet ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'} ${extraClass}`}
+                className={`absolute rounded-sm flex items-center justify-center transition-opacity duration-300 ${canBet ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'} ${extraClass}`}
                 style={{
                   left: cell.x,
                   top: cell.y,
@@ -644,12 +668,18 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 }}
               >
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] font-mono font-bold text-white/80">
+                  <span className={`text-[10px] font-mono font-bold transition-colors ${cell.isBlitzBoosted ? 'text-orange-100 drop-shadow-[0_0_5px_rgba(255,165,0,0.8)]' : 'text-white/80'}`}>
                     x{cell.multiplier}
                   </span>
+                  {cell.isBlitzBoosted && (
+                    <span className="text-[7px] font-bold text-orange-400 -mt-1 uppercase tracking-tighter animate-pulse">
+                      Blitz
+                    </span>
+                  )}
                 </div>
               </div>
             );
+
           })}
         </div>
       )}

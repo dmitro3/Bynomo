@@ -16,7 +16,7 @@ export const GameBoard: React.FC = () => {
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
-  const [activeTab, setActiveTab] = useState<'bet' | 'wallet'>('bet');
+  const [activeTab, setActiveTab] = useState<'bet' | 'wallet' | 'x402'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   // Store connections
@@ -27,6 +27,39 @@ export const GameBoard: React.FC = () => {
   const updatePrice = useStore((state) => state.updatePrice);
   const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
   const isPlacingBet = useStore((state) => state.isPlacingBet);
+  const isBlitzActive = useStore((state) => state.isBlitzActive);
+  const blitzEndTime = useStore((state) => state.blitzEndTime);
+  const nextBlitzTime = useStore((state) => state.nextBlitzTime);
+  const hasBlitzAccess = useStore((state) => state.hasBlitzAccess);
+  const updateBlitzTimer = useStore((state) => state.updateBlitzTimer);
+  const enableBlitzAccess = useStore((state) => state.enableBlitzAccess);
+  const error = useStore((state) => state.error);
+  const clearError = useStore((state) => state.clearError);
+
+
+  const [blitzCountdown, setBlitzCountdown] = useState<string>('');
+  const [blitzTimeRemaining, setBlitzTimeRemaining] = useState<string>('');
+
+  // Update Blitz Timer every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateBlitzTimer();
+      const now = Date.now();
+      if (isBlitzActive && blitzEndTime) {
+        const remaining = Math.max(0, blitzEndTime - now);
+        setBlitzTimeRemaining(`${Math.floor(remaining / 1000)}s`);
+        setBlitzCountdown('');
+      } else {
+        const timeToNext = Math.max(0, nextBlitzTime - now);
+        const mins = Math.floor(timeToNext / 60000);
+        const secs = Math.floor((timeToNext % 60000) / 1000);
+        setBlitzCountdown(`${mins}:${secs.toString().padStart(2, '0')}`);
+        setBlitzTimeRemaining('');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isBlitzActive, blitzEndTime, nextBlitzTime, updateBlitzTimer]);
+
 
   // Sync selectedDuration with store's timeframeSeconds
   useEffect(() => {
@@ -92,9 +125,37 @@ export const GameBoard: React.FC = () => {
         <SettlementNotification />
       </div>
 
-      {/* Instant resolution - no timer needed */}
+      {/* Blitz Round Indicator - Top Right */}
+      <div className="absolute top-12 sm:top-20 right-3 sm:right-6 z-30 pointer-events-auto">
+        <div className={`rounded-xl backdrop-blur-xl border shadow-lg overflow-hidden transition-all duration-500 ${isBlitzActive ? 'bg-gradient-to-br from-orange-500/20 via-red-500/20 to-yellow-500/20 border-orange-500/50 shadow-orange-500/30 animate-pulse' : 'bg-black/80 border-gray-700/50'
+          }`}>
+          <div className="px-3 py-2">
+            {isBlitzActive ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <div>
+                  <p className="text-orange-400 text-[9px] font-bold uppercase tracking-wider">BLITZ ACTIVE</p>
+                  <p className="text-white text-sm font-bold font-mono">{blitzTimeRemaining} left</p>
+                </div>
+                {hasBlitzAccess && (
+                  <div className="ml-2 px-1.5 py-0.5 bg-green-500/20 border border-green-500/50 rounded text-[8px] text-green-400 font-bold">2x</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg opacity-50">⏰</span>
+                <div>
+                  <p className="text-gray-500 text-[9px] font-medium uppercase tracking-wider">Next Blitz</p>
+                  <p className="text-gray-300 text-sm font-mono">{blitzCountdown}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Floating Toggle Button - Fixed to bottom (Mobile only) */}
+
       {!isPanelOpen && (
         <button
           onClick={() => setIsPanelOpen(true)}
@@ -162,6 +223,15 @@ export const GameBoard: React.FC = () => {
                 }`}
             >
               Wallet
+            </button>
+            <button
+              onClick={() => setActiveTab('x402')}
+              className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'x402'
+                ? 'bg-gradient-to-r from-[#00f5ff] to-cyan-500 text-black shadow-lg shadow-cyan-500/30'
+                : 'text-[#00f5ff]/70 hover:text-[#00f5ff] hover:bg-[#00f5ff]/5'
+                }`}
+            >
+              x402
             </button>
           </div>
 
@@ -273,14 +343,48 @@ export const GameBoard: React.FC = () => {
                   </div>
                 )}
 
+                {/* ERROR MESSAGE DISPLAY */}
+                {error && (
+                  <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl relative group">
+                    <button
+                      onClick={clearError}
+                      className="absolute top-2 right-2 text-red-500/50 hover:text-red-500 p-1"
+                    >
+                      ✕
+                    </button>
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg">⚠️</span>
+                      <div className="flex-1">
+                        <p className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Error</p>
+                        <p className="text-red-300 text-[11px] leading-tight mt-0.5">
+                          {error.includes('User not found') || error.includes('balance')
+                            ? 'Account not found or no balance. Please deposit BNB to your house balance to start trading.'
+                            : error}
+                        </p>
+                        {(error.includes('User not found') || error.includes('balance')) && (
+                          <button
+                            onClick={() => {
+                              setActiveTab('wallet');
+                              clearError();
+                            }}
+                            className="mt-2 px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-400 text-[10px] font-bold transition-all"
+                          >
+                            Go to Deposit
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {!isConnected && (
                   <p className="text-gray-500 text-[10px] text-center font-mono">
                     Connect wallet to start trading
                   </p>
                 )}
-
               </div>
-            ) : (
+
+            ) : activeTab === 'wallet' ? (
               <div className="space-y-4">
                 {isConnected && address ? (
                   <>
@@ -318,7 +422,61 @@ export const GameBoard: React.FC = () => {
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Blitz Round Section */}
+                <div className={`rounded-lg p-3 relative overflow-hidden border ${isBlitzActive ? 'bg-gradient-to-br from-orange-500/20 via-red-500/10 to-yellow-500/10 border-orange-500/40' : 'bg-black/30 border-gray-700/50'}`}>
+                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-orange-500/30 text-orange-400 text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">🔥 Blitz</div>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg border ${isBlitzActive ? 'bg-orange-500/20 border-orange-500/30' : 'bg-gray-800/50 border-gray-700/30'}`}>
+                      <span className="text-xl">{isBlitzActive ? '🔥' : '⏰'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-[10px] uppercase tracking-wider font-mono ${isBlitzActive ? 'text-orange-400' : 'text-gray-500'}`}>{isBlitzActive ? 'Blitz Active!' : 'Next Blitz In'}</p>
+                      <p className={`text-lg font-bold font-mono ${isBlitzActive ? 'text-orange-300' : 'text-gray-400'}`}>{isBlitzActive ? blitzTimeRemaining : blitzCountdown}</p>
+                    </div>
+                  </div>
+                  {isBlitzActive && (
+                    <button
+                      onClick={() => enableBlitzAccess()}
+                      disabled={!isConnected || hasBlitzAccess}
+                      className={`w-full mt-3 py-2.5 rounded-lg text-xs font-bold transition-all ${hasBlitzAccess ? 'bg-green-500/20 border border-green-500/40 text-green-400 cursor-default' : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:shadow-orange-500/30'}`}
+                    >
+                      {hasBlitzAccess ? <span className="flex items-center justify-center gap-2"><span>✓</span> 2x Multipliers Active</span> : !isConnected ? 'Connect Wallet' : `🔥 Enter Blitz (0.05 BNB)`}
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-gray-800" />
+                  <span className="text-gray-600 text-[9px] uppercase">or</span>
+                  <div className="flex-1 h-px bg-gray-800" />
+                </div>
+
+                {/* AI Oracle Section (Simulated) */}
+                <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">AI</div>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#00f5ff]/10 border border-[#00f5ff]/20">
+                      <svg className="w-5 h-5 text-[#00f5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-[10px] uppercase tracking-wider font-mono">AI Oracle</p>
+                      <p className="text-[#00f5ff] text-lg font-bold font-mono">0.01 BNB</p>
+                    </div>
+                  </div>
+                  <button
+                    disabled={!isConnected}
+                    className="w-full mt-3 py-2.5 bg-gradient-to-r from-[#00f5ff] to-cyan-500 text-black rounded-lg text-xs font-bold hover:shadow-lg hover:shadow-cyan-500/30 transition-all disabled:opacity-50"
+                  >
+                    Unlock AI Insight
+                  </button>
+                </div>
+              </div>
             )}
+
           </div>
         </div>
       </div>

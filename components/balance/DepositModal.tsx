@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { getBNBConfig } from '@/lib/bnb/config';
+import { getAddress } from 'viem';
+
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -118,9 +120,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
       // Build transaction using Wagmi
       const tx = await sendTransactionAsync({
-        to: config.treasuryAddress as `0x${string}`,
+        to: getAddress(config.treasuryAddress),
         value: ethers.parseEther(depositAmount.toString()),
       });
+
 
       toast.info('Transaction submitted. Waiting for confirmation...');
 
