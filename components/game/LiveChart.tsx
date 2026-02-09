@@ -4,6 +4,7 @@ import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react'
 import * as d3Shape from 'd3-shape';
 import { useStore } from '@/lib/store';
 import { AssetType } from '@/lib/utils/priceFeed';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LiveChartProps {
   betAmount: string;
@@ -44,11 +45,14 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const isBlitzActive = useStore((state) => state.isBlitzActive);
   const hasBlitzAccess = useStore((state) => state.hasBlitzAccess);
   const blitzMultiplier = useStore((state) => state.blitzMultiplier);
+  const lastResult = useStore((state) => state.lastResult);
 
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [now, setNow] = useState(Date.now());
+  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
+
 
   // Loading state for price feed
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
@@ -137,18 +141,54 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   useEffect(() => {
     if (betResults.length === 0) return;
     const timer = setTimeout(() => {
-      setBetResults(prev => prev.filter(r => Date.now() - r.timestamp < 3000));
+      setBetResults(prev => prev.filter((r: BetResult) => Date.now() - r.timestamp < 3000));
     }, 100);
+
     return () => clearTimeout(timer);
   }, [betResults, now]);
 
+  // Sync cellBets from store's activeBets (important when switching modes or assets)
+  useEffect(() => {
+    const boxBets = activeBets.filter((bet: any) =>
+      bet.mode === 'box' &&
+      bet.asset === selectedAsset &&
+      bet.status === 'active' &&
+      bet.cellId
+    );
+
+    setCellBets(prev => {
+      const newMap = new Map();
+      boxBets.forEach((bet: any) => {
+        newMap.set(bet.cellId, {
+          cellId: bet.cellId,
+          betId: bet.id,
+          amount: bet.amount,
+          multiplier: bet.multiplier,
+          direction: bet.direction
+        });
+      });
+      return newMap;
+    });
+  }, [activeBets, selectedAsset]);
+
+
   // Asset display configuration
-  const assetConfig = {
+  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number }> = {
     BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2 },
+    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2 },
+    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2 },
+    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4 },
+    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4 },
+    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5 },
+    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4 },
+    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2 },
     BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2 }
   };
 
-  const currentAssetConfig = assetConfig[selectedAsset];
+
+
+  const currentAssetConfig = assetConfig[selectedAsset] || assetConfig.BTC;
+
 
   // Stable Y-Axis Domain
   const yDomain = useRef({ min: 0, max: 100, initialized: false });
@@ -232,14 +272,20 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const referencePrice = priceHistory.length > 0 ? priceHistory[0].price : currentPrice;
 
     // Asset-specific range percentages (higher for more volatile assets)
-    // Slightly increased to zoom out and show more boxes
-    const rangePercentages = {
-      BTC: 0.001,   // 0.1% - Slightly zoomed out
-      BNB: 0.0015   // 0.15% - Slightly zoomed out
+    const rangePercentages: Record<string, number> = {
+      BTC: 0.0008,
+      ETH: 0.0012,
+      SOL: 0.002,
+      TRX: 0.0025,
+      XRP: 0.002,
+      DOGE: 0.004,
+      ADA: 0.003,
+      BCH: 0.0025,
+      BNB: 0.0015
     };
 
+    const rangePercent = rangePercentages[selectedAsset] || 0.0015;
 
-    const rangePercent = rangePercentages[selectedAsset];
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);
 
@@ -269,6 +315,36 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     return { yScale, xScale, tipX, minY, maxY };
   }, [dimensions, priceHistory, currentPrice, now, selectedAsset]);
+
+  // Handle classic (binomo) mode bet results at the graph tip
+  const lastProcessedResultRef = useRef<number>(0);
+  useEffect(() => {
+    if (lastResult && gameMode === 'binomo' && scales && lastResult.timestamp > lastProcessedResultRef.current) {
+      lastProcessedResultRef.current = lastResult.timestamp;
+
+      const multiplier = lastResult.amount > 0 ? lastResult.payout / lastResult.amount : 0;
+
+      const result: BetResult = {
+        id: `classic-${lastResult.timestamp}`,
+        won: lastResult.won,
+        amount: lastResult.amount,
+        payout: lastResult.payout,
+        multiplier: Number(multiplier.toFixed(2)),
+        timestamp: Date.now(),
+        x: scales.tipX,
+        y: scales.yScale(currentPrice)
+      };
+
+      setBetResults(prev => [...prev, result]);
+
+      // Play sound effects
+      if (lastResult.won) {
+        playWinSound();
+      } else {
+        playLoseSound();
+      }
+    }
+  }, [lastResult, gameMode, scales, currentPrice, playWinSound, playLoseSound]);
 
   // Chart Path
   const chartPath = useMemo(() => {
@@ -628,17 +704,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   );
 
                   if (result && result.bet) {
-                    setCellBets(prev => {
-                      const newMap = new Map(prev);
-                      newMap.set(cell.id, {
-                        cellId: cell.id,
-                        betId: result.betId,
-                        amount: result.bet.amount,
-                        multiplier: result.bet.multiplier,
-                        direction: result.bet.direction
-                      });
-                      return newMap;
-                    });
+                    // cellBets will be automatically updated by the useEffect watching activeBets
                   }
                 } catch (error) {
                   console.error('Failed to place box bet:', error);
@@ -859,48 +925,110 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         )}
       </svg>
 
-      {/* Price Header with Asset Selector - Mobile Responsive */}
-      <div className="absolute top-12 sm:top-20 left-3 sm:left-6 z-30 pointer-events-auto">
-        {/* Asset Selector */}
-        <div className="flex gap-1 mb-2">
-          {(['BTC', 'BNB'] as AssetType[]).map((asset) => (
-            <button
-              key={asset}
-              onClick={() => {
-                if (selectedAsset !== asset) {
-                  console.log(`Switching from ${selectedAsset} to ${asset}`);
-                  setSelectedAsset(asset);
-                }
-              }}
-              className={`
-                px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all duration-200
-                ${selectedAsset === asset
-                  ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50 scale-105'
-                  : 'bg-gray-800/80 text-gray-400 hover:bg-gray-700/80 hover:text-white'
-                }
-              `}
-            >
-              {asset}
-            </button>
-          ))}
+      {/* Price Header with Asset Selector - Dropdown Version */}
+      <div className="absolute top-12 sm:top-20 left-3 sm:left-6 z-40 pointer-events-auto">
+        <div className="relative mb-4">
+          {/* Trigger Button */}
+          <button
+            onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+            className="flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-purple-500/50 transition-all duration-300 group"
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${isAssetDropdownOpen ? 'bg-purple-500 text-white' : 'bg-white/5 text-purple-400 group-hover:bg-purple-500/20'}`}>
+              {selectedAsset[0]}
+            </div>
+            <div className="text-left">
+              <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none mb-1">Asset</p>
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-black tracking-tight">{selectedAsset}</span>
+                <svg
+                  className={`w-3 h-3 text-gray-500 transition-transform duration-300 ${isAssetDropdownOpen ? 'rotate-180 text-purple-400' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </button>
+
+          {/* Dropdown Menu */}
+          <AnimatePresence>
+            {isAssetDropdownOpen && (
+              <>
+                {/* Backdrop to close */}
+                <div
+                  className="fixed inset-0 z-[-1]"
+                  onClick={() => setIsAssetDropdownOpen(false)}
+                />
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 mt-2 w-64 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 p-2"
+                >
+                  <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
+                    {(Object.keys(assetConfig) as AssetType[]).map((asset) => (
+                      <button
+                        key={asset}
+                        onClick={() => {
+                          setSelectedAsset(asset);
+                          setIsAssetDropdownOpen(false);
+                        }}
+                        className={`
+                          flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200
+                          ${selectedAsset === asset
+                            ? 'bg-purple-500/20 border border-purple-500/30'
+                            : 'hover:bg-white/5 border border-transparent'
+                          }
+                        `}
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                          {asset[0]}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
+                          <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                        </div>
+                        {selectedAsset === asset && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Price Display */}
         <div className="pointer-events-none">
-          <h2 className="text-gray-500 text-[10px] sm:text-xs tracking-widest font-mono mb-0.5 sm:mb-1">
-            {currentAssetConfig.pair}
+          <h2 className="text-gray-500 text-[10px] sm:text-xs tracking-widest font-mono mb-0.5 sm:mb-1 uppercase font-black opacity-60">
+            {currentAssetConfig.pair} Live Price
           </h2>
-          <p className="text-white text-2xl sm:text-4xl font-black font-mono tracking-tight">
-            ${currentPrice > 0 ? currentPrice.toLocaleString('en-US', {
-              minimumFractionDigits: currentAssetConfig.decimals,
-              maximumFractionDigits: currentAssetConfig.decimals
-            }) : '---'}
-          </p>
-          <span className="inline-block mt-1 px-1.5 py-0.5 bg-purple-500/20 border border-purple-400/30 rounded text-[8px] sm:text-[9px] text-purple-300 font-medium">
-            PYTH
-          </span>
+          <div className="flex flex-col">
+            <p className="text-white text-3xl sm:text-5xl font-black font-mono tracking-tighter">
+              ${currentPrice > 0 ? currentPrice.toLocaleString('en-US', {
+                minimumFractionDigits: currentAssetConfig.decimals,
+                maximumFractionDigits: currentAssetConfig.decimals
+              }) : '---'}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1 opacity-50">
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+              />
+              <span className="text-[9px] text-gray-400 font-black tracking-[0.2em] uppercase">
+                Powered by Pyth
+              </span>
+            </div>
+          </div>
         </div>
       </div>
+
 
       {/* Insufficient Funds Warning - Minimalist Toast */}
       {showInsufficientFunds && (

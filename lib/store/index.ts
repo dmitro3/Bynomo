@@ -9,7 +9,7 @@
 
 import { create } from "zustand";
 import { WalletState, createWalletSlice } from "./walletSlice";
-import { GameState, createGameSlice, startPriceFeed } from "./gameSlice";
+import { GameState, createGameSlice, startPriceFeed, startGlobalPriceFeed } from "./gameSlice";
 import { HistoryState, createHistorySlice, restoreBetHistory } from "./historySlice";
 import { BalanceState, createBalanceSlice } from "./balanceSlice";
 
@@ -52,12 +52,13 @@ export const initializeStore = async (): Promise<void> => {
     }
 
     // Start price feed polling
-    const stopPriceFeed = startPriceFeed(store.updatePrice);
+    const stopPriceFeed = store.startGlobalPriceFeed(store.updateAllPrices);
 
     // Store cleanup function for later use
     (window as any).__overflowCleanup = () => {
       stopPriceFeed();
     };
+
 
     console.log("Binomo store initialized successfully");
   } catch (error) {

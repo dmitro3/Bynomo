@@ -18,6 +18,7 @@ export type GameMode = 'binomo' | 'box';
 export interface ActiveBet {
   id: string;
   mode: GameMode;
+  asset: AssetType; // Added for multi-asset tracking
   amount: number;
   multiplier: number;
   direction: 'UP' | 'DOWN';
@@ -36,13 +37,20 @@ export interface GameState {
   selectedAsset: AssetType;
   currentPrice: number;
   priceHistory: PricePoint[];
+  assetPrices: Record<string, number>; // Global price tracking
   activeRound: ActiveRound | null;
   activeBets: ActiveBet[];
   settledBets: ActiveBet[];
   targetCells: TargetCell[];
   isPlacingBet: boolean;
   isSettling: boolean;
-  lastResult: { won: boolean; amount: number; payout: number; timestamp: number } | null;
+  lastResult: {
+    won: boolean;
+    amount: number;
+    payout: number;
+    timestamp: number;
+    asset: AssetType; // Track which asset this result belongs to
+  } | null;
   error: string | null;
   timeframeSeconds: number;
 
@@ -59,14 +67,19 @@ export interface GameState {
   setTimeframeSeconds: (seconds: number) => void;
   placeBet: (amount: string, targetId: string) => Promise<void>;
   placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
+  updatePrice: (price: number, asset?: AssetType) => void;
+  updateAllPrices: (prices: Record<string, number>) => void;
+  startGlobalPriceFeed: (updateAllPrices: (prices: Record<string, number>) => void) => (() => void);
+
+
   addActiveBet: (bet: ActiveBet) => void;
   resolveBet: (betId: string, won: boolean, payout: number) => void;
   clearLastResult: () => void;
   settleRound: (betId: string) => Promise<void>;
-  updatePrice: (price: number) => void;
   setActiveRound: (round: ActiveRound | null) => void;
   loadTargetCells: () => Promise<void>;
   clearError: () => void;
+
 
   // Blitz Round Actions
   enableBlitzAccess: () => void;
@@ -101,6 +114,8 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   selectedAsset: 'BNB',
   currentPrice: 0,
   priceHistory: [],
+  assetPrices: {},
+
   activeRound: null,
   activeBets: [],
   settledBets: [],
@@ -136,7 +151,6 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   setGameMode: (mode: GameMode) => {
     set({
       gameMode: mode,
-      activeBets: [], // Clear active bets when switching modes to avoid resolution issues
       lastResult: null,
       error: null
     });
@@ -185,7 +199,6 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         selectedAsset: asset,
         priceHistory: [], // Clear history when switching assets
         currentPrice: 0,
-        activeBets: [], // Clear active bets when switching
         activeRound: null
       });
     }
@@ -212,7 +225,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param cellId - Optional: The specific cell ID this bet is placed on
    */
   placeBetFromHouseBalance: async (amount: string, targetId: string, userAddress: string, cellId?: string) => {
-    const { targetCells, currentPrice, addActiveBet, gameMode, timeframeSeconds } = get();
+    const { targetCells, currentPrice, addActiveBet, gameMode, timeframeSeconds, selectedAsset } = get();
 
     try {
       // Parse amount for validation
@@ -273,6 +286,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         const activeBet: ActiveBet = {
           id: fakeBetId,
           mode: gameMode,
+          asset: selectedAsset, // Set current asset
           amount: betAmount,
           multiplier: multiplier,
           direction: direction,
@@ -285,6 +299,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             cellId: cellId || targetId
           })
         };
+
 
         // Update local demo balance immediately
         storeUpdateBalance(betAmount, 'subtract');
@@ -336,6 +351,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       const activeBet: ActiveBet = {
         id: data.betId,
         mode: gameMode,
+        asset: selectedAsset, // Set current asset
         amount: betAmount,
         multiplier: multiplier,
         direction: direction,
@@ -348,6 +364,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
           cellId: cellId || targetId
         })
       };
+
 
       // Add to active bets (multiple bets can be active simultaneously)
       addActiveBet(activeBet);
@@ -385,46 +402,57 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   },
 
   /**
-   * Update current price and add to history
-   * Maintains rolling 5-minute window of price data
-   * @param price - New price in USD
+   * Update all prices at once
    */
-  updatePrice: (price: number) => {
-    const { priceHistory } = get();
+  updateAllPrices: (prices: Record<string, number>) => {
+    const { updatePrice } = get();
+    Object.entries(prices).forEach(([asset, price]) => {
+      updatePrice(price, asset as AssetType);
+    });
+  },
+
+  /**
+   * Update current price and add to history
+   * @param price - New price in USD
+   * @param asset - The asset being updated
+   */
+  updatePrice: (price: number, asset?: AssetType) => {
+    const { priceHistory, selectedAsset, assetPrices, activeBets, resolveBet, updateBalance, address, accountType, fetchBalance } = get();
+    const currentSelectedAsset = asset || selectedAsset;
     const now = Date.now();
 
-    // Create new price point
-    const newPoint: PricePoint = {
-      timestamp: now,
-      price
-    };
+    // Update global asset prices
+    const updatedAssetPrices = { ...assetPrices, [currentSelectedAsset]: price };
 
-    // Add to history
-    const updatedHistory = [...priceHistory, newPoint];
+    // Primary update for the selected chart asset
+    if (currentSelectedAsset === selectedAsset) {
+      const newPoint: PricePoint = { timestamp: now, price };
+      const updatedHistory = [...priceHistory, newPoint].slice(-MAX_PRICE_HISTORY);
 
-    // Maintain rolling 5-minute window
-    const fiveMinutesAgo = now - (5 * 60 * 1000);
-    const filteredHistory = updatedHistory.filter(
-      point => point.timestamp >= fiveMinutesAgo
-    );
+      set({
+        currentPrice: price,
+        priceHistory: updatedHistory,
+        assetPrices: updatedAssetPrices
+      });
+    } else {
+      set({ assetPrices: updatedAssetPrices });
+    }
 
-    // Limit to MAX_PRICE_HISTORY points
-    const trimmedHistory = filteredHistory.slice(-MAX_PRICE_HISTORY);
-
-    set({
-      currentPrice: price,
-      priceHistory: trimmedHistory
-    });
-
-    // CHECK FOR EXPIRED BINOMO BETS
-    const store = get();
-    const { activeBets, resolveBet, updateBalance, address } = store;
-
+    // RESOLUTION LOGIC: Check for expired bets for THIS specific asset
     if (!activeBets) return;
 
     activeBets.forEach((bet: ActiveBet) => {
-      // ONLY PROCESS BINOMO MODE BETS HERE
-      if (bet.mode === 'binomo' && bet.endTime && bet.strikePrice !== undefined && now >= bet.endTime && bet.status === 'active') {
+      // Resolve bet if: mode is binomo, asset matches, status is active, and time has passed
+      const betAsset = bet.asset || 'BNB'; // Fallback
+
+      if (
+        bet.mode === 'binomo' &&
+        betAsset === currentSelectedAsset &&
+        bet.endTime &&
+        bet.strikePrice !== undefined &&
+        now >= bet.endTime &&
+        bet.status === 'active'
+      ) {
         let won = false;
         if (bet.direction === 'UP') {
           won = price > bet.strikePrice;
@@ -435,38 +463,42 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         const payout = won ? bet.amount * bet.multiplier : 0;
 
         // Play sound effects
-        if (won) {
-          playWinSound();
-        } else {
-          playLoseSound();
-        }
+        if (won) playWinSound();
+        else playLoseSound();
 
-        // Mark as settled in UI immediately
+        // Mark as settled and show result with asset info
+        set({
+          lastResult: {
+            won,
+            amount: bet.amount,
+            payout,
+            timestamp: now,
+            asset: betAsset
+          }
+        });
+
         resolveBet(bet.id, won, payout);
 
-        // Update balance
-        const { accountType } = store;
-        if (accountType === 'real' && address) {
-          if (won) {
-            fetch('/api/balance/win', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userAddress: address,
-                winAmount: payout,
-                betId: bet.id
-              })
-            }).then(() => {
-              if (store.fetchBalance) store.fetchBalance(address);
-            }).catch(console.error);
-          }
+        // Update real balance if necessary
+        if (accountType === 'real' && address && won) {
+          fetch('/api/balance/win', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userAddress: address,
+              winAmount: payout,
+              betId: bet.id
+            })
+          }).then(() => {
+            if (fetchBalance) fetchBalance(address);
+          }).catch(console.error);
         } else if (accountType === 'demo' && won) {
-          // Optimistic update for demo mode
           updateBalance(payout, 'add');
         }
       }
     });
   },
+
 
   /**
    * Set active round (used by event listeners)
@@ -573,87 +605,80 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         });
       }
     }
+  },
+
+  /**
+   * Start global multi-asset price feed tracking
+   */
+  startGlobalPriceFeed: (updateAllPrices: (prices: Record<string, number>) => void) => {
+    return startGlobalPriceFeed(updateAllPrices);
   }
 });
 
 
+
 /**
- * Start price feed polling
- * Fetches real-time crypto price from Pyth Network every second
+ * Start global multi-asset price feed tracking
+ */
+export const startGlobalPriceFeed = (
+  updateAllPrices: (prices: Record<string, number>) => void
+): (() => void) => {
+  let stopFeedFn: (() => void) | null = null;
+  let isActive = true;
+
+  import('@/lib/utils/priceFeed').then(({ startMultiPythPriceFeed }) => {
+    if (!isActive) return;
+    stopFeedFn = startMultiPythPriceFeed((prices) => {
+      if (isActive) {
+        updateAllPrices(prices);
+      }
+    });
+  }).catch(err => {
+    console.error('Failed to start multi-asset price feed:', err);
+  });
+
+  return () => {
+    isActive = false;
+    if (stopFeedFn) stopFeedFn();
+  };
+};
+
+/**
+ * Start price feed polling (Legacy/Single Asset)
  * @param updatePrice - Function to update price in store
- * @param asset - Asset to track (BTC, SUI, SOL)
+ * @param asset - Asset to track
  * @returns Function to stop polling
  */
 export const startPriceFeed = (
-  updatePrice: (price: number) => void,
+  updatePrice: (price: number, asset?: AssetType) => void,
   asset: AssetType = 'BTC'
 ): (() => void) => {
-  // Clean up any existing feed first
+  // Clean up any existing single-asset feed first
   if ((window as any).__currentPriceFeed) {
-    console.log(`Stopping existing price feed before starting ${asset}`);
     (window as any).__currentPriceFeed.stop();
   }
 
   let stopFeedFn: (() => void) | null = null;
-  let isActive = true; // Flag to prevent updates after cleanup
+  let isActive = true;
 
-  // Store reference for cleanup
   (window as any).__currentPriceFeed = {
     asset,
     stop: () => {
       isActive = false;
-      if (stopFeedFn) {
-        stopFeedFn();
-        stopFeedFn = null;
-      }
+      if (stopFeedFn) stopFeedFn();
     }
   };
 
-  // Import Pyth price feed dynamically to avoid SSR issues
   import('@/lib/utils/priceFeed').then(({ startPythPriceFeed }) => {
-    // Don't start if already cleaned up
     if (!isActive) return;
-
-    const stopFeed = startPythPriceFeed((price, data) => {
-      // Only update if still active
-      if (isActive) {
-        updatePrice(price);
-        // Log price updates with confidence interval
-        console.log(`${asset} Price: ${price.toFixed(asset === 'BNB' ? 4 : 2)} ±${data.confidence.toFixed(asset === 'BNB' ? 4 : 2)}`);
-      }
+    stopFeedFn = startPythPriceFeed((price) => {
+      if (isActive) updatePrice(price, asset);
     }, asset);
-
-    stopFeedFn = stopFeed;
-  }).catch(error => {
-    console.error('Failed to start Pyth price feed:', error);
-
-    // Fallback to mock price feed for development
-    import('@/lib/utils/priceFeed').then(({ startMockPriceFeed }) => {
-      // Don't start if already cleaned up
-      if (!isActive) return;
-
-      const stopFeed = startMockPriceFeed((price) => {
-        // Only update if still active
-        if (isActive) {
-          updatePrice(price);
-        }
-      }, { asset });
-
-      stopFeedFn = stopFeed;
-    });
   });
 
-  // Return cleanup function
   return () => {
-    console.log(`Cleanup called for ${asset}`);
-    isActive = false; // Prevent any future updates
-    if (stopFeedFn) {
-      stopFeedFn();
-      stopFeedFn = null;
-    }
-    // Clear global reference if it's ours
-    if ((window as any).__currentPriceFeed?.asset === asset) {
-      delete (window as any).__currentPriceFeed;
-    }
+    isActive = false;
+    if (stopFeedFn) stopFeedFn();
   };
 };
+

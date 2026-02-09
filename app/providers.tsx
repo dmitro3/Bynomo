@@ -29,21 +29,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const initializeApp = async () => {
       try {
-        const { updatePrice, loadTargetCells } = useOverflowStore.getState();
+        const { updateAllPrices, loadTargetCells, startGlobalPriceFeed } = useOverflowStore.getState();
 
         // Load target cells
         await loadTargetCells().catch(console.error);
 
-        // Start price feed
-        console.log('Starting price feed for real-time BTC/USD prices');
-        const stopPriceFeed = startPriceFeed(updatePrice);
+        // Start global multi-asset price feed
+        console.log('Starting global multi-asset price feed tracker');
+        const stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
 
         // Mark as ready
         setIsReady(true);
 
         return () => {
-          stopPriceFeed();
+          if (stopPriceFeed) stopPriceFeed();
         };
+
       } catch (error) {
         console.error('Error initializing app:', error);
         setIsReady(true);

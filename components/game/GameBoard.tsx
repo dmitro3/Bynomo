@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
-import { LiveChart, SettlementNotification } from './';
+import { LiveChart } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
 import { useAccount, useBalance, useSendTransaction } from 'wagmi';
@@ -122,11 +122,12 @@ export const GameBoard: React.FC = () => {
   // Multiplier mapping based on duration
   const getMultiplier = (duration: number) => {
     switch (duration) {
-      case 5: return 1.1;
-      case 10: return 1.3;
-      case 15: return 1.5;
-      case 30: return 1.9;
-      default: return 1.9;
+      case 5: return 1.75;
+      case 10: return 1.80;
+      case 15: return 1.85;
+      case 30: return 1.90;
+      case 60: return 1.95;
+      default: return 1.90;
     }
   };
 
@@ -145,16 +146,8 @@ export const GameBoard: React.FC = () => {
     }
   };
 
-  // Start price feed and restart when asset changes
-  useEffect(() => {
-    console.log(`Starting price feed for ${selectedAsset}`);
-    const stopFeed = startPriceFeed(updatePrice, selectedAsset);
+  // Redundant price feed removed - now handled globally in Providers.tsx
 
-    return () => {
-      console.log(`Stopping price feed for ${selectedAsset}`);
-      stopFeed();
-    };
-  }, [selectedAsset, updatePrice]);
 
 
   const formatAddress = (addr: string) => {
@@ -175,7 +168,6 @@ export const GameBoard: React.FC = () => {
           betAmount={betAmount}
           setBetAmount={setBetAmount}
         />
-        <SettlementNotification />
       </div>
 
       {/* Blitz Round Indicator - Top Right */}
@@ -321,8 +313,8 @@ export const GameBoard: React.FC = () => {
                   <label className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2 block">
                     Expiration Time
                   </label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {[5, 10, 15, 30].map(duration => (
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[5, 10, 15, 30, 60].map(duration => (
                       <button
                         key={duration}
                         onClick={() => setSelectedDuration(duration)}
@@ -335,8 +327,10 @@ export const GameBoard: React.FC = () => {
                         `}
                       >
                         <div className="flex flex-col items-center">
-                          <span>{duration}s</span>
-                          <span className="text-[8px] opacity-70">x{getMultiplier(duration)}</span>
+                          <span>{duration < 60 ? `${duration}s` : '1m'}</span>
+                          {gameMode === 'binomo' && (
+                            <span className="text-[8px] opacity-70">x{getMultiplier(duration)}</span>
+                          )}
                         </div>
                       </button>
                     ))}
