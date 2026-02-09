@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { PublicKey } from '@solana/web3.js';
+import { ethers } from 'ethers';
 
 interface DepositRequest {
   userAddress: string;
@@ -33,12 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Solana address
-    try {
-      new PublicKey(userAddress);
-    } catch (e) {
+    // Validate BNB address
+    if (!ethers.isAddress(userAddress)) {
       return NextResponse.json(
-        { error: 'Invalid Solana address format' },
+        { error: 'Invalid BNB address format' },
         { status: 400 }
       );
     }
@@ -52,10 +50,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Call update_balance_for_deposit stored procedure
-    // This procedure handles:
-    // - Atomic balance update with row-level locking
-    // - Creating user record if it doesn't exist
-    // - Inserting audit log entry with operation_type='deposit'
     const { data, error } = await supabase.rpc('update_balance_for_deposit', {
       p_user_address: userAddress,
       p_deposit_amount: amount,

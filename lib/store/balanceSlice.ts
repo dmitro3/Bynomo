@@ -2,7 +2,7 @@
  * Balance state slice for Zustand store
  * Manages house balance state and operations (deposit, withdraw, bet)
  * 
- * Task: 8.2 Update balance slice for Sui migration
+ * Task: 8.2 Update balance slice for BNB migration
  * Requirements: 3.5
  */
 
@@ -36,7 +36,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
   /**
    * Fetch house balance for a user address
    * Queries the balance API endpoint
-   * @param address - Sui wallet address
+   * @param address - BNB wallet address
    */
   fetchBalance: async (address: string) => {
     if (!address) {

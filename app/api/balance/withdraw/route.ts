@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import bs58 from 'bs58';
+import { ethers } from 'ethers';
+import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 
 interface WithdrawRequest {
   userAddress: string;
@@ -21,12 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Solana address
-    try {
-      new PublicKey(userAddress);
-    } catch (e) {
+    // Validate BNB address
+    if (!ethers.isAddress(userAddress)) {
       return NextResponse.json(
-        { error: 'Invalid Solana address format' },
+        { error: 'Invalid BNB address format' },
         { status: 400 }
       );
     }
@@ -53,52 +51,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient house balance' }, { status: 400 });
     }
 
-    // 2. Perform Solana transfer from treasury
-    const rpcEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || 'https://api.testnet.solana.com';
-    const connection = new Connection(rpcEndpoint, 'confirmed');
-
-    const secretKeyStr = process.env.SOLANA_TREASURY_SECRET_KEY;
-    if (!secretKeyStr) {
-      console.error('SOLANA_TREASURY_SECRET_KEY is not configured');
-      return NextResponse.json({ error: 'Server configuration error: Treasury key missing' }, { status: 500 });
-    }
-
-    let treasuryKeypair: Keypair;
+    // 2. Perform BNB transfer from treasury
+    let signature: string;
     try {
-      if (secretKeyStr.trim().startsWith('[')) {
-        // Handle JSON array format
-        const secretKey = Uint8Array.from(JSON.parse(secretKeyStr));
-        treasuryKeypair = Keypair.fromSecretKey(secretKey);
-      } else {
-        // Handle Base58 format
-        treasuryKeypair = Keypair.fromSecretKey(bs58.decode(secretKeyStr));
-      }
-    } catch (e) {
-      console.error('Failed to parse SOLANA_TREASURY_SECRET_KEY:', e);
-      return NextResponse.json({ error: 'Server configuration error: Invalid treasury key' }, { status: 500 });
+      signature = await transferBNBFromTreasury(userAddress, amount);
+    } catch (e: any) {
+      console.error('BNB transfer failed:', e);
+      return NextResponse.json({ error: `Withdrawal failed: ${e.message}` }, { status: 500 });
     }
-
-    const recipientPubKey = new PublicKey(userAddress);
-    const transaction = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: treasuryKeypair.publicKey,
-        toPubkey: recipientPubKey,
-        lamports: Math.floor(amount * LAMPORTS_PER_SOL),
-      })
-    );
-
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = treasuryKeypair.publicKey;
-
-    const signature = await connection.sendTransaction(transaction, [treasuryKeypair]);
-
-    // Wait for confirmation
-    await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight
-    }, 'confirmed');
 
     // 3. Update Supabase balance using RPC
     const { data, error } = await supabase.rpc('update_balance_for_withdrawal', {
@@ -109,12 +69,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Database error in withdrawal update:', error);
-      // Note: At this point the SOL has been sent!
+      // Note: At this point the BNB has been sent!
       return NextResponse.json(
         {
           success: true,
           txHash: signature,
-          warning: 'SOL sent but balance update failed. Please contact support.',
+          warning: 'BNB sent but balance update failed. Please contact support.',
           error: error.message
         },
         { status: 200 }

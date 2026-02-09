@@ -61,7 +61,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
 
     // Check house balance instead of wallet balance
     if (amount > houseBalance) {
-      setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} SOL. Please deposit more.`);
+      setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} BNB. Please deposit more.`);
       return false;
     }
 
@@ -86,13 +86,13 @@ export const BetControls: React.FC<BetControlsProps> = ({
         {isConnected && (
           <div className="bg-gray-900 rounded p-3">
             <p className="text-gray-400 text-xs uppercase tracking-wider">House Balance</p>
-            <p className="text-white text-lg font-bold">{houseBalance.toFixed(4)} SOL</p>
+            <p className="text-white text-lg font-bold">{houseBalance.toFixed(4)} BNB</p>
           </div>
         )}
 
         {/* Bet Amount Input */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2 font-mono uppercase tracking-wider">Bet Amount (SOL)</label>
+          <label className="block text-gray-400 text-sm mb-2 font-mono uppercase tracking-wider">Bet Amount (BNB)</label>
           <input
             type="number"
             value={betAmount}
@@ -134,7 +134,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
         {selectedTarget && betAmount && parseFloat(betAmount) > 0 && (
           <div className="bg-neon-blue/10 border border-neon-blue/50 rounded p-3 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
             <p className="text-neon-blue text-xs uppercase tracking-wider mb-1 font-mono">Potential Win</p>
-            <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} SOL</p>
+            <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} BNB</p>
           </div>
         )}
 

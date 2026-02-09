@@ -4,23 +4,21 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { LiveChart } from './LiveChart';
 import { BalanceDisplay } from '@/components/balance';
-import { getSOLBalance } from '@/lib/solana/client';
 import { startPriceFeed } from '@/lib/store/gameSlice';
-
-import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useAccount, useBalance } from 'wagmi';
+import { formatUnits } from 'ethers';
 
 export const GameBoard: React.FC = () => {
-  const { connection } = useConnection();
+  const { address, isConnected } = useAccount();
+  const { data: balanceData, isLoading: isLoadingBalance } = useBalance({
+    address: address,
+  });
+
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [activeTab, setActiveTab] = useState<'bet' | 'wallet'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const [solBalance, setSolBalance] = useState<number>(0);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   // Instant resolution system - no activeRound needed
-  const address = useStore((state) => state.address);
-  const isConnected = useStore((state) => state.isConnected);
   const selectedAsset = useStore((state) => state.selectedAsset);
   const updatePrice = useStore((state) => state.updatePrice);
 
@@ -35,53 +33,12 @@ export const GameBoard: React.FC = () => {
     };
   }, [selectedAsset, updatePrice]);
 
-  // Fetch SOL balance when wallet connects or address changes
-  useEffect(() => {
-    let mounted = true;
-
-    if (isConnected && address) {
-      setIsLoadingBalance(true);
-
-      const fetchBalance = async () => {
-        try {
-          const publicKey = new PublicKey(address);
-          const balanceLamports = await connection.getBalance(publicKey, 'confirmed');
-          const balanceSOL = balanceLamports / LAMPORTS_PER_SOL;
-
-          if (mounted) {
-            setSolBalance(balanceSOL);
-          }
-        } catch (error) {
-          console.error('Failed to fetch SOL balance:', error);
-          // Fallback
-          try {
-            const bal = await getSOLBalance(address);
-            if (mounted) setSolBalance(bal);
-          } catch (innerErr) {
-            if (mounted) setSolBalance(0);
-          }
-        } finally {
-          if (mounted) {
-            setIsLoadingBalance(false);
-          }
-        }
-      };
-
-      fetchBalance();
-    } else {
-      setSolBalance(0);
-    }
-
-    return () => {
-      mounted = false;
-    };
-  }, [isConnected, address, connection]);
-
   const formatAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '---';
-    return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+    return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
   };
 
+  const bnbBalanceValue = balanceData ? parseFloat(formatUnits(balanceData.value, balanceData.decimals)) : 0;
   const formatBalance = (bal: number) => {
     return isNaN(bal) ? '0.0000' : bal.toFixed(4);
   };
@@ -189,7 +146,7 @@ export const GameBoard: React.FC = () => {
                       placeholder="0.00"
                     />
                     <span className="px-2 py-1.5 bg-purple-500/20 rounded-lg text-purple-400 text-[10px] font-bold shrink-0">
-                      SOL
+                      BNB
                     </span>
                   </div>
                 </div>
@@ -212,9 +169,9 @@ export const GameBoard: React.FC = () => {
                       <p className="text-gray-400 text-[10px] uppercase tracking-widest mb-1">Wallet Balance</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-white">
-                          {isLoadingBalance ? 'Loading...' : formatBalance(solBalance)}
+                          {isLoadingBalance ? 'Loading...' : formatBalance(bnbBalanceValue)}
                         </span>
-                        <span className="text-purple-400 text-sm font-medium">SOL</span>
+                        <span className="text-purple-400 text-sm font-medium">BNB</span>
                       </div>
                     </div>
 

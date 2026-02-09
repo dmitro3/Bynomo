@@ -3,7 +3,7 @@
  * Manages wallet connection status and address
  * 
  * Note: This slice is now primarily used for storing wallet state.
- * Actual wallet connection is handled by Solana Wallet Adapter in lib/solana/wallet.ts
+ * Actual wallet connection is handled by BNB Wallet integration in lib/bnb/wallet.ts
  */
 
 import { StateCreator } from "zustand";
@@ -22,14 +22,14 @@ export interface WalletState {
   refreshBalance: () => Promise<void>;
   clearError: () => void;
 
-  // Setters for Solana wallet integration
+  // Setters for BNB wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
 }
 
 /**
  * Create wallet slice for Zustand store
- * Handles wallet state management for Solana integration
+ * Handles wallet state management for BNB integration
  */
 export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   // Initial state
@@ -41,7 +41,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
 
   /**
    * Connect wallet
-   * Note: Actual connection is handled by Solana Wallet Adapter
+   * Note: Actual connection is handled by BNB Wallet integration
    */
   connect: async () => {
     console.log('Connect called - handled by adapter');
@@ -49,7 +49,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
 
   /**
    * Disconnect wallet
-   * Note: Actual disconnection is handled by Solana Wallet Adapter
+   * Note: Actual disconnection is handled by BNB Wallet integration
    */
   disconnect: () => {
     console.log('Disconnect called - handled by adapter');
@@ -65,7 +65,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Refresh SOL token balance for connected wallet
+   * Refresh BNB token balance for connected wallet
    */
   refreshBalance: async () => {
     const { address, isConnected } = get();
@@ -75,7 +75,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
     }
 
     try {
-      // Balance is fetched by components using getSOLBalance from lib/solana/client.ts
+      // Balance is fetched by components using getBNBBalance from lib/bnb/client.ts
       console.log('Balance refresh - handled by components');
     } catch (error) {
       console.error("Error refreshing balance:", error);
@@ -93,14 +93,14 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Set address (used by Solana wallet integration)
+   * Set address (used by BNB wallet integration)
    */
   setAddress: (address: string | null) => {
     set({ address });
   },
 
   /**
-   * Set connected status (used by Solana wallet integration)
+   * Set connected status (used by BNB wallet integration)
    */
   setIsConnected: (connected: boolean) => {
     set({ isConnected: connected });

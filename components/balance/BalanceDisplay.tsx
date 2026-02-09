@@ -141,7 +141,7 @@ export const BalanceDisplay: React.FC = () => {
                 <p className="text-neon-blue text-xl font-bold font-mono text-shadow-neon">
                   {formattedBalance}
                 </p>
-                <span className="text-neon-blue/70 text-sm font-mono">SOL</span>
+                <span className="text-neon-blue/70 text-sm font-mono">BNB</span>
               </div>
             )}
           </div>

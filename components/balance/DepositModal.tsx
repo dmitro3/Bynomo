@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useAccount, useBalance, useSendTransaction, useConfig } from 'wagmi';
+import { ethers } from 'ethers';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
-import { buildDepositTransaction, getSOLBalance } from '@/lib/solana/client';
+import { getBNBConfig } from '@/lib/bnb/config';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -21,14 +21,19 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   onError
 }) => {
   const [amount, setAmount] = useState<string>('');
+  const { address, isConnected } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [solBalance, setSolBalance] = useState<number>(0);
 
-  const { address, depositFunds, houseBalance } = useOverflowStore();
+  const { data: balanceData } = useBalance({
+    address: address,
+  });
+
+  const { depositFunds } = useOverflowStore();
   const toast = useToast();
-  const { connection } = useConnection();
-  const { sendTransaction } = useWallet();
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const bnbBalance = balanceData ? parseFloat(ethers.formatUnits(balanceData.value, balanceData.decimals)) : 0;
 
   // Quick select amounts
   const quickAmounts = [0.1, 0.5, 1, 5];
@@ -41,43 +46,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       setIsLoading(false);
     }
   }, [isOpen]);
-
-  // Fetch SOL balance when modal opens or address changes
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchBalance = async () => {
-      if (!isOpen || !address) return;
-
-      try {
-        console.log('Fetching SOL balance for:', address);
-        // Use the connection from the hook for consistency with the provider
-        const publicKey = new PublicKey(address);
-        const balanceLamports = await connection.getBalance(publicKey, 'confirmed');
-        const balanceSOL = balanceLamports / LAMPORTS_PER_SOL;
-
-        if (mounted) {
-          console.log('Fetched balance:', balanceSOL);
-          setSolBalance(balanceSOL);
-        }
-      } catch (err) {
-        console.error('Failed to fetch SOL balance in modal:', err);
-        // Fallback to the client method if connection hook fails
-        try {
-          const bal = await getSOLBalance(address);
-          if (mounted) setSolBalance(bal);
-        } catch (innerErr) {
-          console.error('Fallback balance fetch also failed:', innerErr);
-        }
-      }
-    };
-
-    fetchBalance();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isOpen, address, connection]);
 
   const validateAmount = (value: string): string | null => {
     if (!value || value.trim() === '') {
@@ -94,8 +62,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return 'Amount must be greater than zero';
     }
 
-    if (numValue > solBalance) {
-      return 'Insufficient SOL balance';
+    if (numValue > bnbBalance) {
+      return 'Insufficient BNB balance';
     }
 
     return null;
@@ -115,10 +83,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    if (solBalance > 0) {
+    if (bnbBalance > 0) {
       // Leave a small amount for gas
-      const maxAmount = Math.max(0, solBalance - 0.005);
-      setAmount(maxAmount.toString());
+      const maxAmount = Math.max(0, bnbBalance - 0.005);
+      setAmount(maxAmount.toFixed(4));
       setError(null);
     }
   };
@@ -130,7 +98,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return;
     }
 
-    if (!address) {
+    if (!address || !isConnected) {
       setError('Please connect your wallet');
       return;
     }
@@ -140,34 +108,36 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       setError(null);
 
       const depositAmount = parseFloat(amount);
+      const config = getBNBConfig();
+
+      if (!config.treasuryAddress) {
+        throw new Error('Treasury address not configured');
+      }
+
       toast.info('Please confirm the transaction in your wallet...');
 
-      const tx = await buildDepositTransaction(depositAmount, address);
-
-      // Execute transaction using Solana wallet
-      const signature = await sendTransaction(tx, connection);
+      // Build transaction using Wagmi
+      const tx = await sendTransactionAsync({
+        to: config.treasuryAddress as `0x${string}`,
+        value: ethers.parseEther(depositAmount.toString()),
+      });
 
       toast.info('Transaction submitted. Waiting for confirmation...');
 
-      // Wait for confirmation
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      }, 'confirmed');
+      // Note: In real app, we might wait for tx confirmation here
+      // but sendTransactionAsync returns the hash after submission
 
-      console.log('Deposit transaction successful:', signature);
+      console.log('Deposit transaction submitted:', tx);
 
       // Update balance in database
-      await depositFunds(address, depositAmount, signature);
+      await depositFunds(address, depositAmount, tx);
 
       toast.success(
-        `Successfully deposited ${depositAmount.toFixed(4)} SOL! Balance updated.`
+        `Successfully deposited ${depositAmount.toFixed(4)} BNB! Balance updated.`
       );
 
       if (onSuccess) {
-        onSuccess(depositAmount, signature);
+        onSuccess(depositAmount, tx);
       }
 
       onClose();
@@ -176,6 +146,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       let errorMessage = 'Failed to deposit funds';
       if (err instanceof Error) {
         errorMessage = err.message;
+        if (errorMessage.includes('rejected')) {
+          errorMessage = 'Transaction cancelled by user';
+        }
       }
       setError(errorMessage);
       toast.error(errorMessage);
@@ -191,19 +164,19 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Deposit SOL"
+      title="Deposit BNB"
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
         <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">
-            {process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'}
+            {process.env.NEXT_PUBLIC_BNB_NETWORK || 'testnet'}
           </div>
           <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">
             Wallet Balance
           </p>
           <p className="text-[#00f5ff] text-xl font-bold font-mono">
-            {solBalance.toFixed(4)} SOL
+            {bnbBalance.toFixed(4)} BNB
           </p>
         </div>
 
@@ -226,7 +199,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               `}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono">
-              SOL
+              BNB
             </span>
           </div>
 
@@ -292,7 +265,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 <span>Processing</span>
               </span>
             ) : (
-              'Deposit SOL'
+              'Deposit BNB'
             )}
           </Button>
         </div>

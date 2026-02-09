@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { PublicKey } from '@solana/web3.js';
+import { ethers } from 'ethers';
 
 export async function GET(
   request: NextRequest,
@@ -21,13 +21,10 @@ export async function GET(
     // Await params in Next.js 15+
     const { address } = await params;
 
-    // Validate Solana address
-    try {
-      if (!address) throw new Error('Address is required');
-      new PublicKey(address);
-    } catch (e) {
+    // Validate BNB address
+    if (!ethers.isAddress(address)) {
       return NextResponse.json(
-        { error: 'Invalid Solana address format' },
+        { error: 'Invalid BNB address format' },
         { status: 400 }
       );
     }

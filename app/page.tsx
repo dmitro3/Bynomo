@@ -28,8 +28,8 @@ export default function Home() {
     // Check if 3 clicks reached
     if (newCount >= 3) {
       // Activate demo mode
-      setAddress('SOL_DEMO_1234567890');
-      setBalance(100); // 100 SOL is more realistic than 1000
+      setAddress('0xDEMO_1234567890');
+      setBalance(50); // 50 BNB is reasonable
       setIsConnected(true);
       setDemoActivated(true);
       setClickCount(0);
@@ -55,7 +55,7 @@ export default function Home() {
               className="text-xl sm:text-3xl font-black tracking-wider sm:tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-400 to-white cursor-pointer select-none"
               style={{ fontFamily: 'var(--font-orbitron)' }}
             >
-              SOLNOMO
+              BINOMO
             </span>
             <span className="text-yellow-400 text-[10px] font-mono font-normal border border-yellow-400/50 px-2 py-0.5 rounded bg-yellow-400/10">
               TESTNET

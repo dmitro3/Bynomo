@@ -137,8 +137,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Asset display configuration
   const assetConfig = {
     BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2 },
-    SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 4 },
-    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2 }
+    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2 }
   };
 
   const currentAssetConfig = assetConfig[selectedAsset];
@@ -224,8 +223,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     // Asset-specific range percentages (higher for more volatile assets)
     const rangePercentages = {
       BTC: 0.005,  // 0.5% - Bitcoin is less volatile
-      SUI: 0.015,  // 1.5% - Sui is moderately volatile
-      SOL: 0.015   // 1.5% - Solana is moderately volatile
+      BNB: 0.015   // 1.5% - BNB is moderately volatile
     };
 
     const rangePercent = rangePercentages[selectedAsset];
@@ -707,7 +705,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       <div className="absolute top-12 sm:top-20 left-3 sm:left-6 z-30 pointer-events-auto">
         {/* Asset Selector */}
         <div className="flex gap-1 mb-2">
-          {(['BTC', 'SUI', 'SOL'] as AssetType[]).map((asset) => (
+          {(['BTC', 'BNB'] as AssetType[]).map((asset) => (
             <button
               key={asset}
               onClick={() => {

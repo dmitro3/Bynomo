@@ -115,7 +115,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       await fetchBalance(address);
 
       toast.success(
-        `Successfully withdrew ${withdrawAmount.toFixed(4)} SOL! Balance updated.`
+        `Successfully withdrew ${withdrawAmount.toFixed(4)} BNB! Balance updated.`
       );
 
       if (onSuccess) {
@@ -143,7 +143,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Withdraw SOL"
+      title="Withdraw BNB"
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
@@ -152,7 +152,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             Available to Withdraw
           </p>
           <p className="text-[#FF006E] text-xl font-bold font-mono">
-            {houseBalance.toFixed(4)} SOL
+            {houseBalance.toFixed(4)} BNB
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               `}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono">
-              SOL
+              BNB
             </span>
           </div>
 
@@ -218,7 +218,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 <span>Processing</span>
               </span>
             ) : (
-              'Withdraw SOL'
+              'Withdraw BNB'
             )}
           </Button>
         </div>

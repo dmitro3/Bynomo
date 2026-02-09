@@ -2,7 +2,7 @@
  * Game state slice for Zustand store
  * Manages game state, active rounds, price data, and betting actions
  * 
- * Note: After Sui migration, game logic remains off-chain.
+ * Note: After BNB migration, game logic remains off-chain.
  * Only deposit/withdrawal operations interact with the blockchain.
  */
 
@@ -81,10 +81,10 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    */
   setSelectedAsset: (asset: AssetType) => {
     const { selectedAsset: currentAsset } = get();
-    
+
     // Only reset if actually changing asset
     if (currentAsset !== asset) {
-      set({ 
+      set({
         selectedAsset: asset,
         priceHistory: [], // Clear history when switching assets
         currentPrice: 0,
@@ -102,13 +102,13 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    * @param targetId - ID of the target cell (1-8) OR dynamic grid target (e.g., "UP-2.50")
    */
   placeBet: async (amount: string, targetId: string) => {
-    throw new Error("placeBet is deprecated after Sui migration. Use placeBetFromHouseBalance instead.");
+    throw new Error("placeBet is deprecated after BNB migration. Use placeBetFromHouseBalance instead.");
   },
 
   /**
    * Place a bet using house balance (no wallet signature required)
    * Instant-resolution system: bet is placed on a specific cell, resolves when chart hits it
-   * @param amount - Bet amount in USDC tokens
+   * @param amount - Bet amount in BNB tokens
    * @param targetId - Dynamic grid target (e.g., "UP-2.50") containing direction and multiplier
    * @param userAddress - User's wallet address
    * @param cellId - Optional: The specific cell ID this bet is placed on
@@ -258,7 +258,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    * @param betId - The unique bet ID to settle
    */
   settleRound: async (betId: string) => {
-    console.log('settleRound called but is deprecated after Sui migration');
+    console.log('settleRound called but is deprecated after BNB migration');
     set({ isSettling: false });
   },
 
@@ -387,7 +387,7 @@ export const startPriceFeed = (
       if (isActive) {
         updatePrice(price);
         // Log price updates with confidence interval
-        console.log(`${asset} Price: ${price.toFixed(asset === 'SUI' ? 4 : 2)} ±${data.confidence.toFixed(asset === 'SUI' ? 4 : 2)}`);
+        console.log(`${asset} Price: ${price.toFixed(asset === 'BNB' ? 4 : 2)} ±${data.confidence.toFixed(asset === 'BNB' ? 4 : 2)}`);
       }
     }, asset);
 

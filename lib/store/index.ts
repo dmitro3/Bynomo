@@ -1,9 +1,9 @@
 /**
- * Main Zustand store for Suinomo dApp
+ * Main Zustand store for Binomo dApp
  * Combines wallet, game, and history slices
  * 
- * Note: After Sui migration, blockchain event subscriptions are handled
- * by the event listener service (lib/sui/event-listener.ts) for deposit/withdrawal events.
+ * Note: After BNB migration, blockchain events are handled
+ * by the BNB backend client for deposit/withdrawal confirmation.
  * Game logic remains off-chain.
  */
 
@@ -33,36 +33,33 @@ export const useOverflowStore = create<OverflowStore>()((...args) => ({
  * Initialize the store
  * Restores sessions, loads data
  * Should be called once on app initialization
- * 
- * Note: After Sui migration, wallet session restoration is handled by
- * @mysten/dapp-kit's autoConnect feature in app/providers.tsx
  */
 export const initializeStore = async (): Promise<void> => {
   const store = useOverflowStore.getState();
-  
+
   try {
     // Restore bet history from localStorage
     restoreBetHistory((bets) => {
       useOverflowStore.setState({ bets });
     });
-    
+
     // Load target cells
     await store.loadTargetCells();
-    
+
     // Fetch house balance if wallet is connected
     if (store.address) {
       await store.fetchBalance(store.address);
     }
-    
+
     // Start price feed polling
     const stopPriceFeed = startPriceFeed(store.updatePrice);
-    
+
     // Store cleanup function for later use
     (window as any).__overflowCleanup = () => {
       stopPriceFeed();
     };
-    
-    console.log("Overflow store initialized successfully");
+
+    console.log("Binomo store initialized successfully");
   } catch (error) {
     console.error("Error initializing store:", error);
   }

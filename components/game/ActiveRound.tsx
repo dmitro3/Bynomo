@@ -46,7 +46,7 @@ export const ActiveRound: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 border border-white/10 rounded p-3">
             <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">Bet Amount</p>
-            <p className="text-white text-lg font-bold font-mono">{parseFloat(amount).toFixed(4)} SOL</p>
+            <p className="text-white text-lg font-bold font-mono">{parseFloat(amount).toFixed(4)} BNB</p>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded p-3">
@@ -96,7 +96,7 @@ export const ActiveRound: React.FC = () => {
         {/* Potential Payout */}
         <div className="bg-neon-blue/10 border border-neon-blue/50 rounded p-3 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
           <p className="text-neon-blue text-xs uppercase tracking-wider mb-1 font-mono">Potential Win</p>
-          <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} SOL</p>
+          <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} BNB</p>
           <p className="text-neon-blue/70 text-xs mt-1 font-mono">x{target.multiplier} multiplier</p>
         </div>
       </div>
