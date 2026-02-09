@@ -58,17 +58,17 @@ export const playLoseSound = () => {
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
 
-        // More audible "thud" for lose
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+        // Modern "Muted Pop" - Clean, short, and subtle
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+        oscillator.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.1); // Slide down to A2
 
-        gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
 
         oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.3);
+        oscillator.stop(audioCtx.currentTime + 0.2);
     } catch (e) {
         console.warn('Audio not available:', e);
     }
