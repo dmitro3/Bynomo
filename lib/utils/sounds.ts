@@ -11,27 +11,23 @@ export const playWinSound = () => {
         if (!AudioContextClass) return;
 
         const audioCtx = new AudioContextClass();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
 
-        // Win sound - ascending happy tones (C major chord style)
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-        notes.forEach((freq, i) => {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+        // Bright, chirpy win sound
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.1); // Slide up to E6
 
-            oscillator.frequency.value = freq;
-            oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
 
-            const startTime = audioCtx.currentTime + i * 0.1;
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.05);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
-
-            oscillator.start(startTime);
-            oscillator.stop(startTime + 0.3);
-        });
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.2);
     } catch (e) {
         console.warn('Audio not available:', e);
     }
@@ -46,26 +42,28 @@ export const playLoseSound = () => {
 
         const audioCtx = new AudioContextClass();
 
-        // Lose sound - descending sad tones
-        const notes = [392.00, 311.13, 261.63]; // G4, Eb4, C4
-        notes.forEach((freq, i) => {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+        // Auto-resume context if suspended (browser policy)
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
 
-            oscillator.frequency.value = freq;
-            oscillator.type = 'triangle'; // Slightly rougher sound for lose
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
 
-            const startTime = audioCtx.currentTime + i * 0.15;
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.05);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+        // More audible "thud" for lose
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
 
-            oscillator.start(startTime);
-            oscillator.stop(startTime + 0.5);
-        });
+        gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.3);
     } catch (e) {
         console.warn('Audio not available:', e);
     }

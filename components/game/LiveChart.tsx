@@ -5,6 +5,7 @@ import * as d3Shape from 'd3-shape';
 import { useStore } from '@/lib/store';
 import { AssetType } from '@/lib/utils/priceFeed';
 import { motion, AnimatePresence } from 'framer-motion';
+import { playWinSound, playLoseSound } from '@/lib/utils/sounds';
 
 interface LiveChartProps {
   betAmount: string;
@@ -80,62 +81,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   }
   const [betResults, setBetResults] = useState<BetResult[]>([]);
 
-  // Sound effects using Web Audio API
-  const playWinSound = useCallback(() => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-      // Win sound - ascending happy tones
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-      notes.forEach((freq, i) => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.frequency.value = freq;
-        oscillator.type = 'sine';
-
-        const startTime = audioCtx.currentTime + i * 0.1;
-        gainNode.gain.setValueAtTime(0.3, startTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
-
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.3);
-      });
-    } catch (e) {
-      console.log('Audio not available');
-    }
-  }, []);
-
-  const playLoseSound = useCallback(() => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-      // Lose sound - descending sad tones
-      const notes = [392.00, 349.23, 293.66]; // G4, F4, D4
-      notes.forEach((freq, i) => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.frequency.value = freq;
-        oscillator.type = 'triangle';
-
-        const startTime = audioCtx.currentTime + i * 0.15;
-        gainNode.gain.setValueAtTime(0.2, startTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
-
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.4);
-      });
-    } catch (e) {
-      console.log('Audio not available');
-    }
-  }, []);
 
   // Auto-remove bet results after 3 seconds
   useEffect(() => {
@@ -817,7 +762,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 fontFamily="monospace"
                 className="font-bold opacity-80"
               >
-                {bet.direction} {bet.amount} BNB @ ${bet.strikePrice.toFixed(2)}
+                {bet.direction} {bet.amount} BNB {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
               </text>
             </g>
           );
