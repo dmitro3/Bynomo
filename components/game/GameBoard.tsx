@@ -366,7 +366,6 @@ export const GameBoard: React.FC = () => {
                     >
                       <div className="text-emerald-500 text-2xl font-bold group-hover:scale-110 transition-transform">▲</div>
                       <span className="text-emerald-400 text-xs font-black tracking-tighter uppercase">Higher</span>
-                      <span className="text-[8px] text-emerald-500/60 font-mono">Profit +{((getMultiplier(selectedDuration) - 1) * 100).toFixed(0)}%</span>
                     </button>
 
                     <button
@@ -376,7 +375,6 @@ export const GameBoard: React.FC = () => {
                     >
                       <div className="text-rose-500 text-2xl font-bold group-hover:scale-110 transition-transform">▼</div>
                       <span className="text-rose-400 text-xs font-black tracking-tighter uppercase">Lower</span>
-                      <span className="text-[8px] text-rose-500/60 font-mono">Profit +{((getMultiplier(selectedDuration) - 1) * 100).toFixed(0)}%</span>
                     </button>
                   </div>
                 ) : (

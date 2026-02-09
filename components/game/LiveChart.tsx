@@ -236,6 +236,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Reset Y-axis domain when asset changes to avoid getting stuck at old price levels
+  useEffect(() => {
+    yDomain.current.initialized = false;
+  }, [selectedAsset]);
+
   // Animation Loop - Optimized for performance
   useEffect(() => {
     let frameId: number;
@@ -262,7 +267,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const pixelsPerSecond = gameMode === 'box'
     ? Math.max(2, targetColWidthPx / (gridInterval / 1000))
     : (isMobile ? 40 : 50);
-  const numRows = selectedAsset === 'BTC' ? 10 : 12;
+  const numRows = 12; // Standardize for all assets to ensure consistent box size
 
   // Scales
   const scales = useMemo(() => {
@@ -271,20 +276,13 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     // Use FIRST price in history as stable reference
     const referencePrice = priceHistory.length > 0 ? priceHistory[0].price : currentPrice;
 
-    // Asset-specific range percentages (higher for more volatile assets)
-    const rangePercentages: Record<string, number> = {
-      BTC: 0.0008,
-      ETH: 0.0012,
-      SOL: 0.002,
-      TRX: 0.0025,
-      XRP: 0.002,
-      DOGE: 0.004,
-      ADA: 0.003,
-      BCH: 0.0025,
-      BNB: 0.0015
-    };
-
-    const rangePercent = rangePercentages[selectedAsset] || 0.0015;
+    // Standardize range percentage for Box mode to ensure consistent box sizes across all assets
+    const rangePercent = gameMode === 'box' ? 0.0015 : (
+      selectedAsset === 'BTC' ? 0.0008 :
+        selectedAsset === 'ETH' ? 0.0012 :
+          selectedAsset === 'SOL' ? 0.002 :
+            0.0015
+    );
 
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);
@@ -383,14 +381,16 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const cells = [];
     const colWidth = (gridInterval / 1000) * pixelsPerSecond;
 
-    // STABLE price step calculation - Adjusted to 15 units for BTC as requested
-
-    let priceStep = 0.1;
-    if (selectedAsset === 'BTC') {
-      priceStep = 15; // 15 units for BTC
-    } else {
-      priceStep = 0.15; // 0.15 units for BNB
-    }
+    // Calculate a stable price step based on the current range to ensure the grid "slides" correctly
+    const rawStep = (scales.maxY - scales.minY) / 10;
+    // Snap to "nice" numbers (e.g., 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100...)
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+    let priceStep;
+    if (normalized < 1.5) priceStep = 1 * magnitude;
+    else if (normalized < 3) priceStep = 2 * magnitude;
+    else if (normalized < 7) priceStep = 5 * magnitude;
+    else priceStep = 10 * magnitude;
 
 
     // Calculate visible price range with large buffer (2x viewport)

@@ -534,16 +534,40 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param payout - The payout amount if won
    */
   resolveBet: (betId: string, won: boolean, payout: number) => {
-    const { activeBets, settledBets } = get();
+    const { activeBets, settledBets, currentPrice } = get();
     const resolvedBet = activeBets.find((b: ActiveBet) => b.id === betId);
 
     if (resolvedBet) {
       const settledBet = { ...resolvedBet, status: 'settled' as const };
+      const now = Date.now();
+
       set({
         activeBets: activeBets.filter((b: ActiveBet) => b.id !== betId),
         settledBets: [settledBet, ...settledBets].slice(0, 50), // Keep last 50
-        lastResult: { won, amount: resolvedBet.amount, payout, timestamp: Date.now() }
+        lastResult: { won, amount: resolvedBet.amount, payout, timestamp: now, asset: resolvedBet.asset }
       });
+
+      // Also add to persistent local history store
+      const anyGet = get() as any;
+      if (anyGet.addBet) {
+        anyGet.addBet({
+          id: resolvedBet.id,
+          timestamp: now,
+          amount: resolvedBet.amount.toString(),
+          won: won,
+          payout: payout.toString(),
+          startPrice: resolvedBet.strikePrice || 0,
+          endPrice: currentPrice,
+          actualChange: currentPrice - (resolvedBet.strikePrice || 0),
+          target: {
+            id: resolvedBet.cellId || 'classic',
+            label: resolvedBet.mode === 'binomo' ? `${resolvedBet.direction} ${resolvedBet.multiplier}x` : `Box ${resolvedBet.multiplier}x`,
+            multiplier: resolvedBet.multiplier,
+            priceChange: 0,
+            direction: resolvedBet.direction
+          }
+        });
+      }
     }
 
     // Log resolution for debugging

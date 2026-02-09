@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { GameBoard } from '@/components/game';
-import { BetHistory } from '@/components/history';
+import { BetHistory, MiniHistory } from '@/components/history';
 import { WalletConnect, WalletInfo } from '@/components/wallet';
 import { useStore } from '@/lib/store';
 
@@ -79,6 +79,7 @@ export default function Home() {
       {/* Main Content - Full Screen */}
       <main className="flex-1 w-full h-full relative">
         <GameBoard />
+        <MiniHistory />
       </main>
     </div>
   );
