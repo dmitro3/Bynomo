@@ -11,23 +11,29 @@ export const playWinSound = () => {
         if (!AudioContextClass) return;
 
         const audioCtx = new AudioContextClass();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+        const playTone = (freq: number, startDelay: number, duration: number) => {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
 
-        // Bright, chirpy win sound
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-        oscillator.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.1); // Slide up to E6
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
 
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + startDelay);
 
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime + startDelay);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + startDelay + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startDelay + duration);
+
+            oscillator.start(audioCtx.currentTime + startDelay);
+            oscillator.stop(audioCtx.currentTime + startDelay + duration);
+        };
+
+        // "Trink!" - Two quick, bright pulses
+        playTone(1320, 0, 0.15);      // High E
+        playTone(1760, 0.08, 0.2);    // Higher A (Fast-follow)
+
     } catch (e) {
         console.warn('Audio not available:', e);
     }
