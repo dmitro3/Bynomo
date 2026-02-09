@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { PublicKey } from '@solana/web3.js';
+import { ethers } from 'ethers';
 
 interface BetRequest {
   userAddress: string;
@@ -43,12 +43,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Solana address
-    try {
-      new PublicKey(userAddress);
-    } catch (e) {
+    // Validate BNB (EVM) address
+    if (!ethers.isAddress(userAddress)) {
       return NextResponse.json(
-        { error: 'Invalid Solana address format' },
+        { error: 'Invalid BNB address format' },
         { status: 400 }
       );
     }
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest) {
       // Return specific error message for insufficient balance
       if (result.error === 'Insufficient balance') {
         return NextResponse.json(
-          { error: 'Insufficient house balance. Please deposit more SOL.' },
+          { error: 'Insufficient house balance. Please deposit more BNB.' },
           { status: 400 }
         );
       }

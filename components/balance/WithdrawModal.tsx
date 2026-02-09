@@ -91,7 +91,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       toast.info('Processing withdrawal...');
 
       // Call the withdrawal API
-      // The backend will handle the Solana transfer from the treasury wallet
+      // The backend will handle the BNB transfer from the treasury wallet
       const response = await fetch('/api/balance/withdraw', {
         method: 'POST',
         headers: {

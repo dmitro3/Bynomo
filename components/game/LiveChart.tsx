@@ -39,6 +39,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const userAddress = useStore((state) => state.address);
   const houseBalance = useStore((state) => state.houseBalance);
 
+  const gameMode = useStore((state) => state.gameMode);
+  const timeframeSeconds = useStore((state) => state.timeframeSeconds);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [now, setNow] = useState(Date.now());
@@ -51,6 +54,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   // Local state for tracking cell bets (cells with active bets)
   const [cellBets, setCellBets] = useState<Map<string, CellBet>>(new Map());
+
 
   // Warning state for insufficient funds
   const [showInsufficientFunds, setShowInsufficientFunds] = useState(false);
@@ -206,12 +210,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return () => cancelAnimationFrame(frameId);
   }, []);
 
-  // Configuration - Responsive
+  // Configuration - Responsive + Timeframe
   const isMobile = dimensions.width < 640;
-  const historyWidthRatio = isMobile ? 0.35 : 0.50; // More grid space on mobile
-  const pixelsPerSecond = isMobile ? 40 : 50;
-  const gridInterval = isMobile ? 3000 : 2500; // Fewer cells on mobile
-  const numRows = 10; // Same on mobile and desktop
+  const historyWidthRatio = isMobile ? 0.35 : 0.50;
+  const targetColWidthPx = 250;
+  const gridInterval = (gameMode === 'box' ? timeframeSeconds : 30) * 1000; // ms per column
+  const pixelsPerSecond = gameMode === 'box'
+    ? Math.max(2, targetColWidthPx / (gridInterval / 1000))
+    : (isMobile ? 40 : 50);
+  const numRows = selectedAsset === 'BTC' ? 10 : 12;
 
   // Scales
   const scales = useMemo(() => {
@@ -221,20 +228,26 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const referencePrice = priceHistory.length > 0 ? priceHistory[0].price : currentPrice;
 
     // Asset-specific range percentages (higher for more volatile assets)
+    // Slightly increased to zoom out and show more boxes
     const rangePercentages = {
-      BTC: 0.005,  // 0.5% - Bitcoin is less volatile
-      BNB: 0.015   // 1.5% - BNB is moderately volatile
+      BTC: 0.001,   // 0.1% - Slightly zoomed out
+      BNB: 0.0015   // 0.15% - Slightly zoomed out
     };
 
-    const rangePercent = rangePercentages[selectedAsset];
-    const targetMin = referencePrice * (1 - rangePercent);
-    const targetMax = referencePrice * (1 + rangePercent);
 
-    // FIXED Y-axis - only initialize once
+    const rangePercent = rangePercentages[selectedAsset];
+    const targetMin = currentPrice * (1 - rangePercent);
+    const targetMax = currentPrice * (1 + rangePercent);
+
+    // DYNAMIC Y-axis - lerp towards target to follow price
     if (!yDomain.current.initialized) {
       yDomain.current = { min: targetMin, max: targetMax, initialized: true };
+    } else {
+      // Smoothing factor (lower = smoother, higher = faster tracking)
+      const lerpFactor = 0.05;
+      yDomain.current.min = yDomain.current.min + (targetMin - yDomain.current.min) * lerpFactor;
+      yDomain.current.max = yDomain.current.max + (targetMax - yDomain.current.max) * lerpFactor;
     }
-    // No lerp/update - axis stays fixed
 
     const { min: minY, max: maxY } = yDomain.current;
 
@@ -295,43 +308,58 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     // Generate enough columns to fill screen + buffer
     const totalGridWidth = dimensions.width - scales.tipX + colWidth * 2;
-    const columnsNeeded = Math.ceil(totalGridWidth / colWidth) + 2;
+    const columnsNeeded = Math.ceil(totalGridWidth / colWidth) + 4;
 
-    const currentPriceY = scales.yScale(currentPrice);
+    // STABLE price step calculation - Adjusted to 15 units for BTC as requested
+    let priceStep = 0.1;
+    if (selectedAsset === 'BTC') {
+      priceStep = 15; // 15 units for BTC
+    } else {
+      priceStep = 0.15; // 0.15 units for BNB
+    }
 
-    // Calculate price range for each row
+
+    // Calculate visible price range with large buffer (2x viewport)
+    const viewPadding = (scales.maxY - scales.minY) * 1.5;
+
+    const gridMaxY = scales.maxY + viewPadding;
+    const gridMinY = scales.minY - viewPadding;
+
+    // Stable snap points
+    const startPrice = Math.floor(gridMaxY / priceStep) * priceStep;
+    const endPrice = Math.ceil(gridMinY / priceStep) * priceStep;
+
     const priceRange = scales.maxY - scales.minY;
-    const pricePerRow = priceRange / numRows;
 
     for (let col = -1; col < columnsNeeded; col++) {
       const colX = scales.tipX + (col * colWidth) - baseOffset + colWidth;
-
       const colTimeOffset = col * gridInterval;
       const colTimestamp = Math.floor(now / gridInterval) * gridInterval + colTimeOffset + gridInterval;
 
-      if (colX + colWidth < scales.tipX - 50) continue;
-      if (colX > dimensions.width + 50) continue;
+      if (colX + colWidth < scales.tipX - 100) continue;
+      if (colX > dimensions.width + 100) continue;
 
       const isCrossing = colX <= scales.tipX && colX + colWidth > scales.tipX;
       const isPast = colX + colWidth <= scales.tipX;
 
-      for (let row = 0; row < numRows; row++) {
-        // Calculate price levels for this row (top = high price, bottom = low price)
-        const rowPriceTop = scales.maxY - (row * pricePerRow);
-        const rowPriceBottom = scales.maxY - ((row + 1) * pricePerRow);
+      // Loop through price levels
+      for (let rowPriceTop = startPrice; rowPriceTop >= endPrice; rowPriceTop -= priceStep) {
+        const rowPriceBottom = rowPriceTop - priceStep;
         const rowPriceCenter = (rowPriceTop + rowPriceBottom) / 2;
+        const priceLevelIndex = Math.round(rowPriceTop / priceStep);
 
         // Convert price to Y position using the scale
         const y = scales.yScale(rowPriceTop);
         const cellBottom = scales.yScale(rowPriceBottom);
         const rowHeight = cellBottom - y;
-        const centerY = y + rowHeight / 2;
+
+        // Skip if completely off screen vertically to save performance
+        if (y > dimensions.height + 50 || cellBottom < -50) continue;
 
         // Determine win/loss for cells crossing or past
         let status: 'future' | 'active' | 'won' | 'lost' = 'future';
 
         if (isCrossing || isPast) {
-          // Check if current price is in this row's price range
           if (currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom) {
             status = 'won';
           } else {
@@ -339,54 +367,38 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           }
         }
 
-        // Color based on position relative to current price
         const isUp = rowPriceCenter > currentPrice;
-
-        // Multiplier calculation based on price distance
-        // The row containing current price gets lowest multiplier
-        // Further rows get progressively higher multipliers
-
-        // Check if current price is inside this row
         const priceInRow = currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom;
 
         let baseMultiplier: number;
         if (priceInRow) {
-          // Current price is in this row - lowest multiplier
           baseMultiplier = 1.01;
         } else {
-          // Calculate distance based on how many rows away
-          const priceDist = Math.abs(rowPriceCenter - currentPrice) / priceRange;
-          const normalizedDist = Math.min(priceDist * 2, 1); // 0-1
-
-          // Exponential scaling for dramatic difference
-          // 1 row away: ~1.15
-          // 2 rows away: ~1.40
-          // 3 rows away: ~1.80
-          // 4+ rows away: 2.5 - 4.5
-          baseMultiplier = 1.05 + Math.pow(normalizedDist, 1.2) * 3.45;
+          // Distance from CURRENT PRICE in price terms
+          const priceDist = Math.abs(rowPriceCenter - currentPrice);
+          const normalizedDist = Math.min(priceDist / (priceRange * 0.8), 1);
+          baseMultiplier = 1.05 + Math.pow(normalizedDist, 1.3) * 3.95;
         }
 
-        // Small time bonus for cells further in time
-        const timeBonus = Math.max(0, (colX - scales.tipX) / 500) * 0.15;
-        const multiplier = Math.min(baseMultiplier + timeBonus, 5.0).toFixed(2);
+        const timeBonus = Math.max(0, (colX - scales.tipX) / 800) * 0.25;
+        const multiplier = Math.min(baseMultiplier + timeBonus, 10.0).toFixed(2);
 
-        // Purple gradient color based on distance from current price
-        // Close to price = higher opacity, far from price = lower opacity
-        const colorPriceDist = Math.abs(rowPriceCenter - currentPrice) / priceRange;
-        const intensity = Math.min(colorPriceDist * 2, 1); // 0 to 1
-        const hue = 270; // Purple hue
-        const saturation = 50 + intensity * 30; // 50-80%
-        const lightness = 45; // Fixed lightness
-        const alpha = 0.4 - intensity * 0.3; // 0.4-0.1 (reduced opacity)
+        // Visual properties
+        const distFromCenter = Math.abs(rowPriceCenter - currentPrice) / priceRange;
+        const intensity = Math.min(distFromCenter * 1.5, 1);
+        const hue = 270;
+        const saturation = 50 + intensity * 30;
+        const lightness = 45;
+        const alpha = Math.max(0.05, 0.4 - intensity * 0.35);
         const cellColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
-        const borderColor = `hsla(${hue}, 70%, 55%, ${0.5 - intensity * 0.3})`;
+        const borderColor = `hsla(${hue}, 70%, 55%, ${Math.max(0.1, 0.5 - intensity * 0.4)})`;
 
         cells.push({
-          id: `cell-${colTimestamp}-${row}`,
+          id: `cell-${colTimestamp}-${priceLevelIndex}`,
           x: colX,
           y,
           width: colWidth - 3,
-          height: Math.max(rowHeight - 3, 10),
+          height: Math.max(rowHeight - 3, 5),
           multiplier,
           isUp,
           status,
@@ -399,11 +411,13 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
 
     return cells;
-  }, [scales, now, currentPrice, dimensions]);
+  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset]);
+
+
 
   // Handle bet resolution when chart crosses cells with active bets
   useEffect(() => {
-    if (!scales || cellBets.size === 0) return;
+    if (!scales || cellBets.size === 0 || gameMode !== 'box') return;
 
     betCells.forEach((cell: any) => {
       const bet = cellBets.get(cell.id);
@@ -483,7 +497,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         console.log(`Bet resolved: ${won ? 'WON' : 'LOST'} - Amount: ${bet.amount}, Multiplier: ${bet.multiplier}, Payout: ${payout}`);
       }
     });
-  }, [betCells, cellBets, scales, currentPrice, resolveBet, userAddress, fetchBalance, playWinSound, playLoseSound]);
+  }, [betCells, cellBets, scales, currentPrice, resolveBet, userAddress, fetchBalance, playWinSound, playLoseSound, gameMode]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-0 bg-[#02040A] overflow-hidden select-none">
@@ -514,189 +528,302 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         }}
       />
 
-      {/* Cells Layer - Rendered BEHIND the chart line */}
-      <div className="absolute inset-0 z-5 overflow-hidden pointer-events-none">
-        {betCells.map((cell: any) => {
-          // Visual styling based on status
-          let opacity = 0.9;
-          let bg = cell.color;
-          let borderStyle = `1px solid ${cell.borderColor}`;
-          let canBet = cell.status === 'future';
-          let extraClass = '';
+      {/* Box Mode: Grid Cells layer */}
+      {gameMode === 'box' && (
+        <div className="absolute inset-0 z-5 overflow-hidden pointer-events-none">
+          {betCells.map((cell: any) => {
+            // Visual styling based on status
+            let opacity = 0.9;
+            let bg = cell.color;
+            let borderStyle = `1px solid ${cell.borderColor}`;
+            let canBet = cell.status === 'future';
+            let extraClass = '';
 
-          if (cell.status === 'won') {
-            // Won cell - purple with explosion ring effect (higher opacity)
+            if (cell.status === 'won') {
+              // Won cell - purple with explosion ring effect (higher opacity)
+              return (
+                <div key={cell.id} className="pointer-events-none">
+                  <div
+                    className="absolute rounded-sm animate-ping"
+                    style={{
+                      left: cell.x - 5,
+                      top: cell.y - 5,
+                      width: cell.width + 10,
+                      height: cell.height + 10,
+                      backgroundColor: '#a855f7',
+                      opacity: 0.5
+                    }}
+                  />
+                  <div
+                    className="absolute rounded-sm flex items-center justify-center"
+                    style={{
+                      left: cell.x,
+                      top: cell.y,
+                      width: cell.width,
+                      height: cell.height,
+                      backgroundColor: 'rgba(168, 85, 247, 0.9)',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 0 20px #a855f7'
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-mono font-bold text-white">
+                        x{cell.multiplier}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            } else if (cell.status === 'lost') {
+              return null;
+            } else if (cell.status === 'active') {
+              opacity = 1;
+              borderStyle = `2px solid rgba(255,255,255,0.5)`;
+              extraClass = 'ring-1 ring-white/30';
+            }
+
+            const handleClick = async () => {
+              if (canBet && betAmount && userAddress) {
+                const requiredAmount = parseFloat(betAmount);
+                const currentBalance = houseBalance || 0;
+
+                if (currentBalance < requiredAmount) {
+                  setShowInsufficientFunds(true);
+                  setTimeout(() => setShowInsufficientFunds(false), 2000);
+                  return;
+                }
+
+                try {
+                  const targetId = `${cell.isUp ? 'UP' : 'DOWN'}-${cell.multiplier}-${timeframeSeconds}`;
+                  const result = await placeBetFromHouseBalance(
+                    betAmount,
+                    targetId,
+                    userAddress,
+                    cell.id
+                  );
+
+                  if (result && result.bet) {
+                    setCellBets(prev => {
+                      const newMap = new Map(prev);
+                      newMap.set(cell.id, {
+                        cellId: cell.id,
+                        betId: result.betId,
+                        amount: result.bet.amount,
+                        multiplier: result.bet.multiplier,
+                        direction: result.bet.direction
+                      });
+                      return newMap;
+                    });
+                  }
+                } catch (error) {
+                  console.error('Failed to place box bet:', error);
+                }
+              }
+            };
+
+            const hasBet = cellBets.has(cell.id);
+            if (hasBet) {
+              bg = 'rgba(0, 255, 255, 0.4)';
+              borderStyle = '2px solid #00FFFF';
+              extraClass = 'ring-2 ring-cyan-400/50 animate-pulse';
+            }
+
             return (
-              <div key={cell.id} className="pointer-events-none">
-                {/* Explosion ring expanding outward */}
-                <div
-                  className="absolute rounded-sm animate-ping"
-                  style={{
-                    left: cell.x - 5,
-                    top: cell.y - 5,
-                    width: cell.width + 10,
-                    height: cell.height + 10,
-                    backgroundColor: '#a855f7',
-                    opacity: 0.5
-                  }}
-                />
-                {/* Main cell with content - purple, higher opacity */}
-                <div
-                  className="absolute rounded-sm flex items-center justify-center"
-                  style={{
-                    left: cell.x,
-                    top: cell.y,
-                    width: cell.width,
-                    height: cell.height,
-                    backgroundColor: 'rgba(168, 85, 247, 0.9)',
-                    border: '2px solid #ffffff',
-                    boxShadow: '0 0 20px #a855f7'
-                  }}
-                >
-                  <span className="text-[10px] font-mono font-bold text-white">
+              <div
+                key={cell.id}
+                onClick={handleClick}
+                className={`absolute rounded-sm flex items-center justify-center ${canBet ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'} ${extraClass}`}
+                style={{
+                  left: cell.x,
+                  top: cell.y,
+                  width: cell.width,
+                  height: cell.height,
+                  backgroundColor: bg,
+                  border: borderStyle,
+                  opacity
+                }}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] font-mono font-bold text-white/80">
                     x{cell.multiplier}
                   </span>
                 </div>
               </div>
             );
-          } else if (cell.status === 'lost') {
-            return null;
-          } else if (cell.status === 'active') {
-            // Active cells - subtle glow, keep same color
-            opacity = 1;
-            borderStyle = `2px solid rgba(255,255,255,0.5)`;
-            extraClass = 'ring-1 ring-white/30';
-          }
+          })}
+        </div>
+      )}
 
-          const handleClick = async () => {
-            if (canBet && betAmount && userAddress) {
-              // Check if user has sufficient balance
-              const requiredAmount = parseFloat(betAmount);
-              const currentBalance = houseBalance || 0;
+      {/* Binomo Mode: Active Bets SVG Overlay - Strike and Expiration lines */}
+      <svg className="absolute inset-0 w-full h-full z-20 pointer-events-none">
+        {gameMode === 'binomo' && scales && activeBets.map((bet: any) => {
+          if (bet.status !== 'active') return null;
 
-              if (currentBalance < requiredAmount) {
-                // Show insufficient funds warning
-                setShowInsufficientFunds(true);
-                setTimeout(() => setShowInsufficientFunds(false), 2000);
-                return;
-              }
+          const strikeY = scales.yScale(bet.strikePrice);
+          const expirationX = scales.xScale(bet.endTime);
+          const nowX = scales.tipX;
 
-              try {
-                // Place bet using house balance - no wallet signature required
-                const result = await placeBetFromHouseBalance(
-                  betAmount,
-                  `${cell.isUp ? 'UP' : 'DOWN'}-${cell.multiplier}`,
-                  userAddress,
-                  cell.id // Pass the cell ID
-                );
+          // Only show if expiration is in the future
+          if (expirationX < 0) return null;
 
-                if (result && result.bet) {
-                  // Add to local cell bets for visual tracking
-                  setCellBets(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(cell.id, {
-                      cellId: cell.id,
-                      betId: result.betId,
-                      amount: result.bet.amount,
-                      multiplier: result.bet.multiplier,
-                      direction: result.bet.direction
-                    });
-                    return newMap;
-                  });
-
-                  // Update balance after bet
-                  const isDemoMode = userAddress?.startsWith('0xDEMO');
-                  if (userAddress && !isDemoMode) {
-                    // Real mode - fetch from API
-                    fetchBalance(userAddress);
-                  } else if (isDemoMode) {
-                    // Demo mode - update locally
-                    updateBalance(result.bet.amount, 'subtract');
-                  }
-                }
-              } catch (error) {
-                console.error('Failed to place bet:', error);
-              }
-            }
-          };
-
-          // Check if this cell has an active bet
-          const hasBet = cellBets.has(cell.id);
-          if (hasBet) {
-            // Highlight cells with active bets - cyan glow
-            bg = 'rgba(0, 255, 255, 0.4)';
-            borderStyle = '2px solid #00FFFF';
-            extraClass = 'ring-2 ring-cyan-400/50 animate-pulse';
-          }
+          const isUp = bet.direction === 'UP';
+          const isWinning = isUp ? currentPrice > bet.strikePrice : currentPrice < bet.strikePrice;
+          const color = isUp ? '#22c55e' : '#ef4444';
+          const glowColor = isWinning ? color : '#666';
 
           return (
-            <div
-              key={cell.id}
-              onClick={handleClick}
-              className={`absolute rounded-sm flex items-center justify-center ${canBet ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'} ${extraClass}`}
-              style={{
-                left: cell.x,
-                top: cell.y,
-                width: cell.width,
-                height: cell.height,
-                backgroundColor: bg,
-                border: borderStyle,
-                opacity
-              }}
-            >
-              <span className="text-[10px] font-mono font-bold text-white/80">
-                x{cell.multiplier}
-              </span>
-            </div>
+            <g key={bet.id}>
+              {/* Strike Line (Horizontal) */}
+              <line
+                x1={nowX}
+                y1={strikeY}
+                x2={Math.max(nowX, expirationX)}
+                y2={strikeY}
+                stroke={color}
+                strokeWidth="2"
+                strokeDasharray="4 4"
+                className="opacity-70"
+              />
+
+              {/* Expiration Line (Vertical) */}
+              {expirationX > nowX && (
+                <line
+                  x1={expirationX}
+                  y1={0}
+                  x2={expirationX}
+                  y2={dimensions.height}
+                  stroke="#ffffff"
+                  strokeWidth="1"
+                  strokeOpacity="0.3"
+                  strokeDasharray="8 4"
+                />
+              )}
+
+              {/* Price Filling Area (Optional but looks cool) */}
+              {expirationX > nowX && (
+                <rect
+                  x={nowX}
+                  y={isUp ? Math.min(strikeY, scales.yScale(currentPrice)) : strikeY}
+                  width={expirationX - nowX}
+                  height={Math.abs(strikeY - scales.yScale(currentPrice))}
+                  fill={color}
+                  fillOpacity="0.05"
+                />
+              )}
+
+              {/* Label at Strike Price */}
+              <text
+                x={nowX + 5}
+                y={strikeY - 5}
+                fill={color}
+                fontSize="10"
+                fontFamily="monospace"
+                className="font-bold opacity-80"
+              >
+                {bet.direction} {bet.amount} BNB @ ${bet.strikePrice.toFixed(2)}
+              </text>
+            </g>
           );
         })}
-      </div>
+      </svg>
 
       {/* SVG Layer for Chart - ON TOP */}
       <svg
         key={`chart-${selectedAsset}`}
         className="absolute inset-0 w-full h-full z-10 pointer-events-none"
       >
-        {scales && chartPath && currentPrice > 0 && (
+        {scales && (
           <>
-            {/* Glow effect */}
-            <path
-              d={chartPath}
-              fill="none"
-              stroke="#00FF9D"
-              strokeWidth="12"
-              strokeOpacity="0.2"
-              strokeLinecap="round"
-            />
-            {/* Main line */}
-            <path
-              d={chartPath}
-              fill="none"
-              stroke="#00FF9D"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
+            {/* Y-Axis Price Ticks */}
+            <g className="y-axis">
+              {[0.1, 0.3, 0.5, 0.7, 0.9].map((tick) => {
+                const price = scales.minY + (scales.maxY - scales.minY) * tick;
+                const y = scales.yScale(price);
+                return (
+                  <g key={`y-tick-${tick}`}>
+                    <line x1={0} y1={y} x2={dimensions.width} y2={y} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
+                    <text
+                      x={dimensions.width - 5}
+                      y={y - 5}
+                      fill="#94a3b8"
+                      fontSize="10"
+                      fontFamily="monospace"
+                      textAnchor="end"
+                      className="opacity-50"
+                    >
+                      {price.toLocaleString('en-US', { minimumFractionDigits: currentAssetConfig.decimals })}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
 
-            {/* Tip indicator */}
-            <circle
-              cx={scales.tipX}
-              cy={scales.yScale(currentPrice)}
-              r="5"
-              fill="#00FF9D"
-              stroke="#ffffff"
-              strokeWidth="2"
-            />
+            {/* X-Axis Time Ticks */}
+            <g className="x-axis">
+              {[-30, -20, -10, 0, 10, 20, 30].map((sec) => {
+                const ts = now + sec * 1000;
+                const x = scales.xScale(ts);
+                if (x < 0 || x > dimensions.width) return null;
+                return (
+                  <g key={`x-tick-${sec}`}>
+                    <line x1={x} y1={0} x2={x} y2={dimensions.height} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
+                    <text
+                      x={x + 5}
+                      y={dimensions.height - 10}
+                      fill="#94a3b8"
+                      fontSize="10"
+                      fontFamily="monospace"
+                      className="opacity-50"
+                    >
+                      {new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
 
-            {/* Horizontal price line */}
-            <line
-              x1={0}
-              y1={scales.yScale(currentPrice)}
-              x2={scales.tipX - 10}
-              y2={scales.yScale(currentPrice)}
-              stroke="#00F0FF"
-              strokeOpacity="0.3"
-              strokeDasharray="4 4"
-            />
+            {chartPath && currentPrice > 0 && (
+              <>
+                {/* Glow effect */}
+                <path
+                  d={chartPath}
+                  fill="none"
+                  stroke="#00FF9D"
+                  strokeWidth="12"
+                  strokeOpacity="0.2"
+                  strokeLinecap="round"
+                />
+                {/* Main line */}
+                <path
+                  d={chartPath}
+                  fill="none"
+                  stroke="#00FF9D"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+
+                {/* Tip indicator */}
+                <circle
+                  cx={scales.tipX}
+                  cy={scales.yScale(currentPrice)}
+                  r="5"
+                  fill="#00FF9D"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                />
+
+                {/* Horizontal price line */}
+                <line
+                  x1={0}
+                  y1={scales.yScale(currentPrice)}
+                  x2={scales.tipX - 10}
+                  y2={scales.yScale(currentPrice)}
+                  stroke="#00F0FF"
+                  strokeOpacity="0.3"
+                  strokeDasharray="4 4"
+                />
+              </>
+            )}
           </>
         )}
       </svg>
@@ -807,7 +934,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                         ? `+${result.payout.toFixed(4)}`
                         : `-${result.amount.toFixed(4)}`
                       }
-                      <span className="text-xs ml-1 opacity-70">SOL</span>
+                      <span className="text-xs ml-1 opacity-70">BNB</span>
                     </p>
                   </div>
 

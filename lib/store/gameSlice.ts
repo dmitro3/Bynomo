@@ -9,35 +9,52 @@
 import { StateCreator } from "zustand";
 import { TargetCell, PricePoint, ActiveRound } from "@/types/game";
 import { AssetType } from "@/lib/utils/priceFeed";
+import { playWinSound, playLoseSound } from "@/lib/utils/sounds";
 
-// Active bet type for instant-resolution system
+// Game Modes
+export type GameMode = 'binomo' | 'box';
+
+// Active bet (Supports both modes)
 export interface ActiveBet {
   id: string;
-  cellId: string; // The cell this bet is placed on (e.g., "cell-1737748395000-3")
+  mode: GameMode;
   amount: number;
   multiplier: number;
   direction: 'UP' | 'DOWN';
   timestamp: number;
+  status: 'active' | 'settled';
+  // Binomo mode specific
+  strikePrice?: number;
+  endTime?: number;
+  // Box mode specific
+  cellId?: string;
 }
 
 export interface GameState {
   // State
+  gameMode: GameMode;
   selectedAsset: AssetType;
   currentPrice: number;
   priceHistory: PricePoint[];
-  activeRound: ActiveRound | null; // Keep for backward compatibility
-  activeBets: ActiveBet[]; // Multiple concurrent bets
+  activeRound: ActiveRound | null;
+  activeBets: ActiveBet[];
+  settledBets: ActiveBet[];
   targetCells: TargetCell[];
   isPlacingBet: boolean;
   isSettling: boolean;
+  lastResult: { won: boolean; amount: number; payout: number; timestamp: number } | null;
   error: string | null;
+  timeframeSeconds: number;
 
   // Actions
+  setGameMode: (mode: GameMode) => void;
   setSelectedAsset: (asset: AssetType) => void;
+  setTimeframeSeconds: (seconds: number) => void;
   placeBet: (amount: string, targetId: string) => Promise<void>;
   placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
   addActiveBet: (bet: ActiveBet) => void;
   resolveBet: (betId: string, won: boolean, payout: number) => void;
+  clearLastResult: () => void;
   settleRound: (betId: string) => Promise<void>;
   updatePrice: (price: number) => void;
   setActiveRound: (round: ActiveRound | null) => void;
@@ -64,17 +81,42 @@ const DEFAULT_TARGET_CELLS: TargetCell[] = [
  * Create game slice for Zustand store
  * Handles betting, round management, and price updates
  */
-export const createGameSlice: StateCreator<GameState> = (set, get) => ({
+export const createGameSlice: StateCreator<any> = (set, get) => ({
   // Initial state
-  selectedAsset: 'BTC',
+  gameMode: 'binomo', // Default to binomo mode
+  selectedAsset: 'BNB',
   currentPrice: 0,
   priceHistory: [],
   activeRound: null,
-  activeBets: [], // Multiple concurrent bets
+  activeBets: [],
+  settledBets: [],
   targetCells: DEFAULT_TARGET_CELLS,
   isPlacingBet: false,
   isSettling: false,
+  lastResult: null,
   error: null,
+  timeframeSeconds: 30, // Default for binomo
+
+  /**
+   * Set game mode (binomo or box)
+   */
+  setGameMode: (mode: GameMode) => {
+    set({
+      gameMode: mode,
+      activeBets: [], // Clear active bets when switching modes to avoid resolution issues
+      lastResult: null
+    });
+  },
+
+  /**
+   * Set timeframe for grid cells (box mode)
+   */
+  setTimeframeSeconds: (seconds: number) => {
+    set({
+      timeframeSeconds: seconds,
+      activeBets: [], // Clear when timeframe changes
+    });
+  },
 
   /**
    * Set selected asset for price tracking
@@ -93,6 +135,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
       });
     }
   },
+
 
   /**
    * Place a bet on a target cell
@@ -114,7 +157,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    * @param cellId - Optional: The specific cell ID this bet is placed on
    */
   placeBetFromHouseBalance: async (amount: string, targetId: string, userAddress: string, cellId?: string) => {
-    const { targetCells, currentPrice, addActiveBet } = get();
+    const { targetCells, currentPrice, addActiveBet, gameMode, timeframeSeconds } = get();
 
     try {
       // Parse amount for validation
@@ -128,25 +171,27 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
 
       let target: TargetCell;
       let direction: 'UP' | 'DOWN' = 'UP';
-      let multiplier = 1.5;
+      let multiplier = 1.9;
+      let durationSeconds = timeframeSeconds || 30;
 
-      // Check if this is a dynamic grid target (e.g., "UP-2.50" or "DOWN-1.80")
+      // Check if this is a dynamic grid target (e.g., "UP-1.9-30" or "DOWN-1.2-5")
       if (targetId.startsWith('UP-') || targetId.startsWith('DOWN-')) {
         const parts = targetId.split('-');
         direction = parts[0] as 'UP' | 'DOWN';
-        multiplier = parseFloat(parts[1]) || 1.5;
+        multiplier = parseFloat(parts[1]) || 1.9;
+        durationSeconds = parseInt(parts[2]) || durationSeconds;
 
         // Create dynamic target
         target = {
           id: targetId,
-          label: `${direction} x${multiplier}`,
+          label: `${direction} x${multiplier} (${durationSeconds}s)`,
           multiplier: multiplier,
           priceChange: direction === 'UP' ? 10 : -10,
           direction: direction
         };
       } else {
         // Find predefined target cell
-        const foundTarget = targetCells.find(cell => cell.id === targetId);
+        const foundTarget = targetCells.find((cell: TargetCell) => cell.id === targetId);
         if (!foundTarget) {
           throw new Error("Invalid target cell");
         }
@@ -155,10 +200,15 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
         multiplier = target.multiplier;
       }
 
-      // DEMO MODE: Skip API call for demo addresses
-      const isDemoMode = formattedAddress.startsWith('0xDEMO');
+      // DEMO MODE: Skip API call for demo mode
+      const { accountType, demoBalance, updateBalance: storeUpdateBalance } = get();
+      const isDemoMode = accountType === 'demo';
 
       if (isDemoMode) {
+        if (demoBalance < betAmount) {
+          throw new Error("Insufficient demo balance");
+        }
+
         set({ isPlacingBet: true, error: null });
 
         // Simulate bet placement without API
@@ -167,12 +217,22 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
         // Create active bet for tracking
         const activeBet: ActiveBet = {
           id: fakeBetId,
-          cellId: cellId || targetId,
+          mode: gameMode,
           amount: betAmount,
           multiplier: multiplier,
           direction: direction,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          status: 'active',
+          ...(gameMode === 'binomo' ? {
+            strikePrice: currentPrice,
+            endTime: Date.now() + (durationSeconds * 1000)
+          } : {
+            cellId: cellId || targetId
+          })
         };
+
+        // Update local demo balance immediately
+        storeUpdateBalance(betAmount, 'subtract');
 
         // Add to active bets
         addActiveBet(activeBet);
@@ -181,7 +241,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
 
         return {
           betId: fakeBetId,
-          remainingBalance: 1000 - betAmount, // Fake remaining balance
+          remainingBalance: demoBalance - betAmount,
           bet: activeBet
         };
       }
@@ -205,7 +265,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
             id: 9, // Always use 9 for dynamic grid bets
             priceChange: target.priceChange,
             direction: direction,
-            timeframe: 30,
+            timeframe: durationSeconds,
           },
         }),
       });
@@ -217,14 +277,21 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
 
       const data = await response.json();
 
-      // Create active bet for tracking (instant-resolution system)
+      // Create ActiveBet object
       const activeBet: ActiveBet = {
         id: data.betId,
-        cellId: cellId || targetId,
+        mode: gameMode,
         amount: betAmount,
         multiplier: multiplier,
         direction: direction,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        status: 'active',
+        ...(gameMode === 'binomo' ? {
+          strikePrice: currentPrice,
+          endTime: Date.now() + (durationSeconds * 1000)
+        } : {
+          cellId: cellId || targetId
+        })
       };
 
       // Add to active bets (multiple bets can be active simultaneously)
@@ -268,7 +335,7 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    * @param price - New price in USD
    */
   updatePrice: (price: number) => {
-    const { priceHistory, selectedAsset } = get();
+    const { priceHistory } = get();
     const now = Date.now();
 
     // Create new price point
@@ -292,6 +359,57 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
     set({
       currentPrice: price,
       priceHistory: trimmedHistory
+    });
+
+    // CHECK FOR EXPIRED BINOMO BETS
+    const store = get();
+    const { activeBets, resolveBet, updateBalance, address } = store;
+
+    if (!activeBets) return;
+
+    activeBets.forEach((bet: ActiveBet) => {
+      // ONLY PROCESS BINOMO MODE BETS HERE
+      if (bet.mode === 'binomo' && bet.endTime && bet.strikePrice !== undefined && now >= bet.endTime && bet.status === 'active') {
+        let won = false;
+        if (bet.direction === 'UP') {
+          won = price > bet.strikePrice;
+        } else {
+          won = price < bet.strikePrice;
+        }
+
+        const payout = won ? bet.amount * bet.multiplier : 0;
+
+        // Play sound effects
+        if (won) {
+          playWinSound();
+        } else {
+          playLoseSound();
+        }
+
+        // Mark as settled in UI immediately
+        resolveBet(bet.id, won, payout);
+
+        // Update balance
+        const { accountType } = store;
+        if (accountType === 'real' && address) {
+          if (won) {
+            fetch('/api/balance/win', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userAddress: address,
+                winAmount: payout,
+                betId: bet.id
+              })
+            }).then(() => {
+              if (store.fetchBalance) store.fetchBalance(address);
+            }).catch(console.error);
+          }
+        } else if (accountType === 'demo' && won) {
+          // Optimistic update for demo mode
+          updateBalance(payout, 'add');
+        }
+      }
     });
   },
 
@@ -329,12 +447,27 @@ export const createGameSlice: StateCreator<GameState> = (set, get) => ({
    * @param payout - The payout amount if won
    */
   resolveBet: (betId: string, won: boolean, payout: number) => {
-    const { activeBets } = get();
-    // Remove the resolved bet from active bets
-    set({ activeBets: activeBets.filter(b => b.id !== betId) });
+    const { activeBets, settledBets } = get();
+    const resolvedBet = activeBets.find((b: ActiveBet) => b.id === betId);
+
+    if (resolvedBet) {
+      const settledBet = { ...resolvedBet, status: 'settled' as const };
+      set({
+        activeBets: activeBets.filter((b: ActiveBet) => b.id !== betId),
+        settledBets: [settledBet, ...settledBets].slice(0, 50), // Keep last 50
+        lastResult: { won, amount: resolvedBet.amount, payout, timestamp: Date.now() }
+      });
+    }
 
     // Log resolution for debugging
     console.log(`Bet ${betId} resolved: ${won ? 'WON' : 'LOST'}, payout: ${payout}`);
+  },
+
+  /**
+   * Clear the last result notification
+   */
+  clearLastResult: () => {
+    set({ lastResult: null });
   },
 
   /**

@@ -1,105 +1,79 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
+import { ActiveBet } from '@/lib/store/gameSlice';
 import { Card } from '@/components/ui/Card';
 
 export const ActiveRound: React.FC = () => {
-  const activeRound = useStore((state) => state.activeRound);
+  const activeBets = useStore((state) => state.activeBets);
   const currentPrice = useStore((state) => state.currentPrice);
+  const [now, setNow] = useState(Date.now());
 
-  if (!activeRound) {
+  // Update timer every 100ms
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!activeBets || activeBets.length === 0) {
     return null;
   }
 
-  const { amount, target, startPrice, status } = activeRound;
-
-  // Calculate current price change
-  const priceChange = currentPrice - startPrice;
-  const priceChangePercent = ((priceChange / startPrice) * 100).toFixed(2);
-
-  // Calculate potential payout
-  const potentialPayout = (parseFloat(amount) * target.multiplier).toFixed(4);
-
-  // Determine if currently winning
-  const isWinning = target.direction === 'UP'
-    ? priceChange >= target.priceChange
-    : priceChange <= target.priceChange;
-
   return (
-    <Card glowEffect className="border border-neon-blue/50">
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold text-neon-blue tracking-wider font-mono">ACTIVE ROUND</h3>
-          <span className={`
-            px-3 py-1 rounded text-xs font-bold uppercase tracking-widest
-            ${status === 'active' ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' : ''}
-            ${status === 'settling' ? 'bg-yellow-900/50 text-yellow-400' : ''}
-            ${status === 'settled' ? 'bg-gray-900/50 text-gray-400' : ''}
-          `}>
-            {status}
-          </span>
-        </div>
+    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-2">Active Trades</h3>
 
-        {/* Bet Details */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/5 border border-white/10 rounded p-3">
-            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">Bet Amount</p>
-            <p className="text-white text-lg font-bold font-mono">{parseFloat(amount).toFixed(4)} BNB</p>
-          </div>
+      {activeBets.map((bet: ActiveBet) => {
+        const timeLeft = Math.max(0, Math.floor((bet.endTime - now) / 1000));
+        const isUp = bet.direction === 'UP';
+        const isWinning = isUp ? currentPrice > bet.strikePrice : currentPrice < bet.strikePrice;
+        const potentialPayout = (bet.amount * bet.multiplier).toFixed(4);
 
-          <div className="bg-white/5 border border-white/10 rounded p-3">
-            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">Target</p>
-            <p className="text-white text-lg font-bold font-mono">{target.label}</p>
-          </div>
-        </div>
+        return (
+          <Card key={bet.id} className={`border ${isWinning ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-rose-500/50 bg-rose-500/5'} transition-colors duration-300`}>
+            <div className="space-y-3">
+              {/* Header */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isUp ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                    {isUp ? 'UP' : 'DOWN'}
+                  </span>
+                  <span className="text-white font-mono text-sm font-bold">{bet.amount} BNB</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400 text-[10px] font-mono">EXPIRING IN</span>
+                  <span className={`text-white font-mono font-bold ${timeLeft < 10 ? 'text-rose-500 animate-pulse' : ''}`}>
+                    {timeLeft}s
+                  </span>
+                </div>
+              </div>
 
-        {/* Price Information */}
-        <div className="space-y-2 bg-black/20 p-3 rounded border border-white/5">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-xs font-mono">Start Price:</span>
-            <span className="text-white font-semibold font-mono">${startPrice.toLocaleString()}</span>
-          </div>
+              {/* Price Info */}
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                <div className="bg-black/20 p-2 rounded">
+                  <p className="text-gray-500 mb-0.5">STRIKE</p>
+                  <p className="text-white">${bet.strikePrice.toFixed(2)}</p>
+                </div>
+                <div className="bg-black/20 p-2 rounded">
+                  <p className="text-gray-500 mb-0.5">CURRENT</p>
+                  <p className={`font-bold ${isWinning ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    ${currentPrice.toFixed(2)}
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-xs font-mono">Current Price:</span>
-            <span className="text-white font-semibold font-mono">${currentPrice.toLocaleString()}</span>
-          </div>
-
-          <div className="flex justify-between items-center pt-2 border-t border-white/10">
-            <span className="text-gray-400 text-xs font-mono">Price Change:</span>
-            <span className={`font-bold font-mono ${priceChange >= 0 ? 'text-neon-green' : 'text-red-500'}`}>
-              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)} ({priceChangePercent}%)
-            </span>
-          </div>
-        </div>
-
-        {/* Status Indicator */}
-        {status === 'active' && (
-          <div className={`
-            border rounded p-3 text-center transition-all duration-300
-            ${isWinning
-              ? 'border-neon-green/50 bg-neon-green/10 shadow-[0_0_10px_rgba(0,255,157,0.2)]'
-              : 'border-red-500/50 bg-red-900/20'
-            }
-          `}>
-            <p className={`text-lg font-bold tracking-wide ${isWinning ? 'text-neon-green' : 'text-red-500'}`}>
-              {isWinning ? 'WINNING' : 'LOSING'}
-            </p>
-            <p className="text-gray-400 text-xs mt-1 font-mono">
-              Target: {target.direction === 'UP' ? '+' : ''}{target.priceChange}
-            </p>
-          </div>
-        )}
-
-        {/* Potential Payout */}
-        <div className="bg-neon-blue/10 border border-neon-blue/50 rounded p-3 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
-          <p className="text-neon-blue text-xs uppercase tracking-wider mb-1 font-mono">Potential Win</p>
-          <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} BNB</p>
-          <p className="text-neon-blue/70 text-xs mt-1 font-mono">x{target.multiplier} multiplier</p>
-        </div>
-      </div>
-    </Card>
+              {/* Payout Info */}
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Potential Payout</span>
+                <span className={`text-sm font-bold font-mono ${isWinning ? 'text-emerald-400' : 'text-gray-500'}`}>
+                  {potentialPayout} BNB
+                </span>
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
   );
 };

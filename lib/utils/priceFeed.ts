@@ -9,7 +9,7 @@ import { HermesClient } from '@pythnetwork/hermes-client';
 // Pyth Network Price Feed IDs
 export const PRICE_FEED_IDS = {
   BTC: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
-  BNB: '0x2f95862b045670cd222a03f39a0ad52828445103ecb15444ca973de9b15892fe',
+  BNB: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
 } as const;
 
 export type AssetType = keyof typeof PRICE_FEED_IDS;

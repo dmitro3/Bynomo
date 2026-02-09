@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { PublicKey } from '@solana/web3.js';
+import { ethers } from 'ethers';
 
 interface PayoutRequest {
   userAddress: string;
@@ -33,12 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Solana address
-    try {
-      new PublicKey(userAddress);
-    } catch (e) {
+    // Validate BNB (EVM) address
+    if (!ethers.isAddress(userAddress)) {
       return NextResponse.json(
-        { error: 'Invalid Solana address format' },
+        { error: 'Invalid BNB address format' },
         { status: 400 }
       );
     }

@@ -20,8 +20,8 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "Solnomo",
-  description: "Decentralized real-time BTC price prediction game on Solana Blockchain",
+  title: "Binomo",
+  description: "Real-time BTC/BNB price prediction platform on BNB Smart Chain",
   icons: {
     icon: "/overflowlogo.ico",
     shortcut: "/overflowlogo.ico",

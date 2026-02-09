@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
-import { LiveChart } from './LiveChart';
+import { LiveChart, SettlementNotification } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
 import { useAccount, useBalance } from 'wagmi';
@@ -15,12 +15,49 @@ export const GameBoard: React.FC = () => {
   });
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
+  const [selectedDuration, setSelectedDuration] = useState<number>(30);
   const [activeTab, setActiveTab] = useState<'bet' | 'wallet'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
-  // Instant resolution system - no activeRound needed
+  // Store connections
+  const gameMode = useStore((state) => state.gameMode);
+  const setGameMode = useStore((state) => state.setGameMode);
+  const setTimeframeSeconds = useStore((state) => state.setTimeframeSeconds);
   const selectedAsset = useStore((state) => state.selectedAsset);
   const updatePrice = useStore((state) => state.updatePrice);
+  const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
+  const isPlacingBet = useStore((state) => state.isPlacingBet);
+
+  // Sync selectedDuration with store's timeframeSeconds
+  useEffect(() => {
+    setTimeframeSeconds(selectedDuration);
+  }, [selectedDuration, setTimeframeSeconds]);
+
+  // Multiplier mapping based on duration
+  const getMultiplier = (duration: number) => {
+    switch (duration) {
+      case 5: return 1.1;
+      case 10: return 1.3;
+      case 15: return 1.5;
+      case 30: return 1.9;
+      default: return 1.9;
+    }
+  };
+
+  const handleBinomoBet = async (direction: 'UP' | 'DOWN') => {
+    if (!address || !isConnected || gameMode !== 'binomo') return;
+
+    try {
+      const multiplier = getMultiplier(selectedDuration);
+      await placeBetFromHouseBalance(
+        betAmount,
+        `${direction}-${multiplier}-${selectedDuration}`,
+        address
+      );
+    } catch (err) {
+      console.error("Failed to place Binomo bet:", err);
+    }
+  };
 
   // Start price feed and restart when asset changes
   useEffect(() => {
@@ -32,6 +69,7 @@ export const GameBoard: React.FC = () => {
       stopFeed();
     };
   }, [selectedAsset, updatePrice]);
+
 
   const formatAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '---';
@@ -51,6 +89,7 @@ export const GameBoard: React.FC = () => {
           betAmount={betAmount}
           setBetAmount={setBetAmount}
         />
+        <SettlementNotification />
       </div>
 
       {/* Instant resolution - no timer needed */}
@@ -81,6 +120,28 @@ export const GameBoard: React.FC = () => {
           >
             ✕
           </button>
+
+          {/* Game Mode Selector */}
+          <div className="flex gap-1 p-1 bg-black/60 border-b border-white/5">
+            <button
+              onClick={() => setGameMode('binomo')}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'binomo'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
+                : 'text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Classic
+            </button>
+            <button
+              onClick={() => setGameMode('box')}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'box'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
+                : 'text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Box Mode
+            </button>
+          </div>
 
           {/* Tab Navigation - Pill Style */}
           <div className="flex gap-1 p-2 bg-black/40">
@@ -132,10 +193,37 @@ export const GameBoard: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Duration Selector */}
+                <div>
+                  <label className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2 block">
+                    Expiration Time
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[5, 10, 15, 30].map(duration => (
+                      <button
+                        key={duration}
+                        onClick={() => setSelectedDuration(duration)}
+                        className={`
+                          py-2 rounded-lg font-bold text-xs transition-all duration-200 border
+                          ${selectedDuration === duration
+                            ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                            : 'bg-black/40 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/10'
+                          }
+                        `}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span>{duration}s</span>
+                          <span className="text-[8px] opacity-70">x{getMultiplier(duration)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Custom Input */}
                 <div>
                   <label className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2 block">
-                    Custom Amount
+                    Investment Amount
                   </label>
                   <div className="flex items-center bg-black/40 rounded-xl p-1 border border-white/5">
                     <input
@@ -150,6 +238,47 @@ export const GameBoard: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Action Buttons / Instructions */}
+                {gameMode === 'binomo' ? (
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button
+                      onClick={() => handleBinomoBet('UP')}
+                      disabled={!isConnected || isPlacingBet}
+                      className="group relative flex flex-col items-center justify-center gap-1 py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl transition-all duration-200 active:scale-95 disabled:opacity-50"
+                    >
+                      <div className="text-emerald-500 text-2xl font-bold group-hover:scale-110 transition-transform">▲</div>
+                      <span className="text-emerald-400 text-xs font-black tracking-tighter uppercase">Higher</span>
+                      <span className="text-[8px] text-emerald-500/60 font-mono">Profit +{((getMultiplier(selectedDuration) - 1) * 100).toFixed(0)}%</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleBinomoBet('DOWN')}
+                      disabled={!isConnected || isPlacingBet}
+                      className="group relative flex flex-col items-center justify-center gap-1 py-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-2xl transition-all duration-200 active:scale-95 disabled:opacity-50"
+                    >
+                      <div className="text-rose-500 text-2xl font-bold group-hover:scale-110 transition-transform">▼</div>
+                      <span className="text-rose-400 text-xs font-black tracking-tighter uppercase">Lower</span>
+                      <span className="text-[8px] text-rose-500/60 font-mono">Profit +{((getMultiplier(selectedDuration) - 1) * 100).toFixed(0)}%</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="pt-2">
+                    <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 text-center">
+                      <p className="text-purple-300 text-xs font-bold uppercase tracking-widest mb-1">Box Mode Active</p>
+                      <p className="text-gray-400 text-[10px] leading-relaxed">
+                        Click any cell on the grid chart to place your bet. Each cell has a different multiplier based on its distance from the current price.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {!isConnected && (
+                  <p className="text-gray-500 text-[10px] text-center font-mono">
+                    Connect wallet to start trading
+                  </p>
+                )}
+
               </div>
             ) : (
               <div className="space-y-4">

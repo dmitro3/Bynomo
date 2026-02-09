@@ -15,6 +15,8 @@ export default function Home() {
   const setAddress = useStore((state) => state.setAddress);
   const setBalance = useStore((state) => state.setBalance);
   const setIsConnected = useStore((state) => state.setIsConnected);
+  const toggleAccountType = useStore((state) => state.toggleAccountType);
+  const accountType = useStore((state) => state.accountType);
 
   const handleOverflowClick = () => {
     // Clear existing timer
@@ -31,6 +33,7 @@ export default function Home() {
       setAddress('0xDEMO_1234567890');
       setBalance(50); // 50 BNB is reasonable
       setIsConnected(true);
+      if (accountType === 'real') toggleAccountType();
       setDemoActivated(true);
       setClickCount(0);
 
