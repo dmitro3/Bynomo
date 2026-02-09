@@ -5,8 +5,12 @@ import { useStore } from '@/lib/store';
 import { LiveChart, SettlementNotification } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
-import { useAccount, useBalance } from 'wagmi';
-import { formatUnits } from 'ethers';
+import { useAccount, useBalance, useSendTransaction } from 'wagmi';
+import { formatUnits, parseEther } from 'ethers';
+import { getBNBConfig } from '@/lib/bnb/config';
+import { getAddress } from 'viem';
+import { useToast } from '@/lib/hooks/useToast';
+
 
 export const GameBoard: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -16,7 +20,7 @@ export const GameBoard: React.FC = () => {
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
-  const [activeTab, setActiveTab] = useState<'bet' | 'wallet' | 'x402'>('bet');
+  const [activeTab, setActiveTab] = useState<'bet' | 'wallet' | 'blitz'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   // Store connections
@@ -39,6 +43,49 @@ export const GameBoard: React.FC = () => {
 
   const [blitzCountdown, setBlitzCountdown] = useState<string>('');
   const [blitzTimeRemaining, setBlitzTimeRemaining] = useState<string>('');
+  const [isActivatingBlitz, setIsActivatingBlitz] = useState(false);
+
+  const toast = useToast();
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const handleEnterBlitz = async () => {
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!isBlitzActive) {
+      toast.error("Blitz Round is not currently active");
+      return;
+    }
+
+    try {
+      setIsActivatingBlitz(true);
+      const config = getBNBConfig();
+
+      if (!config.treasuryAddress) {
+        throw new Error("Treasury not configured");
+      }
+
+      toast.info("Confirming 0.01 BNB Blitz Entry...");
+
+      const tx = await sendTransactionAsync({
+        to: getAddress(config.treasuryAddress),
+        value: parseEther("0.01"),
+      });
+
+      console.log("Blitz entry payment tx:", tx);
+      toast.success("Payment successful! Blitz Mode enabled.");
+
+      // Update store state
+      enableBlitzAccess();
+    } catch (err: any) {
+      console.error("Blitz entry failed:", err);
+      toast.error(err.message || "Failed to enter Blitz Round");
+    } finally {
+      setIsActivatingBlitz(false);
+    }
+  };
 
   // Update Blitz Timer every second
   useEffect(() => {
@@ -225,13 +272,13 @@ export const GameBoard: React.FC = () => {
               Wallet
             </button>
             <button
-              onClick={() => setActiveTab('x402')}
-              className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'x402'
-                ? 'bg-gradient-to-r from-[#00f5ff] to-cyan-500 text-black shadow-lg shadow-cyan-500/30'
-                : 'text-[#00f5ff]/70 hover:text-[#00f5ff] hover:bg-[#00f5ff]/5'
+              onClick={() => setActiveTab('blitz')}
+              className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'blitz'
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
+                : 'text-orange-400/70 hover:text-orange-400 hover:bg-orange-400/5'
                 }`}
             >
-              x402
+              Blitz
             </button>
           </div>
 
@@ -425,54 +472,74 @@ export const GameBoard: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {/* Blitz Round Section */}
-                <div className={`rounded-lg p-3 relative overflow-hidden border ${isBlitzActive ? 'bg-gradient-to-br from-orange-500/20 via-red-500/10 to-yellow-500/10 border-orange-500/40' : 'bg-black/30 border-gray-700/50'}`}>
-                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-orange-500/30 text-orange-400 text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">🔥 Blitz</div>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg border ${isBlitzActive ? 'bg-orange-500/20 border-orange-500/30' : 'bg-gray-800/50 border-gray-700/30'}`}>
-                      <span className="text-xl">{isBlitzActive ? '🔥' : '⏰'}</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className={`text-[10px] uppercase tracking-wider font-mono ${isBlitzActive ? 'text-orange-400' : 'text-gray-500'}`}>{isBlitzActive ? 'Blitz Active!' : 'Next Blitz In'}</p>
-                      <p className={`text-lg font-bold font-mono ${isBlitzActive ? 'text-orange-300' : 'text-gray-400'}`}>{isBlitzActive ? blitzTimeRemaining : blitzCountdown}</p>
-                    </div>
+                <div className={`rounded-xl p-4 relative overflow-hidden border-2 transition-all duration-500 ${isBlitzActive ? 'bg-gradient-to-br from-orange-500/20 via-red-500/10 to-yellow-500/10 border-orange-500/40 shadow-[0_0_20px_rgba(249,115,22,0.1)]' : 'bg-black/40 border-gray-800/50'}`}>
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500/20 border-b border-l border-orange-500/30 text-orange-400 text-[9px] font-black uppercase tracking-widest rounded-bl-xl">
+                    Live System
                   </div>
-                  {isBlitzActive && (
-                    <button
-                      onClick={() => enableBlitzAccess()}
-                      disabled={!isConnected || hasBlitzAccess}
-                      className={`w-full mt-3 py-2.5 rounded-lg text-xs font-bold transition-all ${hasBlitzAccess ? 'bg-green-500/20 border border-green-500/40 text-green-400 cursor-default' : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:shadow-orange-500/30'}`}
-                    >
-                      {hasBlitzAccess ? <span className="flex items-center justify-center gap-2"><span>✓</span> 2x Multipliers Active</span> : !isConnected ? 'Connect Wallet' : `🔥 Enter Blitz (0.05 BNB)`}
-                    </button>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-px bg-gray-800" />
-                  <span className="text-gray-600 text-[9px] uppercase">or</span>
-                  <div className="flex-1 h-px bg-gray-800" />
-                </div>
-
-                {/* AI Oracle Section (Simulated) */}
-                <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">AI</div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#00f5ff]/10 border border-[#00f5ff]/20">
-                      <svg className="w-5 h-5 text-[#00f5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border shadow-inner transition-transform duration-500 ${isBlitzActive ? 'bg-orange-500/20 border-orange-500/50 animate-pulse scale-110' : 'bg-gray-900 border-gray-800'}`}>
+                      {isBlitzActive ? '🔥' : '⏰'}
                     </div>
                     <div>
-                      <p className="text-gray-400 text-[10px] uppercase tracking-wider font-mono">AI Oracle</p>
-                      <p className="text-[#00f5ff] text-lg font-bold font-mono">0.01 BNB</p>
+                      <p className={`text-[10px] uppercase font-black tracking-[0.2em] mb-1 ${isBlitzActive ? 'text-orange-400' : 'text-gray-500'}`}>
+                        {isBlitzActive ? 'Blitz Round Active' : 'Next Blitz Sequence'}
+                      </p>
+                      <p className={`text-2xl font-black font-mono tracking-tighter ${isBlitzActive ? 'text-white' : 'text-gray-400'}`}>
+                        {isBlitzActive ? blitzTimeRemaining : blitzCountdown}
+                      </p>
                     </div>
                   </div>
-                  <button
-                    disabled={!isConnected}
-                    className="w-full mt-3 py-2.5 bg-gradient-to-r from-[#00f5ff] to-cyan-500 text-black rounded-lg text-xs font-bold hover:shadow-lg hover:shadow-cyan-500/30 transition-all disabled:opacity-50"
-                  >
-                    Unlock AI Insight
-                  </button>
+
+                  <div className="space-y-3">
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        <span>Current Multiplier Boost</span>
+                        <span className={isBlitzActive ? 'text-orange-400' : 'text-gray-400'}>{isBlitzActive ? '2.0x' : '1.0x'}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-1000 ${isBlitzActive ? 'bg-gradient-to-r from-orange-500 to-red-500 w-full' : 'bg-gray-700 w-0'}`}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleEnterBlitz}
+                      disabled={!isConnected || hasBlitzAccess || isActivatingBlitz}
+                      className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 transform active:scale-95 ${hasBlitzAccess
+                        ? 'bg-emerald-500/20 border-2 border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)] cursor-default'
+                        : !isConnected
+                          ? 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 bg-[length:200%_auto] hover:bg-right text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 border-t border-white/20'
+                        }`}
+                    >
+                      {isActivatingBlitz ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : hasBlitzAccess ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="text-base">✓</span> System Enabled
+                        </span>
+                      ) : !isConnected ? (
+                        'Connect Wallet'
+                      ) : (
+                        `Enter Blitz Round (0.01 BNB)`
+                      )}
+                    </button>
+
+
+                    <p className={`text-[9px] text-center font-medium leading-relaxed ${isBlitzActive ? 'text-orange-500/60' : 'text-gray-600'}`}>
+                      {isBlitzActive
+                        ? 'Activate now to receive 2x multipliers on all boosted grid cells.'
+                        : 'Blitz rounds occur every 3 minutes. Prepare your balance.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

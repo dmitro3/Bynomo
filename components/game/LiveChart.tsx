@@ -387,11 +387,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         const timeBonus = Math.max(0, (colX - scales.tipX) / 800) * 0.25;
         let calculatedMultiplier = Math.min(baseMultiplier + timeBonus, 10.0);
 
-        // BLITZ MODE BOOST (x2 Multiplier)
+        // BLITZ MODE BOOST (x2 Multiplier) - Reduced density as requested
         const colIndex = Math.floor(colTimestamp / gridInterval);
-        const isHighStake = baseMultiplier > 1.8;
-        const isLuckyDiagonal = (priceLevelIndex + colIndex) % 3 === 0;
+        const isHighStake = baseMultiplier > 2.2; // Only very high risk cells
+        const isLuckyDiagonal = (priceLevelIndex + colIndex) % 5 === 0; // Less frequent (1 in 5 instead of 1 in 3)
         const isBlitzBoosted = isBlitzActive && hasBlitzAccess && (isHighStake || isLuckyDiagonal);
+
 
 
         if (isBlitzBoosted) {
