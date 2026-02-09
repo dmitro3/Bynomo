@@ -173,16 +173,16 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
 
   // Asset display configuration
-  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number }> = {
-    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2 },
-    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2 },
-    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2 },
-    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4 },
-    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4 },
-    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5 },
-    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4 },
-    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2 },
-    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2 }
+  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string }> = {
+    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png' },
+    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png' },
+    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png' },
+    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png' },
+    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png' },
+    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png' },
+    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png' },
+    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png' },
+    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' }
   };
 
 
@@ -933,8 +933,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
             onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
             className="flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-purple-500/50 transition-all duration-300 group"
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${isAssetDropdownOpen ? 'bg-purple-500 text-white' : 'bg-white/5 text-purple-400 group-hover:bg-purple-500/20'}`}>
-              {selectedAsset[0]}
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${isAssetDropdownOpen ? 'bg-purple-500' : 'bg-white/5'}`}>
+              <img src={currentAssetConfig.logo} alt={selectedAsset} className="w-6 h-6 object-contain" />
             </div>
             <div className="text-left">
               <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none mb-1">Asset</p>
@@ -984,8 +984,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                           }
                         `}
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
-                          {asset[0]}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500' : 'bg-white/5'}`}>
+                          <img src={assetConfig[asset].logo} alt={asset} className="w-7 h-7 object-contain" />
                         </div>
                         <div className="flex-1 text-left">
                           <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
