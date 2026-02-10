@@ -60,9 +60,6 @@ export default function Home() {
             >
               BINOMO
             </span>
-            <span className="text-yellow-400 text-[10px] font-mono font-normal border border-yellow-400/50 px-2 py-0.5 rounded bg-yellow-400/10">
-              TESTNET
-            </span>
             {demoActivated && (
               <span className="text-green-400 text-[10px] font-mono font-normal border border-green-400/50 px-2 py-0.5 rounded bg-green-400/10 animate-pulse">
                 DEMO MODE

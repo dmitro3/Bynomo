@@ -147,23 +147,23 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png' },
     BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' },
     // Metals
-    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold-logo.png' },
-    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver-logo.png' },
+    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.png' },
+    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.png' },
     // FX
-    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur-logo.png' },
-    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp-logo.png' },
-    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy-logo.png' },
-    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud-logo.png' },
-    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad-logo.png' },
+    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png' },
+    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png' },
+    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png' },
+    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png' },
+    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png' },
     // Stocks
-    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/aapl-logo.png' },
-    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/googl-logo.png' },
-    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amzn-logo.png' },
-    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/msft-logo.png' },
-    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvda-logo.png' },
-    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tsla-logo.png' },
-    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta-logo.png' },
-    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/nflx-logo.png' },
+    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png' },
+    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png' },
+    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png' },
+    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png' },
+    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png' },
+    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png' },
+    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png' },
+    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png' },
   };
 
 

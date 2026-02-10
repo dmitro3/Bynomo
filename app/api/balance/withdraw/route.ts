@@ -21,12 +21,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate BNB address
-    if (!ethers.isAddress(userAddress)) {
-      return NextResponse.json(
-        { error: 'Invalid BNB address format' },
-        { status: 400 }
-      );
+    // Validate address (support both BNB and Solana)
+    let isBNB = ethers.isAddress(userAddress);
+    let isSOL = false;
+
+    if (!isBNB) {
+      try {
+        const { PublicKey } = await import('@solana/web3.js');
+        const pk = new PublicKey(userAddress);
+        isSOL = true;
+      } catch (e) {
+        return NextResponse.json(
+          { error: 'Invalid wallet address format (BNB or Solana required)' },
+          { status: 400 }
+        );
+      }
     }
 
     if (amount <= 0) {
@@ -51,12 +60,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient house balance' }, { status: 400 });
     }
 
-    // 2. Perform BNB transfer from treasury
+    // 2. Perform transfer from treasury based on network
     let signature: string;
     try {
-      signature = await transferBNBFromTreasury(userAddress, amount);
+      if (isBNB) {
+        signature = await transferBNBFromTreasury(userAddress, amount);
+      } else {
+        const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
+        signature = await transferSOLFromTreasury(userAddress, amount);
+      }
     } catch (e: any) {
-      console.error('BNB transfer failed:', e);
+      console.error('Transfer failed:', e);
       return NextResponse.json({ error: `Withdrawal failed: ${e.message}` }, { status: 500 });
     }
 

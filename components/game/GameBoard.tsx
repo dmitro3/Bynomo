@@ -10,12 +10,35 @@ import { formatUnits, parseEther } from 'ethers';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
 import { useToast } from '@/lib/hooks/useToast';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 
 export const GameBoard: React.FC = () => {
-  const { address, isConnected } = useAccount();
-  const { data: balanceData, isLoading: isLoadingBalance } = useBalance({
-    address: address,
+  const {
+    address,
+    isConnected,
+    network,
+    balance: storeBalance,
+    gameMode,
+    setGameMode,
+    setTimeframeSeconds,
+    selectedAsset,
+    updatePrice,
+    placeBetFromHouseBalance,
+    isPlacingBet,
+    isBlitzActive,
+    blitzEndTime,
+    nextBlitzTime,
+    hasBlitzAccess,
+    updateBlitzTimer,
+    enableBlitzAccess,
+    error,
+    clearError
+  } = useStore();
+
+  // BNB specific for balance refetching if on BNB
+  const { data: bnbBalanceData, refetch: refetchBNB } = useBalance({
+    address: network === 'BNB' ? address as `0x${string}` : undefined,
   });
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
@@ -23,30 +46,19 @@ export const GameBoard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bet' | 'wallet' | 'blitz'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
-  // Store connections
-  const gameMode = useStore((state) => state.gameMode);
-  const setGameMode = useStore((state) => state.setGameMode);
-  const setTimeframeSeconds = useStore((state) => state.setTimeframeSeconds);
-  const selectedAsset = useStore((state) => state.selectedAsset);
-  const updatePrice = useStore((state) => state.updatePrice);
-  const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
-  const isPlacingBet = useStore((state) => state.isPlacingBet);
-  const isBlitzActive = useStore((state) => state.isBlitzActive);
-  const blitzEndTime = useStore((state) => state.blitzEndTime);
-  const nextBlitzTime = useStore((state) => state.nextBlitzTime);
-  const hasBlitzAccess = useStore((state) => state.hasBlitzAccess);
-  const updateBlitzTimer = useStore((state) => state.updateBlitzTimer);
-  const enableBlitzAccess = useStore((state) => state.enableBlitzAccess);
-  const error = useStore((state) => state.error);
-  const clearError = useStore((state) => state.clearError);
-
-
   const [blitzCountdown, setBlitzCountdown] = useState<string>('');
   const [blitzTimeRemaining, setBlitzTimeRemaining] = useState<string>('');
   const [isActivatingBlitz, setIsActivatingBlitz] = useState(false);
 
+  // Solana hooks
+  const { publicKey: solanaPublicKey, sendTransaction } = useWallet();
+
   const toast = useToast();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync: sendBNBTransaction } = useSendTransaction();
+
+  // Unified balance and currency
+  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
+  const blitzEntryFee = 0.01;
 
   const handleEnterBlitz = async () => {
     if (!isConnected || !address) {
@@ -61,34 +73,41 @@ export const GameBoard: React.FC = () => {
 
     try {
       setIsActivatingBlitz(true);
-      const config = getBNBConfig();
 
-      if (!config.treasuryAddress) {
-        throw new Error("Treasury not configured");
+      if (network === 'SOL') {
+        const { getSolanaConnection, buildDepositTransaction } = await import('@/lib/solana/client');
+        const connection = getSolanaConnection();
+        const transaction = await buildDepositTransaction(blitzEntryFee, address);
+
+        toast.info(`Confirming ${blitzEntryFee} SOL Blitz Entry...`);
+        const sig = await sendTransaction(transaction, connection);
+        console.log("Solana Blitz payment sig:", sig);
+      } else {
+        const config = getBNBConfig();
+        if (!config.treasuryAddress) {
+          throw new Error("Treasury not configured");
+        }
+
+        toast.info(`Confirming ${blitzEntryFee} BNB Blitz Entry...`);
+        const tx = await sendBNBTransaction({
+          to: getAddress(config.treasuryAddress),
+          value: parseEther(blitzEntryFee.toString()),
+        });
+        console.log("BNB Blitz payment tx:", tx);
       }
 
-      toast.info("Confirming 0.01 BNB Blitz Entry...");
-
-      const tx = await sendTransactionAsync({
-        to: getAddress(config.treasuryAddress),
-        value: parseEther("0.01"),
-      });
-
-      console.log("Blitz entry payment tx:", tx);
       toast.success("Payment successful! Blitz Mode enabled.");
-
       // Update store state
       enableBlitzAccess();
     } catch (err: any) {
       console.error("Blitz entry failed:", err);
       const errorMessage = err.message || "";
-      if (errorMessage.includes('rejected') || errorMessage.includes('denied')) {
+      if (errorMessage.includes('rejected') || errorMessage.includes('denied') || errorMessage.includes('User rejected')) {
         toast.error("User rejected");
       } else {
         toast.error(errorMessage || "Failed to enter Blitz Round");
       }
     } finally {
-
       setIsActivatingBlitz(false);
     }
   };
@@ -148,14 +167,37 @@ export const GameBoard: React.FC = () => {
 
   // Redundant price feed removed - now handled globally in Providers.tsx
 
+  const bnbBalanceValue = bnbBalanceData ? parseFloat(formatUnits(bnbBalanceData.value, bnbBalanceData.decimals)) : 0;
 
+  // Solana wallet balance state
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  useEffect(() => {
+    if (network === 'SOL' && address) {
+      const fetchBal = async () => {
+        setIsLoadingBalance(true);
+        try {
+          const { getSOLBalance } = await import('@/lib/solana/client');
+          const bal = await getSOLBalance(address);
+          setWalletBalance(bal);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoadingBalance(false);
+        }
+      };
+      fetchBal();
+    }
+  }, [network, address]);
+
+  const activeWalletBalance = network === 'SOL' ? walletBalance : bnbBalanceValue;
 
   const formatAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '---';
     return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
   };
 
-  const bnbBalanceValue = balanceData ? parseFloat(formatUnits(balanceData.value, balanceData.decimals)) : 0;
   const formatBalance = (bal: number) => {
     return isNaN(bal) ? '0.0000' : bal.toFixed(4);
   };
@@ -351,7 +393,7 @@ export const GameBoard: React.FC = () => {
                       placeholder="0.00"
                     />
                     <span className="px-2 py-1.5 bg-purple-500/20 rounded-lg text-purple-400 text-[10px] font-bold shrink-0">
-                      BNB
+                      {currencySymbol}
                     </span>
                   </div>
                 </div>
@@ -403,7 +445,7 @@ export const GameBoard: React.FC = () => {
                         <p className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Error</p>
                         <p className="text-red-300 text-[11px] leading-tight mt-0.5">
                           {error.includes('User not found') || error.includes('balance')
-                            ? 'Account not found or no balance. Please deposit BNB to your house balance to start trading.'
+                            ? `Account not found or no balance. Please deposit ${currencySymbol} to your house balance to start trading.`
                             : error}
                         </p>
                         {(error.includes('User not found') || error.includes('balance')) && (
@@ -447,9 +489,9 @@ export const GameBoard: React.FC = () => {
                       <p className="text-gray-400 text-[10px] uppercase tracking-widest mb-1">Wallet Balance</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-white">
-                          {isLoadingBalance ? 'Loading...' : formatBalance(bnbBalanceValue)}
+                          {isLoadingBalance ? 'Loading...' : formatBalance(activeWalletBalance)}
                         </span>
-                        <span className="text-purple-400 text-sm font-medium">BNB</span>
+                        <span className="text-purple-400 text-sm font-medium">{currencySymbol}</span>
                       </div>
                     </div>
 
@@ -527,7 +569,7 @@ export const GameBoard: React.FC = () => {
                       ) : !isConnected ? (
                         'Connect Wallet'
                       ) : (
-                        `Enter Blitz Round (0.01 BNB)`
+                        `Enter Blitz Round (${blitzEntryFee} ${currencySymbol})`
                       )}
                     </button>
 

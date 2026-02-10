@@ -33,10 +33,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate BNB address
-    if (!ethers.isAddress(userAddress)) {
+    // Validate address (support both BNB and Solana)
+    let isValid = false;
+
+    // Check if it's a valid EVM address
+    if (ethers.isAddress(userAddress)) {
+      isValid = true;
+    } else {
+      // Check if it's a valid Solana address
+      try {
+        const { PublicKey } = await import('@solana/web3.js');
+        const pk = new PublicKey(userAddress);
+        isValid = true;
+      } catch (e) {
+        isValid = false;
+      }
+    }
+
+    if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid BNB address format' },
+        { error: 'Invalid wallet address format (BNB or Solana required)' },
         { status: 400 }
       );
     }

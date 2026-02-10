@@ -16,6 +16,7 @@ export function useWalletConnection() {
     // Get store actions
     const setAddress = useOverflowStore(state => state.setAddress);
     const setIsConnected = useOverflowStore(state => state.setIsConnected);
+    const setNetwork = useOverflowStore(state => state.setNetwork);
     const fetchBalance = useOverflowStore(state => state.fetchBalance);
 
     // Sync wallet state with store
@@ -23,6 +24,7 @@ export function useWalletConnection() {
         if (address && isConnected) {
             setAddress(address);
             setIsConnected(true);
+            setNetwork('BNB');
 
             // Fetch house balance when wallet connects
             fetchBalance(address).catch(console.error);

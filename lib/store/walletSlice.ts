@@ -14,6 +14,7 @@ export interface WalletState {
   balance: string;
   isConnected: boolean;
   isConnecting: boolean;
+  network: 'BNB' | 'SOL' | null;
   error: string | null;
 
   // Actions
@@ -22,9 +23,10 @@ export interface WalletState {
   refreshBalance: () => Promise<void>;
   clearError: () => void;
 
-  // Setters for BNB wallet integration
+  // Setters for wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
+  setNetwork: (network: 'BNB' | 'SOL' | null) => void;
 }
 
 /**
@@ -37,11 +39,12 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   balance: "0.0",
   isConnected: false,
   isConnecting: false,
+  network: null,
   error: null,
 
   /**
    * Connect wallet
-   * Note: Actual connection is handled by BNB Wallet integration
+   * Note: Actual connection is handled by BNB or Solana Wallet integration
    */
   connect: async () => {
     console.log('Connect called - handled by adapter');
@@ -49,7 +52,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
 
   /**
    * Disconnect wallet
-   * Note: Actual disconnection is handled by BNB Wallet integration
+   * Note: Actual disconnection is handled by BNB or Solana Wallet integration
    */
   disconnect: () => {
     console.log('Disconnect called - handled by adapter');
@@ -60,23 +63,24 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
       balance: "0.0",
       isConnected: false,
       isConnecting: false,
+      network: null,
       error: null
     });
   },
 
   /**
-   * Refresh BNB token balance for connected wallet
+   * Refresh token balance for connected wallet
    */
   refreshBalance: async () => {
-    const { address, isConnected } = get();
+    const { address, isConnected, network } = get();
 
-    if (!isConnected || !address) {
+    if (!isConnected || !address || !network) {
       return;
     }
 
     try {
-      // Balance is fetched by components using getBNBBalance from lib/bnb/client.ts
-      console.log('Balance refresh - handled by components');
+      // Balance is fetched by components or store hooks
+      console.log(`Balance refresh for ${network} - handled by components`);
     } catch (error) {
       console.error("Error refreshing balance:", error);
       set({
@@ -93,16 +97,23 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Set address (used by BNB wallet integration)
+   * Set address (used by wallet integration)
    */
   setAddress: (address: string | null) => {
     set({ address });
   },
 
   /**
-   * Set connected status (used by BNB wallet integration)
+   * Set connected status (used by wallet integration)
    */
   setIsConnected: (connected: boolean) => {
     set({ isConnected: connected });
+  },
+
+  /**
+   * Set active network (BNB or SOL)
+   */
+  setNetwork: (network: 'BNB' | 'SOL' | null) => {
+    set({ network });
   }
 });

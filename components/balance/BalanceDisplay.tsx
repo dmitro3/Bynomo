@@ -27,6 +27,7 @@ export const BalanceDisplay: React.FC = () => {
   const houseBalance = useOverflowStore(state => state.houseBalance);
   const demoBalance = useOverflowStore(state => state.demoBalance);
   const accountType = useOverflowStore(state => state.accountType);
+  const network = useOverflowStore(state => state.network);
   const toggleAccountType = useOverflowStore(state => state.toggleAccountType);
   const isLoading = useOverflowStore(state => state.isLoading);
   const address = useOverflowStore(state => state.address);
@@ -173,13 +174,20 @@ export const BalanceDisplay: React.FC = () => {
                 <span className="text-gray-500 text-xs font-mono">Loading...</span>
               </div>
             ) : (
-              <div className="flex items-baseline gap-1.5">
-                <p className={`text-xl font-bold font-mono ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'
-                  }`}>
-                  {formattedBalance}
-                </p>
-                <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'
-                  }`}>BNB</span>
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <img
+                    src={network === 'SOL' ? '/logos/solana-sol-logo.png' : '/logos/bnb-bnb-logo.png'}
+                    alt={network || 'Network'}
+                    className="w-4 h-4 object-contain"
+                  />
+                  <p className={`text-xl font-bold font-mono ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'}`}>
+                    {formattedBalance}
+                  </p>
+                </div>
+                <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'}`}>
+                  {network === 'SOL' ? 'SOL' : 'BNB'}
+                </span>
               </div>
             )}
           </div>

@@ -7,6 +7,7 @@ import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 
 interface DepositModalProps {
@@ -31,11 +32,35 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     address: address,
   });
 
-  const { depositFunds } = useOverflowStore();
+  const { depositFunds, network } = useOverflowStore();
   const toast = useToast();
   const { sendTransactionAsync } = useSendTransaction();
 
+  // Solana hooks
+  const { publicKey: solanaPublicKey, sendTransaction } = useWallet();
+
   const bnbBalance = balanceData ? parseFloat(ethers.formatUnits(balanceData.value, balanceData.decimals)) : 0;
+
+  // Solana Balance (State needed)
+  const [solBalance, setSolBalance] = useState(0);
+
+  useEffect(() => {
+    if (network === 'SOL' && solanaPublicKey) {
+      const fetchSolBalance = async () => {
+        try {
+          const { getSOLBalance } = await import('@/lib/solana/client');
+          const bal = await getSOLBalance(solanaPublicKey.toBase58());
+          setSolBalance(bal);
+        } catch (e) {
+          console.error('Failed to fetch SOL balance', e);
+        }
+      };
+      fetchSolBalance();
+    }
+  }, [network, solanaPublicKey]);
+
+  const activeWalletBalance = network === 'SOL' ? solBalance : bnbBalance;
+  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
 
   // Quick select amounts
   const quickAmounts = [0.1, 0.5, 1, 5];
@@ -64,8 +89,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return 'Amount must be greater than zero';
     }
 
-    if (numValue > bnbBalance) {
-      return 'Insufficient BNB balance';
+    if (numValue > activeWalletBalance) {
+      return `Insufficient ${currencySymbol} balance`;
     }
 
     return null;
@@ -85,9 +110,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    if (bnbBalance > 0) {
+    if (activeWalletBalance > 0) {
       // Leave a small amount for gas
-      const maxAmount = Math.max(0, bnbBalance - 0.005);
+      const gasBuffer = network === 'SOL' ? 0.001 : 0.005;
+      const maxAmount = Math.max(0, activeWalletBalance - gasBuffer);
       setAmount(maxAmount.toFixed(4));
       setError(null);
     }
@@ -100,8 +126,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return;
     }
 
-    if (!address || !isConnected) {
-      setError('Please connect your wallet');
+    if (network === 'BNB' && (!address || !isConnected)) {
+      setError('Please connect your BNB wallet');
+      return;
+    }
+
+    if (network === 'SOL' && !solanaPublicKey) {
+      setError('Please connect your Solana wallet');
       return;
     }
 
@@ -110,34 +141,45 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       setError(null);
 
       const depositAmount = parseFloat(amount);
-      const config = getBNBConfig();
+      let tx: string;
 
-      if (!config.treasuryAddress) {
-        throw new Error('Treasury address not configured');
+      if (network === 'SOL') {
+        const { buildDepositTransaction, getSolanaConnection } = await import('@/lib/solana/client');
+        const connection = getSolanaConnection();
+        const transaction = await buildDepositTransaction(depositAmount, solanaPublicKey!.toBase58());
+
+        toast.info('Please confirm the transaction in your Solana wallet...');
+        tx = await sendTransaction(transaction, connection);
+      } else {
+        const config = getBNBConfig();
+        if (!config.treasuryAddress) {
+          throw new Error('Treasury address not configured');
+        }
+
+        toast.info('Please confirm the transaction in your wallet...');
+        tx = await sendTransactionAsync({
+          to: getAddress(config.treasuryAddress),
+          value: ethers.parseEther(depositAmount.toString()),
+        });
       }
-
-      toast.info('Please confirm the transaction in your wallet...');
-
-      // Build transaction using Wagmi
-      const tx = await sendTransactionAsync({
-        to: getAddress(config.treasuryAddress),
-        value: ethers.parseEther(depositAmount.toString()),
-      });
-
 
       toast.info('Transaction submitted. Waiting for confirmation...');
 
-      // Note: In real app, we might wait for tx confirmation here
-      // but sendTransactionAsync returns the hash after submission
-
       // Update balance in database
-      await depositFunds(address, depositAmount, tx);
+      const userAddr = network === 'SOL' ? solanaPublicKey!.toBase58() : address!;
+      await depositFunds(userAddr, depositAmount, tx);
 
-      // Refetch wallet balance
-      refetch?.();
+      // Refetch balance
+      if (network === 'BNB') {
+        refetch?.();
+      } else {
+        const { getSOLBalance } = await import('@/lib/solana/client');
+        const bal = await getSOLBalance(solanaPublicKey!.toBase58());
+        setSolBalance(bal);
+      }
 
       toast.success(
-        `Successfully deposited ${depositAmount.toFixed(4)} BNB! Balance updated.`
+        `Successfully deposited ${depositAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
       );
 
       if (onSuccess) {
@@ -150,8 +192,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       let errorMessage = 'Failed to deposit funds';
       if (err instanceof Error) {
         const msg = err.message || "";
-        if (msg.includes('rejected') || msg.includes('denied')) {
-          errorMessage = 'User rejected';
+        if (msg.includes('rejected') || msg.includes('denied') || msg.includes('User rejected')) {
+          errorMessage = 'User rejected transaction';
         } else {
           errorMessage = msg;
         }
@@ -162,7 +204,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         onError(errorMessage);
       }
     } finally {
-
       setIsLoading(false);
     }
   };
@@ -171,19 +212,22 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Deposit BNB"
+      title={`Deposit ${currencySymbol}`}
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
         <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">
-            {process.env.NEXT_PUBLIC_BNB_NETWORK || 'testnet'}
+            {network === 'SOL'
+              ? (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta')
+              : (process.env.NEXT_PUBLIC_BNB_NETWORK || 'mainnet')
+            }
           </div>
           <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">
             Wallet Balance
           </p>
           <p className="text-[#00f5ff] text-xl font-bold font-mono">
-            {bnbBalance.toFixed(4)} BNB
+            {activeWalletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>
 
@@ -206,7 +250,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               `}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono">
-              BNB
+              {currencySymbol}
             </span>
           </div>
 
@@ -272,7 +316,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 <span>Processing</span>
               </span>
             ) : (
-              'Deposit BNB'
+              `Deposit ${currencySymbol}`
             )}
           </Button>
         </div>

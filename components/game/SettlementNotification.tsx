@@ -12,6 +12,7 @@ export const SettlementNotification: React.FC = () => {
     const lastResult = useOverflowStore(state => state.lastResult);
     const clearLastResult = useOverflowStore(state => state.clearLastResult);
     const accountType = useOverflowStore(state => state.accountType);
+    const network = useOverflowStore(state => state.network);
 
     const [visible, setVisible] = useState(false);
 
@@ -52,7 +53,7 @@ export const SettlementNotification: React.FC = () => {
 
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-tighter leading-none opacity-60">
-                                    {lastResult.asset || 'BNB'} {lastResult.won ? 'PROFIT' : 'LOSS'}
+                                    {lastResult.asset || (network === 'SOL' ? 'SOL' : 'BNB')} {lastResult.won ? 'PROFIT' : 'LOSS'}
                                 </span>
                                 <span className="text-sm font-mono font-black tracking-tight leading-tight">
                                     {lastResult.won ? '+' : '-'}{Math.abs(lastResult.won ? lastResult.payout : lastResult.amount).toFixed(4)}

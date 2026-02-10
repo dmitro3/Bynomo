@@ -5,9 +5,8 @@ import { bscTestnet, bsc } from 'wagmi/chains';
 export const config = createConfig(
     getDefaultConfig({
         // Your dApps chains
-        chains: [bscTestnet, bsc],
+        chains: [bsc],
         transports: {
-            [bscTestnet.id]: http(),
             [bsc.id]: http(),
         },
 

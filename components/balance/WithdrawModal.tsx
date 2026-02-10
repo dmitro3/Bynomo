@@ -21,8 +21,10 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { address, withdrawFunds, houseBalance, fetchBalance } = useOverflowStore();
+  const { address, withdrawFunds, houseBalance, network } = useOverflowStore();
   const toast = useToast();
+
+  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -96,7 +98,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       console.log('Withdrawal successful:', result.txHash);
 
       toast.success(
-        `Successfully withdrew ${withdrawAmount.toFixed(4)} BNB! Balance updated.`
+        `Successfully withdrew ${withdrawAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
       );
 
       if (onSuccess) {
@@ -124,7 +126,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Withdraw BNB"
+      title={`Withdraw ${currencySymbol}`}
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
@@ -133,7 +135,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             Available to Withdraw
           </p>
           <p className="text-[#FF006E] text-xl font-bold font-mono">
-            {houseBalance.toFixed(4)} BNB
+            {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>
 
@@ -156,7 +158,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               `}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono">
-              BNB
+              {currencySymbol}
             </span>
           </div>
 
@@ -199,7 +201,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 <span>Processing</span>
               </span>
             ) : (
-              'Withdraw BNB'
+              `Withdraw ${currencySymbol}`
             )}
           </Button>
         </div>

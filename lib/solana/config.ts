@@ -36,13 +36,19 @@ export function getSolanaConfig(): SolanaConfig {
             break;
     }
 
-    const rpcEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || clusterApiUrl(network);
-    const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
+    const publicRpcs = [
+        'https://api.mainnet-beta.solana.com',
+        'https://solana-mainnet.rpc.extrnode.com',
+        'https://rpc.ankr.com/solana',
+    ];
+
+    const rpcEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || publicRpcs[0];
+    const treasuryAddress = process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
 
     // Validate required environment variables
     if (!treasuryAddress) {
         throw new Error(
-            'Missing required Solana environment variable: NEXT_PUBLIC_TREASURY_ADDRESS. ' +
+            'Missing required Solana environment variable: NEXT_PUBLIC_SOL_TREASURY_ADDRESS. ' +
             'Please check your .env file and ensure it is set.'
         );
     }
