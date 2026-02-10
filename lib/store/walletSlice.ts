@@ -15,6 +15,7 @@ export interface WalletState {
   isConnected: boolean;
   isConnecting: boolean;
   network: 'BNB' | 'SOL' | null;
+  preferredNetwork: 'BNB' | 'SOL' | null;
   error: string | null;
 
   // Actions
@@ -27,6 +28,7 @@ export interface WalletState {
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
   setNetwork: (network: 'BNB' | 'SOL' | null) => void;
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | null) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnected: false,
   isConnecting: false,
   network: null,
+  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | null : null,
   error: null,
 
   /**
@@ -115,5 +118,19 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
    */
   setNetwork: (network: 'BNB' | 'SOL' | null) => {
     set({ network });
+  },
+
+  /**
+   * Set preferred network (manually chosen by user)
+   */
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | null) => {
+    set({ preferredNetwork: network });
+    if (typeof window !== 'undefined') {
+      if (network) {
+        localStorage.setItem('solnomo_preferred_network', network);
+      } else {
+        localStorage.removeItem('solnomo_preferred_network');
+      }
+    }
   }
 });

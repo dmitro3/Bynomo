@@ -6,6 +6,7 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useModal } from 'connectkit';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useOverflowStore } from '@/lib/store';
 
 interface WalletDiscoveryModalProps {
     isOpen: boolean;
@@ -16,7 +17,10 @@ export const WalletDiscoveryModal: React.FC<WalletDiscoveryModalProps> = ({ isOp
     const { setVisible: setSolanaVisible } = useWalletModal();
     const { setOpen: setBNBVisible } = useModal();
 
+    const setPreferredNetwork = useOverflowStore(state => state.setPreferredNetwork);
+
     const handleBNBConnect = () => {
+        setPreferredNetwork('BNB');
         onClose();
         // Use a small timeout to ensure modal closing animation doesn't conflict
         setTimeout(() => {
@@ -25,6 +29,7 @@ export const WalletDiscoveryModal: React.FC<WalletDiscoveryModalProps> = ({ isOp
     };
 
     const handleSolanaConnect = () => {
+        setPreferredNetwork('SOL');
         onClose();
         setTimeout(() => {
             setSolanaVisible(true);

@@ -19,9 +19,12 @@ export function useWalletConnection() {
     const setNetwork = useOverflowStore(state => state.setNetwork);
     const fetchBalance = useOverflowStore(state => state.fetchBalance);
 
+    const preferredNetwork = useOverflowStore(state => state.preferredNetwork);
+
     // Sync wallet state with store
     useEffect(() => {
-        if (address && isConnected) {
+        // Only update store if this is the preferred network or no preference is set
+        if (address && isConnected && (preferredNetwork === 'BNB' || preferredNetwork === null)) {
             setAddress(address);
             setIsConnected(true);
             setNetwork('BNB');
@@ -37,7 +40,8 @@ export function useWalletConnection() {
                     timestamp: Date.now()
                 }));
             }
-        } else {
+        } else if (!isConnected && preferredNetwork === 'BNB') {
+            // Only clear if we were the active network
             setAddress(null);
             setIsConnected(false);
 
@@ -46,7 +50,7 @@ export function useWalletConnection() {
                 localStorage.removeItem('bnbnomo_wallet_session');
             }
         }
-    }, [address, isConnected, connector, setAddress, setIsConnected, fetchBalance]);
+    }, [address, isConnected, connector, setAddress, setIsConnected, fetchBalance, preferredNetwork]);
 
     return {
         address,

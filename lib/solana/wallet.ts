@@ -25,9 +25,12 @@ export function useWalletConnection() {
     const setNetwork = useOverflowStore(state => state.setNetwork);
     const fetchBalance = useOverflowStore(state => state.fetchBalance);
 
+    const preferredNetwork = useOverflowStore(state => state.preferredNetwork);
+
     // Sync wallet state with store
     useEffect(() => {
-        if (publicKey) {
+        // Only update store if this is the preferred network or no preference is set
+        if (publicKey && (preferredNetwork === 'SOL' || preferredNetwork === null)) {
             const address = publicKey.toBase58();
             setAddress(address);
             setIsConnected(true);
@@ -44,7 +47,8 @@ export function useWalletConnection() {
                     timestamp: Date.now()
                 }));
             }
-        } else {
+        } else if (!publicKey && preferredNetwork === 'SOL') {
+            // Only clear if we were the active network
             setAddress(null);
             setIsConnected(false);
 
@@ -53,7 +57,7 @@ export function useWalletConnection() {
                 localStorage.removeItem('solnomo_wallet_session');
             }
         }
-    }, [publicKey, wallet?.adapter.name, setAddress, setIsConnected, fetchBalance]);
+    }, [publicKey, wallet?.adapter.name, setAddress, setIsConnected, fetchBalance, preferredNetwork]);
 
     const disconnect = async () => {
         try {

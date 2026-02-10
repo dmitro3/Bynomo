@@ -11,7 +11,7 @@ export const WalletConnect: React.FC = () => {
   const { connected: solanaConnected, publicKey, disconnect: solanaDisconnect } = useWallet();
   const { isConnected: bnbConnected, address: bnbAddress } = useAccount();
   const { disconnect: bnbDisconnect } = useDisconnect();
-  const { network, setNetwork, setIsConnected, setAddress } = useOverflowStore();
+  const { network, setNetwork, setIsConnected, setAddress, setPreferredNetwork } = useOverflowStore();
 
   const handleDisconnect = () => {
     if (solanaConnected) {
@@ -23,6 +23,7 @@ export const WalletConnect: React.FC = () => {
     setAddress(null);
     setIsConnected(false);
     setNetwork(null);
+    setPreferredNetwork(null);
   };
 
   const formatAddress = (addr: string) => {
@@ -43,13 +44,22 @@ export const WalletConnect: React.FC = () => {
         </button>
       ) : (
         <div className="flex items-center gap-2">
-          <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex flex-col items-end">
-            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">
-              {solanaConnected ? 'Solana Network' : 'BNB Smart Chain'}
-            </span>
-            <span className="text-white text-[11px] font-mono leading-none">
-              {activeAddress ? formatAddress(activeAddress) : '...'}
-            </span>
+          <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2.5">
+            <div className="w-4 h-4 shrink-0">
+              <img
+                src={solanaConnected ? '/logos/solana-sol-logo.png' : '/logos/bnb-bnb-logo.png'}
+                alt="Network"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">
+                {solanaConnected ? 'Solana Network' : 'BNB Smart Chain'}
+              </span>
+              <span className="text-white text-[11px] font-mono leading-none">
+                {activeAddress ? formatAddress(activeAddress) : '...'}
+              </span>
+            </div>
           </div>
 
           <button
