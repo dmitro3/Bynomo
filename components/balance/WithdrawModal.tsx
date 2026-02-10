@@ -90,29 +90,10 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
       toast.info('Processing withdrawal...');
 
-      // Call the withdrawal API
-      // The backend will handle the BNB transfer from the treasury wallet
-      const response = await fetch('/api/balance/withdraw', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userAddress: address,
-          amount: withdrawAmount,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to process withdrawal');
-      }
+      // Call the withdrawal store action
+      const result = await withdrawFunds(address, withdrawAmount);
 
       console.log('Withdrawal successful:', result.txHash);
-
-      // Update local state
-      await fetchBalance(address);
 
       toast.success(
         `Successfully withdrew ${withdrawAmount.toFixed(4)} BNB! Balance updated.`

@@ -28,6 +28,24 @@ interface CellBet {
   direction: 'UP' | 'DOWN';
 }
 
+// Component to safely display asset logos with fallback
+const AssetIcon = ({ src, asset, className }: { src: string; asset: string; className: string }) => {
+  const [error, setError] = useState(false);
+
+  if (error || !src) {
+    return <span className="font-black text-sm">{asset[0]}</span>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={asset}
+      className={className}
+      onError={() => setError(true)}
+    />
+  );
+};
+
 export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount }) => {
   const priceHistory = useStore((state) => state.priceHistory);
   const currentPrice = useStore((state) => state.currentPrice);
@@ -127,7 +145,25 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png' },
     ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png' },
     BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png' },
-    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' }
+    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' },
+    // Metals
+    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold-logo.png' },
+    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver-logo.png' },
+    // FX
+    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur-logo.png' },
+    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp-logo.png' },
+    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy-logo.png' },
+    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud-logo.png' },
+    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad-logo.png' },
+    // Stocks
+    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/aapl-logo.png' },
+    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/googl-logo.png' },
+    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amzn-logo.png' },
+    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/msft-logo.png' },
+    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvda-logo.png' },
+    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tsla-logo.png' },
+    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta-logo.png' },
+    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/nflx-logo.png' },
   };
 
 
@@ -878,8 +914,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
             onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
             className="flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-purple-500/50 transition-all duration-300 group"
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${isAssetDropdownOpen ? 'bg-purple-500' : 'bg-white/5'}`}>
-              <img src={currentAssetConfig.logo} alt={selectedAsset} className="w-6 h-6 object-contain" />
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${isAssetDropdownOpen ? 'bg-purple-500 text-white' : 'bg-white/5 text-purple-400'}`}>
+              <AssetIcon
+                src={currentAssetConfig.logo}
+                asset={selectedAsset}
+                className="w-6 h-6 object-contain"
+              />
             </div>
             <div className="text-left">
               <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none mb-1">Asset</p>
@@ -929,8 +969,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                           }
                         `}
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500' : 'bg-white/5'}`}>
-                          <img src={assetConfig[asset].logo} alt={asset} className="w-7 h-7 object-contain" />
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                          <AssetIcon
+                            src={assetConfig[asset].logo}
+                            asset={asset}
+                            className="w-7 h-7 object-contain"
+                          />
                         </div>
                         <div className="flex-1 text-left">
                           <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>

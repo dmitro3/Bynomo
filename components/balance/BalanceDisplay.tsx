@@ -92,9 +92,7 @@ export const BalanceDisplay: React.FC = () => {
    * Refreshes balance and shows success message
    */
   const handleDepositSuccess = async (amount: number, txHash: string) => {
-    if (address) {
-      await fetchBalance(address);
-    }
+    // Balance is now updated automatically by the store action
   };
 
   /**
@@ -102,9 +100,7 @@ export const BalanceDisplay: React.FC = () => {
    * Refreshes balance and shows success message
    */
   const handleWithdrawSuccess = async (amount: number, txHash: string) => {
-    if (address) {
-      await fetchBalance(address);
-    }
+    // Balance is now updated automatically by the store action
   };
 
   // Choose balance based on account type

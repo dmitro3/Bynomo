@@ -27,7 +27,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch } = useBalance({
     address: address,
   });
 
@@ -130,10 +130,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       // Note: In real app, we might wait for tx confirmation here
       // but sendTransactionAsync returns the hash after submission
 
-      console.log('Deposit transaction submitted:', tx);
-
       // Update balance in database
       await depositFunds(address, depositAmount, tx);
+
+      // Refetch wallet balance
+      refetch?.();
 
       toast.success(
         `Successfully deposited ${depositAmount.toFixed(4)} BNB! Balance updated.`

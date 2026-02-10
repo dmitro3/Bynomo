@@ -20,8 +20,8 @@ export interface BalanceState {
   fetchBalance: (address: string) => Promise<void>;
   setBalance: (balance: number) => void;
   updateBalance: (amount: number, operation: 'add' | 'subtract') => void;
-  depositFunds: (address: string, amount: number, txHash: string) => Promise<void>;
-  withdrawFunds: (address: string, amount: number, txHash: string) => Promise<void>;
+  depositFunds: (address: string, amount: number, txHash: string) => Promise<any>;
+  withdrawFunds: (address: string, amount: number) => Promise<any>;
   toggleAccountType: () => void;
   clearError: () => void;
 }
@@ -157,6 +157,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         isLoading: false,
         error: null
       });
+
+      // Secondary check after a delay to ensure eventual consistency
+      setTimeout(() => get().fetchBalance(address), 1500);
+
+      return data;
     } catch (error) {
       console.error('Error processing deposit:', error);
       set({
@@ -174,7 +179,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    * @param amount - Withdrawal amount in USDC
    * @param txHash - Transaction hash for audit trail
    */
-  withdrawFunds: async (address: string, amount: number, txHash: string) => {
+  withdrawFunds: async (address: string, amount: number) => {
     const formattedAddress = address;
 
     try {
@@ -188,7 +193,6 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         body: JSON.stringify({
           userAddress: formattedAddress,
           amount,
-          txHash,
         }),
       });
 
@@ -204,6 +208,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         isLoading: false,
         error: null
       });
+
+      // Secondary check after a delay to ensure eventual consistency
+      setTimeout(() => get().fetchBalance(address), 1500);
+
+      return data;
     } catch (error) {
       console.error('Error processing withdrawal:', error);
       set({
