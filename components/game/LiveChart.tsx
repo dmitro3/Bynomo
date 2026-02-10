@@ -257,13 +257,18 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     // Use FIRST price in history as stable reference
     const referencePrice = priceHistory.length > 0 ? priceHistory[0].price : currentPrice;
 
-    // Standardize range percentage for Box mode to ensure consistent box sizes across all assets
-    const rangePercent = gameMode === 'box' ? 0.0015 : (
-      selectedAsset === 'BTC' ? 0.0008 :
-        selectedAsset === 'ETH' ? 0.0012 :
-          selectedAsset === 'SOL' ? 0.002 :
-            0.0015
+    // DYNAMIC RANGE: Tighter ranges = More visual volatility (zoom in)
+    const baseRange = (
+      ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0004 : // Forex: Very tight
+        ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(selectedAsset) ? 0.0008 : // Stocks: Tight
+          ['GOLD', 'SILVER'].includes(selectedAsset) ? 0.0012 : // Metals: Medium
+            selectedAsset === 'BTC' ? 0.0015 :
+              selectedAsset === 'ETH' ? 0.0018 :
+                selectedAsset === 'SOL' ? 0.0025 :
+                  0.0020 // Default
     );
+
+    const rangePercent = gameMode === 'box' ? baseRange * 0.8 : baseRange;
 
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);

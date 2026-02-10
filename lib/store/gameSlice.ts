@@ -38,6 +38,7 @@ export interface GameState {
   currentPrice: number;
   priceHistory: PricePoint[];
   assetPrices: Record<string, number>; // Global price tracking
+  rawAssetPrices: Record<string, number>; // Store original prices for delta amplification
   activeRound: ActiveRound | null;
   activeBets: ActiveBet[];
   settledBets: ActiveBet[];
@@ -115,6 +116,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   currentPrice: 0,
   priceHistory: [],
   assetPrices: {},
+  rawAssetPrices: {},
 
   activeRound: null,
   activeBets: [],
@@ -417,25 +419,63 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param asset - The asset being updated
    */
   updatePrice: (price: number, asset?: AssetType) => {
-    const { priceHistory, selectedAsset, assetPrices, activeBets, resolveBet, updateBalance, address, accountType, fetchBalance } = get();
-    const currentSelectedAsset = asset || selectedAsset;
+    const {
+      priceHistory, selectedAsset, assetPrices, rawAssetPrices,
+      activeBets, resolveBet, updateBalance, address, accountType, fetchBalance
+    } = get();
+    const currentSelectedAsset = (asset || selectedAsset) as AssetType;
     const now = Date.now();
 
+    // VOLATILITY AMPLIFICATION ENGINE
+    // For stable assets (Forex/Stocks), we amplify the real Pyth delta to make them "game-ready"
+    const getVolatilityMultiplier = (a: AssetType) => {
+      // Forex pairs (Very stable in real life, need 18x boost)
+      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 18.0;
+      // Stocks (Need 8x boost)
+      if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 8.0;
+      // Metals (Need 4x boost)
+      if (['GOLD', 'SILVER'].includes(a)) return 4.0;
+      // Crypto (Natural volatility, no boost)
+      return 1.0;
+    };
+
+    const multiplier = getVolatilityMultiplier(currentSelectedAsset);
+    const lastRawPrice = rawAssetPrices[currentSelectedAsset] || price;
+    const rawDelta = price - lastRawPrice;
+
+    // Calculate amplified delta
+    let amplifiedDelta = rawDelta * multiplier;
+
+    // Add micro-jitter (0.0001% - 0.0003%) to make price "vibrate" even when Pyth is slow
+    const jitterSign = Math.random() > 0.5 ? 1 : -1;
+    const jitterAmount = price * (0.00001 + Math.random() * 0.00002) * jitterSign;
+    amplifiedDelta += jitterAmount;
+
+    // The new price to be used in the game state
+    // If it's the first time we see this asset, use raw price
+    const currentVirtualPrice = assetPrices[currentSelectedAsset] || price;
+    const finalPrice = currentVirtualPrice + amplifiedDelta;
+
     // Update global asset prices
-    const updatedAssetPrices = { ...assetPrices, [currentSelectedAsset]: price };
+    const updatedAssetPrices = { ...assetPrices, [currentSelectedAsset]: finalPrice };
+    const updatedRawPrices = { ...rawAssetPrices, [currentSelectedAsset]: price };
 
     // Primary update for the selected chart asset
     if (currentSelectedAsset === selectedAsset) {
-      const newPoint: PricePoint = { timestamp: now, price };
+      const newPoint: PricePoint = { timestamp: now, price: finalPrice };
       const updatedHistory = [...priceHistory, newPoint].slice(-MAX_PRICE_HISTORY);
 
       set({
-        currentPrice: price,
+        currentPrice: finalPrice,
         priceHistory: updatedHistory,
-        assetPrices: updatedAssetPrices
+        assetPrices: updatedAssetPrices,
+        rawAssetPrices: updatedRawPrices
       });
     } else {
-      set({ assetPrices: updatedAssetPrices });
+      set({
+        assetPrices: updatedAssetPrices,
+        rawAssetPrices: updatedRawPrices
+      });
     }
 
     // RESOLUTION LOGIC: Check for expired bets for THIS specific asset
