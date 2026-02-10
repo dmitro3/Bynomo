@@ -16,7 +16,13 @@ export const ActiveRound: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  if (!activeBets || activeBets.length === 0) {
+  // Only show Binomo-style bets that have strikePrice and endTime
+  const binomoBets = activeBets.filter(
+    (bet): bet is ActiveBet & { strikePrice: number; endTime: number } =>
+      bet.strikePrice != null && bet.endTime != null
+  );
+
+  if (binomoBets.length === 0) {
     return null;
   }
 
@@ -24,9 +30,8 @@ export const ActiveRound: React.FC = () => {
     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-2">Active Trades</h3>
 
-      {activeBets.map((bet: ActiveBet) => {
-        const endTime = bet.endTime ?? now;
-        const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+      {binomoBets.map((bet) => {
+        const timeLeft = Math.max(0, Math.floor((bet.endTime - now) / 1000));
         const isUp = bet.direction === 'UP';
         const isWinning = isUp ? currentPrice > bet.strikePrice : currentPrice < bet.strikePrice;
         const potentialPayout = (bet.amount * bet.multiplier).toFixed(4);
