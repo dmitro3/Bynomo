@@ -25,7 +25,8 @@ export const ActiveRound: React.FC = () => {
       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-2">Active Trades</h3>
 
       {activeBets.map((bet: ActiveBet) => {
-        const timeLeft = Math.max(0, Math.floor((bet.endTime - now) / 1000));
+        const endTime = bet.endTime ?? now;
+        const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
         const isUp = bet.direction === 'UP';
         const isWinning = isUp ? currentPrice > bet.strikePrice : currentPrice < bet.strikePrice;
         const potentialPayout = (bet.amount * bet.multiplier).toFixed(4);
