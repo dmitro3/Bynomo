@@ -162,13 +162,25 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             </span>
           </div>
 
-          <button
-            onClick={handleMaxClick}
-            disabled={isLoading || houseBalance === 0}
-            className="text-[10px] text-[#FF006E] hover:text-[#FF006E]/80 font-mono disabled:opacity-50 transition-colors uppercase tracking-wider"
-          >
-            Withdraw All
-          </button>
+          <div className="flex justify-between items-center">
+            <button
+              onClick={handleMaxClick}
+              disabled={isLoading || houseBalance === 0}
+              className="text-[10px] text-[#FF006E] hover:text-[#FF006E]/80 font-mono disabled:opacity-50 transition-colors uppercase tracking-wider"
+            >
+              Withdraw All
+            </button>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-500 font-mono">
+                Admin Fee: <span className="text-red-400">2%</span>
+              </p>
+              {amount && !isNaN(parseFloat(amount)) && (
+                <p className="text-[10px] text-gray-400 font-mono">
+                  You Receive: <span className="text-green-400">{(parseFloat(amount) * 0.98).toFixed(4)} {currencySymbol}</span>
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {error && (

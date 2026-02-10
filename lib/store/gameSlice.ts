@@ -429,12 +429,12 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     // VOLATILITY AMPLIFICATION ENGINE
     // For stable assets (Forex/Stocks), we amplify the real Pyth delta to make them "game-ready"
     const getVolatilityMultiplier = (a: AssetType) => {
-      // Forex pairs (Very stable in real life, need 18x boost)
-      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 18.0;
-      // Stocks (Need 8x boost)
+      // Forex pairs (Moderate boost for stability)
+      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 8.0;
+      // Stocks (Maintain at 8x)
       if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 8.0;
-      // Metals (Need 4x boost)
-      if (['GOLD', 'SILVER'].includes(a)) return 4.0;
+      // Metals (Reduce to 2.5x for smoother movement)
+      if (['GOLD', 'SILVER'].includes(a)) return 2.5;
       // Crypto (Natural volatility, no boost)
       return 1.0;
     };

@@ -259,7 +259,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     // DYNAMIC RANGE: Tighter ranges = More visual volatility (zoom in)
     const baseRange = (
-      ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0004 : // Forex: Very tight
+      ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0007 : // Forex: Moderate zoom
         ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(selectedAsset) ? 0.0008 : // Stocks: Tight
           ['GOLD', 'SILVER'].includes(selectedAsset) ? 0.0012 : // Metals: Medium
             selectedAsset === 'BTC' ? 0.0015 :

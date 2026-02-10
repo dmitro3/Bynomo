@@ -60,14 +60,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient house balance' }, { status: 400 });
     }
 
-    // 2. Perform transfer from treasury based on network
+    // 2. Apply 2% Treasury Fee
+    // The user's house balance is deducted by the full 'amount', 
+    // but they only receive 98% in their wallet.
+    const feePercent = 0.02;
+    const feeAmount = amount * feePercent;
+    const netWithdrawAmount = amount - feeAmount;
+
+    console.log(`Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}`);
+
+    // 3. Perform transfer from treasury based on network
     let signature: string;
     try {
       if (isBNB) {
-        signature = await transferBNBFromTreasury(userAddress, amount);
+        signature = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
       } else {
         const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
-        signature = await transferSOLFromTreasury(userAddress, amount);
+        signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
       }
     } catch (e: any) {
       console.error('Transfer failed:', e);
