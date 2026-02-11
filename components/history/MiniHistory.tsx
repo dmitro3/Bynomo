@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const MiniHistory: React.FC = () => {
     const bets = useStore((state) => state.bets);
+    const isIndicatorsOpen = useStore((state) => state.isIndicatorsOpen);
+    const setIsIndicatorsOpen = useStore((state) => state.setIsIndicatorsOpen);
+    const activeIndicators = useStore((state) => state.activeIndicators);
     const [isOpen, setIsOpen] = useState(false);
 
     // Show only last 10 bets
@@ -75,17 +78,37 @@ export const MiniHistory: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Trigger Button */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isOpen
-                    ? 'bg-white text-black border-white'
-                    : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
-                    }`}
-            >
-                <span className="text-[10px] font-black uppercase tracking-widest">History</span>
-                <div className={`w-1.5 h-1.5 rounded-full ${bets.length > 0 && bets[0].won ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
-            </button>
+            {/* Trigger Buttons Row */}
+            <div className="flex items-center gap-2">
+                {/* Indicators Toggle */}
+                <button
+                    onClick={() => setIsIndicatorsOpen(!isIndicatorsOpen)}
+                    className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isIndicatorsOpen || Object.values(activeIndicators).some(v => v)
+                        ? 'bg-purple-600 text-white border-purple-500 shadow-purple-500/30'
+                        : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
+                        }`}
+                >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Indicators</span>
+                    {Object.values(activeIndicators).some(v => v) && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                    )}
+                </button>
+
+                {/* History Trigger Button */}
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isOpen
+                        ? 'bg-white text-black border-white'
+                        : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
+                        }`}
+                >
+                    <span className="text-[10px] font-black uppercase tracking-widest">History</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${bets.length > 0 && bets[0].won ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
+                </button>
+            </div>
 
             <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {

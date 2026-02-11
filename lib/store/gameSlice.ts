@@ -62,6 +62,8 @@ export interface GameState {
   hasBlitzAccess: boolean;
   blitzMultiplier: number;
   activeTab: 'bet' | 'wallet' | 'blitz';
+  activeIndicators: Record<string, boolean>;
+  isIndicatorsOpen: boolean;
 
   // Actions
   setActiveTab: (tab: 'bet' | 'wallet' | 'blitz') => void;
@@ -87,7 +89,9 @@ export interface GameState {
   // Blitz Round Actions
   enableBlitzAccess: () => void;
   revokeBlitzAccess: () => void;
-  updateBlitzTimer: () => void;
+  // Indicators Actions
+  toggleIndicator: (indicatorId: string) => void;
+  setIsIndicatorsOpen: (isOpen: boolean) => void;
 }
 
 
@@ -130,6 +134,8 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   error: null,
   timeframeSeconds: 30, // Default for binomo
   activeTab: 'bet',
+  activeIndicators: {},
+  isIndicatorsOpen: false,
 
   // Blitz Initial State
   isBlitzActive: false,
@@ -166,6 +172,25 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    */
   setActiveTab: (tab: 'bet' | 'wallet' | 'blitz') => {
     set({ activeTab: tab });
+  },
+
+  /**
+   * Toggle a technical indicator
+   */
+  toggleIndicator: (indicatorId: string) => {
+    set((state: GameState) => ({
+      activeIndicators: {
+        ...state.activeIndicators,
+        [indicatorId]: !state.activeIndicators[indicatorId]
+      }
+    }));
+  },
+
+  /**
+   * Set indicators menu open state
+   */
+  setIsIndicatorsOpen: (isOpen: boolean) => {
+    set({ isIndicatorsOpen: isOpen });
   },
 
 

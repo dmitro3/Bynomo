@@ -108,6 +108,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     y: number;
   }
   const [betResults, setBetResults] = useState<BetResult[]>([]);
+  const activeIndicators = useStore((state) => state.activeIndicators);
+  const isIndicatorsOpen = useStore((state) => state.isIndicatorsOpen);
+  const setIsIndicatorsOpen = useStore((state) => state.setIsIndicatorsOpen);
+  const toggleIndicator = useStore((state) => state.toggleIndicator);
+  const [socialBets, setSocialBets] = useState<{ id: number; x: number; y: number; direction: 'UP' | 'DOWN' }[]>([]);
 
 
   // Auto-remove bet results after 3 seconds
@@ -143,6 +148,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       return newMap;
     });
   }, [activeBets, selectedAsset]);
+
 
 
   // Asset display configuration
@@ -187,23 +193,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Reset Y-axis domain when asset changes
   useEffect(() => {
     yDomain.current = { min: 0, max: 100, initialized: false };
-  }, [selectedAsset]);
-
-  // Reset Y-axis when asset changes
-  useEffect(() => {
-    yDomain.current = { min: 0, max: 100, initialized: false };
     setResolvedCells([]); // Clear resolved cells
     setBetResults([]); // Clear bet results
     setCellBets(new Map()); // Clear cell bets
     setIsLoadingPrice(true); // Show loading when switching assets
   }, [selectedAsset]);
-
-  // Hide loading when price data arrives
-  useEffect(() => {
-    if (currentPrice > 0 && priceHistory.length >= 2) {
-      setIsLoadingPrice(false);
-    }
-  }, [currentPrice, priceHistory]);
 
   // Hide loading when price data arrives
   useEffect(() => {
@@ -310,6 +304,27 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return { yScale, xScale, tipX, minY, maxY };
   }, [dimensions, priceHistory, currentPrice, now, selectedAsset]);
 
+  // SIMULATE SOCIAL TRADING SENSORY DATA
+  useEffect(() => {
+    if (!activeIndicators['social'] || !scales) return;
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) {
+        const id = Date.now();
+        const direction: 'UP' | 'DOWN' = Math.random() > 0.5 ? 'UP' : 'DOWN';
+        const offset = (Math.random() - 0.5) * 20;
+        setSocialBets(prev => [...prev, {
+          id,
+          x: scales.tipX,
+          y: scales.yScale(currentPrice) + offset,
+          direction
+        }].slice(-15));
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeIndicators, scales, currentPrice]);
+
   // Handle classic (binomo) mode bet results at the graph tip
   const lastProcessedResultRef = useRef<number>(0);
   useEffect(() => {
@@ -368,6 +383,104 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     return lineGenerator(pointsToRender) || '';
   }, [scales, priceHistory, currentPrice, now]);
+
+  // TECHNICAL INDICATORS CALCULATION
+  const indicatorPaths = useMemo(() => {
+    if (!scales) return null;
+
+    const paths: Record<string, string | string[]> = {};
+    const points = [...priceHistory, { timestamp: now, price: currentPrice }];
+
+    // 1. Moving Average (SMA 20)
+    if (activeIndicators['ma'] && points.length >= 20) {
+      const maPoints = [];
+      for (let i = 20; i < points.length; i++) {
+        const slice = points.slice(i - 20, i);
+        const avg = slice.reduce((sum, p) => sum + p.price, 0) / 20;
+        maPoints.push({ timestamp: points[i].timestamp, price: avg });
+      }
+      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+        .x(d => scales.xScale(d.timestamp))
+        .y(d => scales.yScale(d.price))
+        .curve(d3Shape.curveMonotoneX);
+      paths.ma = lineGen(maPoints) || '';
+    }
+
+    // 2. Bollinger Bands (20, 2)
+    if (activeIndicators['bollinger'] && points.length >= 20) {
+      const topPoints = [];
+      const bottomPoints = [];
+      const midPoints = [];
+
+      for (let i = 20; i < points.length; i++) {
+        const slice = points.slice(i - 20, i).map(p => p.price);
+        const avg = slice.reduce((a, b) => a + b, 0) / 20;
+        const stdDev = Math.sqrt(slice.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / 20);
+
+        topPoints.push({ timestamp: points[i].timestamp, price: avg + 2 * stdDev });
+        bottomPoints.push({ timestamp: points[i].timestamp, price: avg - 2 * stdDev });
+        midPoints.push({ timestamp: points[i].timestamp, price: avg });
+      }
+
+      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+        .x(d => scales.xScale(d.timestamp))
+        .y(d => scales.yScale(d.price))
+        .curve(d3Shape.curveMonotoneX);
+
+      paths.bollinger = [
+        lineGen(topPoints) || '',
+        lineGen(bottomPoints) || '',
+        lineGen(midPoints) || ''
+      ];
+    }
+
+    // 3. Alligator
+    if (activeIndicators['alligator'] && points.length >= 13) {
+      const calculateSMA = (period: number) => {
+        const sma = [];
+        for (let i = period; i < points.length; i++) {
+          const slice = points.slice(i - period, i);
+          const avg = slice.reduce((sum, p) => sum + p.price, 0) / period;
+          sma.push({ timestamp: points[i].timestamp, price: avg });
+        }
+        return sma;
+      };
+
+      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+        .x(d => scales.xScale(d.timestamp))
+        .y(d => scales.yScale(d.price))
+        .curve(d3Shape.curveMonotoneX);
+
+      paths.alligator = [
+        lineGen(calculateSMA(13)) || '', // Jaw
+        lineGen(calculateSMA(8)) || '',  // Teeth
+        lineGen(calculateSMA(5)) || ''   // Lips
+      ];
+    }
+
+    // 4. RSI (14) - This is tricky to draw on price chart, we'll draw it at the bottom
+    if (activeIndicators['rsi'] && points.length >= 14) {
+      const rsiPoints = [];
+      for (let i = 14; i < points.length; i++) {
+        const slice = points.slice(i - 14, i);
+        let gains = 0;
+        let losses = 0;
+        for (let j = 1; j < slice.length; j++) {
+          const diff = slice[j].price - slice[j - 1].price;
+          if (diff >= 0) gains += diff;
+          else losses -= diff;
+        }
+        const rs = (gains / 14) / ((losses / 14) || 1);
+        const rsi = 100 - (100 / (1 + rs));
+        // Normalize RSI to fit in chart height (bottom 20%)
+        const rsiY = rsi; // 0-100
+        rsiPoints.push({ timestamp: points[i].timestamp, rsi });
+      }
+      paths.rsi = JSON.stringify(rsiPoints); // Send raw points to render in a separate overlay
+    }
+
+    return paths;
+  }, [scales, priceHistory, now, currentPrice, activeIndicators]);
 
   // Continuous Grid Generation
   // Cells are now positioned based on PRICE LEVELS, not fixed pixels
@@ -915,6 +1028,101 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   strokeOpacity="0.3"
                   strokeDasharray="4 4"
                 />
+
+                {/* TECHNICAL INDICATORS RENDER */}
+                {indicatorPaths && (
+                  <g className="indicators-layer">
+                    {/* Moving Average */}
+                    {activeIndicators['ma'] && indicatorPaths.ma && (
+                      <path
+                        d={indicatorPaths.ma as string}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="2"
+                        strokeDasharray="4 2"
+                        opacity="0.8"
+                      />
+                    )}
+
+                    {/* Bollinger Bands */}
+                    {activeIndicators['bollinger'] && indicatorPaths.bollinger && (
+                      <g>
+                        <path
+                          d={(indicatorPaths.bollinger as string[])[0]}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1.5"
+                          opacity="0.5"
+                        />
+                        <path
+                          d={(indicatorPaths.bollinger as string[])[1]}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1.5"
+                          opacity="0.5"
+                        />
+                        <path
+                          d={(indicatorPaths.bollinger as string[])[2]}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1"
+                          strokeDasharray="2 2"
+                          opacity="0.3"
+                        />
+                      </g>
+                    )}
+
+                    {/* Alligator */}
+                    {activeIndicators['alligator'] && indicatorPaths.alligator && (
+                      <g>
+                        <path d={(indicatorPaths.alligator as string[])[0]} fill="none" stroke="#2563eb" strokeWidth="2" opacity="0.6" />
+                        <path d={(indicatorPaths.alligator as string[])[1]} fill="none" stroke="#dc2626" strokeWidth="2" opacity="0.6" />
+                        <path d={(indicatorPaths.alligator as string[])[2]} fill="none" stroke="#16a34a" strokeWidth="2" opacity="0.6" />
+                      </g>
+                    )}
+
+                    {/* RSI */}
+                    {activeIndicators['rsi'] && indicatorPaths.rsi && (() => {
+                      try {
+                        const rsiPoints = JSON.parse(indicatorPaths.rsi as string);
+                        const rsiLine = d3Shape.line<{ timestamp: number, rsi: number }>()
+                          .x(d => scales.xScale(d.timestamp))
+                          .y(d => dimensions.height - 20 - (d.rsi / 100) * 40)
+                          .curve(d3Shape.curveMonotoneX);
+
+                        return (
+                          <g>
+                            <rect x={0} y={dimensions.height - 70} width={dimensions.width} height={60} fill="rgba(168,85,247,0.05)" />
+                            <line x1={0} y1={dimensions.height - 70} x2={dimensions.width} y2={dimensions.height - 70} stroke="rgba(168,85,247,0.2)" strokeWidth="1" />
+                            <path d={rsiLine(rsiPoints) || ''} fill="none" stroke="#a855f7" strokeWidth="2" />
+                            <text x={10} y={dimensions.height - 55} fill="#a855f7" fontSize="8" fontWeight="bold">RSI (14)</text>
+                          </g>
+                        );
+                      } catch (e) { return null; }
+                    })()}
+                    {/* Social Trading Dots */}
+                    {activeIndicators['social'] && socialBets.map(bet => {
+                      const age = Date.now() - bet.id;
+                      if (age > 10000) return null;
+                      const x = scales.xScale(bet.id);
+                      const opacity = Math.max(0, 1 - age / 10000);
+                      if (x < 0 || x > dimensions.width) return null;
+
+                      return (
+                        <g key={bet.id} opacity={opacity}>
+                          <circle
+                            cx={x}
+                            cy={bet.y}
+                            r="2"
+                            fill={bet.direction === 'UP' ? '#22c55e' : '#ef4444'}
+                          >
+                            <animate attributeName="r" values="2;4;2" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                        </g>
+                      );
+                    })}
+                  </g>
+                )}
               </>
             )}
           </>
@@ -1032,6 +1240,87 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Indicator Selection UI - Positioned absolute to follow the new trigger */}
+      <div className="fixed bottom-20 right-4 sm:right-6 z-50 pointer-events-none">
+        <AnimatePresence>
+          {isIndicatorsOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="w-56 bg-[#0d0d0d]/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-3 shadow-2xl overflow-hidden pointer-events-auto"
+            >
+              <div className="flex justify-between items-center px-3 py-2 mb-2 border-b border-white/5">
+                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Indicators</p>
+                <button
+                  onClick={() => setIsIndicatorsOpen(false)}
+                  className="text-gray-500 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              {[
+                {
+                  id: 'social', name: 'Social Trading', icon: (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  )
+                },
+                {
+                  id: 'ma', name: 'Moving Average', icon: (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  )
+                },
+                {
+                  id: 'alligator', name: 'Alligator', icon: (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                  )
+                },
+                {
+                  id: 'bollinger', name: 'Bollinger Bands', icon: (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                  )
+                },
+                {
+                  id: 'rsi', name: 'RSI', icon: (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M3 4v16M3 20h18" />
+                    </svg>
+                  )
+                },
+              ].map(indicator => (
+                <button
+                  key={indicator.id}
+                  onClick={() => toggleIndicator(indicator.id)}
+                  className={`
+                    w-full flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 mb-1 last:mb-0 group
+                    ${activeIndicators[indicator.id]
+                      ? 'bg-purple-600/20 border border-purple-500/30'
+                      : 'hover:bg-white/5 border border-transparent'
+                    }
+                  `}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 ${activeIndicators[indicator.id] ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 text-gray-500 group-hover:text-gray-300'}`}>
+                    {indicator.icon}
+                  </div>
+                  <span className={`flex-1 text-left text-[11px] font-black uppercase tracking-wider transition-colors ${activeIndicators[indicator.id] ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
+                    {indicator.name}
+                  </span>
+                  <div className={`w-2 h-2 rounded-full transition-all duration-500 ${activeIndicators[indicator.id] ? 'bg-purple-500 scale-100 shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'bg-white/10 scale-50'}`} />
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
 
