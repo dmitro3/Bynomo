@@ -304,26 +304,38 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return { yScale, xScale, tipX, minY, maxY };
   }, [dimensions, priceHistory, currentPrice, now, selectedAsset]);
 
+  const scalesRef = useRef(scales);
+  const currentPriceRef = useRef(currentPrice);
+
+  useEffect(() => {
+    scalesRef.current = scales;
+    currentPriceRef.current = currentPrice;
+  }, [scales, currentPrice]);
+
   // SIMULATE SOCIAL TRADING SENSORY DATA
   useEffect(() => {
-    if (!activeIndicators['social'] || !scales) return;
+    if (!activeIndicators['social']) return;
 
     const interval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        const id = Date.now();
+      if (Math.random() > 0.4) {
+        const currentScales = scalesRef.current;
+        if (!currentScales) return;
+
+        const timestamp = Date.now();
         const direction: 'UP' | 'DOWN' = Math.random() > 0.5 ? 'UP' : 'DOWN';
-        const offset = (Math.random() - 0.5) * 20;
+        const offset = (Math.random() - 0.5) * 60;
+
         setSocialBets(prev => [...prev, {
-          id,
-          x: scales.tipX,
-          y: scales.yScale(currentPrice) + offset,
+          id: timestamp,
+          x: currentScales.tipX,
+          y: currentScales.yScale(currentPriceRef.current) + offset,
           direction
-        }].slice(-15));
+        }].slice(-30));
       }
-    }, 2000);
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeIndicators, scales, currentPrice]);
+  }, [activeIndicators['social']]);
 
   // Handle classic (binomo) mode bet results at the graph tip
   const lastProcessedResultRef = useRef<number>(0);
@@ -1095,7 +1107,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                             <rect x={0} y={dimensions.height - 70} width={dimensions.width} height={60} fill="rgba(168,85,247,0.05)" />
                             <line x1={0} y1={dimensions.height - 70} x2={dimensions.width} y2={dimensions.height - 70} stroke="rgba(168,85,247,0.2)" strokeWidth="1" />
                             <path d={rsiLine(rsiPoints) || ''} fill="none" stroke="#a855f7" strokeWidth="2" />
-                            <text x={10} y={dimensions.height - 55} fill="#a855f7" fontSize="8" fontWeight="bold">RSI (14)</text>
+                            <text x={dimensions.width - 15} y={dimensions.height - 55} fill="#a855f7" fontSize="10" fontWeight="bold" textAnchor="end">RSI (14)</text>
                           </g>
                         );
                       } catch (e) { return null; }
@@ -1103,20 +1115,39 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                     {/* Social Trading Dots */}
                     {activeIndicators['social'] && socialBets.map(bet => {
                       const age = Date.now() - bet.id;
-                      if (age > 10000) return null;
-                      const x = scales.xScale(bet.id);
-                      const opacity = Math.max(0, 1 - age / 10000);
-                      if (x < 0 || x > dimensions.width) return null;
+                      if (age > 15000) return null; // Dot lives for 15s
+
+                      // Calculate pulse and fade
+                      const opacity = Math.max(0, 1 - age / 15000);
+
+                      // The dot should move with the chart. 
+                      // Its x-position should be its original position (tipX at creation) 
+                      // minus how much time has passed * pixelsPerSecond.
+                      const xShift = (age / 1000) * pixelsPerSecond;
+                      const currentX = bet.x - xShift;
+
+                      if (currentX < 0 || currentX > dimensions.width) return null;
 
                       return (
                         <g key={bet.id} opacity={opacity}>
+                          {/* Glow effect */}
                           <circle
-                            cx={x}
+                            cx={currentX}
                             cy={bet.y}
-                            r="2"
+                            r="6"
                             fill={bet.direction === 'UP' ? '#22c55e' : '#ef4444'}
+                            opacity={opacity * 0.3}
+                          />
+                          {/* Inner dot */}
+                          <circle
+                            cx={currentX}
+                            cy={bet.y}
+                            r="3"
+                            fill={bet.direction === 'UP' ? '#4ade80' : '#f87171'}
+                            stroke="white"
+                            strokeWidth="1"
                           >
-                            <animate attributeName="r" values="2;4;2" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="r" values="2;4;2" dur="1.5s" repeatCount="indefinite" />
                           </circle>
                         </g>
                       );
