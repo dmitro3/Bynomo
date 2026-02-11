@@ -1237,42 +1237,52 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 >
                   <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
                     {(Object.keys(assetConfig) as AssetType[])
-                      .filter((asset) => {
-                        if (userTier === 'vip') return true;
-                        if (userTier === 'standard') return ['BTC', 'BNB', 'ETH', 'SOL', 'XRP', 'ADA', 'TRX', 'DOGE', 'GOLD', 'SILVER'].includes(asset);
-                        return ['BTC', 'BNB'].includes(asset);
-                      })
-                      .map((asset) => (
-                        <button
-                          key={asset}
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setIsAssetDropdownOpen(false);
-                          }}
-                          className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200
-                          ${selectedAsset === asset
-                              ? 'bg-purple-500/20 border border-purple-500/30'
-                              : 'hover:bg-white/5 border border-transparent'
-                            }
-                        `}
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
-                            <AssetIcon
-                              src={assetConfig[asset].logo}
-                              asset={asset}
-                              className="w-7 h-7 object-contain"
-                            />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                            <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
-                          </div>
-                          {selectedAsset === asset && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                          )}
-                        </button>
-                      ))}
+                      .map((asset) => {
+                        const isUnlocked = userTier === 'vip' ||
+                          (userTier === 'standard' && ['BTC', 'BNB', 'ETH', 'SOL', 'XRP', 'ADA', 'TRX', 'DOGE', 'GOLD', 'SILVER'].includes(asset)) ||
+                          (userTier === 'free' && ['BTC', 'BNB'].includes(asset));
+
+                        return (
+                          <button
+                            key={asset}
+                            onClick={() => {
+                              if (!isUnlocked) return;
+                              setSelectedAsset(asset);
+                              setIsAssetDropdownOpen(false);
+                            }}
+                            className={`
+                            flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 group
+                            ${selectedAsset === asset
+                                ? 'bg-purple-500/20 border border-purple-500/30'
+                                : isUnlocked ? 'hover:bg-white/5 border border-transparent' : 'opacity-40 cursor-not-allowed'
+                              }
+                          `}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                              <AssetIcon
+                                src={assetConfig[asset].logo}
+                                asset={asset}
+                                className={`w-7 h-7 object-contain ${!isUnlocked ? 'grayscale' : ''}`}
+                              />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <div className="flex items-center gap-2">
+                                <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
+                                {!isUnlocked && <span className="text-[8px] px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-500 font-black uppercase tracking-widest flex items-center gap-1">
+                                  <svg className="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                  </svg>
+                                  Locked
+                                </span>}
+                              </div>
+                              <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                            </div>
+                            {selectedAsset === asset && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                            )}
+                          </button>
+                        );
+                      })}
                   </div>
                 </motion.div>
               </>
