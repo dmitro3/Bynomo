@@ -18,6 +18,7 @@ export function useWalletConnection() {
     const setIsConnected = useOverflowStore(state => state.setIsConnected);
     const setNetwork = useOverflowStore(state => state.setNetwork);
     const fetchBalance = useOverflowStore(state => state.fetchBalance);
+    const refreshWalletBalance = useOverflowStore(state => state.refreshWalletBalance);
 
     const preferredNetwork = useOverflowStore(state => state.preferredNetwork);
 
@@ -29,8 +30,9 @@ export function useWalletConnection() {
             setIsConnected(true);
             setNetwork('BNB');
 
-            // Fetch house balance when wallet connects
+            // Fetch house and wallet balance when wallet connects
             fetchBalance(address).catch(console.error);
+            refreshWalletBalance();
 
             // Persist session to localStorage
             if (typeof window !== 'undefined') {

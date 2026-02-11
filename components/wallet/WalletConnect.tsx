@@ -38,6 +38,7 @@ export const WalletConnect: React.FC = () => {
       {!isAnyConnected ? (
         <button
           onClick={() => setIsDiscoveryOpen(true)}
+          data-tour="connect-button"
           className="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/10 transition-all active:scale-95"
         >
           Connect

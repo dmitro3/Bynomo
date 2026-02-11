@@ -18,7 +18,7 @@ export const GameBoard: React.FC = () => {
     address,
     isConnected,
     network,
-    balance: storeBalance,
+    walletBalance,
     gameMode,
     setGameMode,
     setTimeframeSeconds,
@@ -33,7 +33,10 @@ export const GameBoard: React.FC = () => {
     updateBlitzTimer,
     enableBlitzAccess,
     error,
-    clearError
+    clearError,
+    isLoading: isLoadingBalance,
+    activeTab,
+    setActiveTab
   } = useStore();
 
   // BNB specific for balance refetching if on BNB
@@ -43,7 +46,6 @@ export const GameBoard: React.FC = () => {
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
-  const [activeTab, setActiveTab] = useState<'bet' | 'wallet' | 'blitz'>('bet');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   const [blitzCountdown, setBlitzCountdown] = useState<string>('');
@@ -169,29 +171,7 @@ export const GameBoard: React.FC = () => {
 
   const bnbBalanceValue = bnbBalanceData ? parseFloat(formatUnits(bnbBalanceData.value, bnbBalanceData.decimals)) : 0;
 
-  // Solana wallet balance state
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-
-  useEffect(() => {
-    if (network === 'SOL' && address) {
-      const fetchBal = async () => {
-        setIsLoadingBalance(true);
-        try {
-          const { getSOLBalance } = await import('@/lib/solana/client');
-          const bal = await getSOLBalance(address);
-          setWalletBalance(bal);
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setIsLoadingBalance(false);
-        }
-      };
-      fetchBal();
-    }
-  }, [network, address]);
-
-  const activeWalletBalance = network === 'SOL' ? walletBalance : bnbBalanceValue;
+  const activeWalletBalance = walletBalance;
 
   const formatAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '---';
@@ -273,6 +253,7 @@ export const GameBoard: React.FC = () => {
           <div className="flex gap-1 p-1 bg-black/60 border-b border-white/5">
             <button
               onClick={() => setGameMode('binomo')}
+              data-tour="classic-mode"
               className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'binomo'
                 ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
                 : 'text-gray-500 hover:text-gray-300'
@@ -282,6 +263,7 @@ export const GameBoard: React.FC = () => {
             </button>
             <button
               onClick={() => setGameMode('box')}
+              data-tour="box-mode"
               className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'box'
                 ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
                 : 'text-gray-500 hover:text-gray-300'
@@ -304,6 +286,7 @@ export const GameBoard: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('wallet')}
+              data-tour="wallet-tab"
               className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'wallet'
                 ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-500/30'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -472,7 +455,7 @@ export const GameBoard: React.FC = () => {
               </div>
 
             ) : activeTab === 'wallet' ? (
-              <div className="space-y-4">
+              <div className="space-y-4" data-tour="deposit-section">
                 {isConnected && address ? (
                   <>
                     {/* House Balance Display */}

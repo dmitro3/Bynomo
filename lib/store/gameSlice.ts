@@ -61,8 +61,10 @@ export interface GameState {
   nextBlitzTime: number;
   hasBlitzAccess: boolean;
   blitzMultiplier: number;
+  activeTab: 'bet' | 'wallet' | 'blitz';
 
   // Actions
+  setActiveTab: (tab: 'bet' | 'wallet' | 'blitz') => void;
   setGameMode: (mode: GameMode) => void;
   setSelectedAsset: (asset: AssetType) => void;
   setTimeframeSeconds: (seconds: number) => void;
@@ -127,6 +129,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   lastResult: null,
   error: null,
   timeframeSeconds: 30, // Default for binomo
+  activeTab: 'bet',
 
   // Blitz Initial State
   isBlitzActive: false,
@@ -154,9 +157,15 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     set({
       gameMode: mode,
       lastResult: null,
-      error: null
     });
 
+  },
+
+  /**
+   * Set UI active tab
+   */
+  setActiveTab: (tab: 'bet' | 'wallet' | 'blitz') => {
+    set({ activeTab: tab });
   },
 
 

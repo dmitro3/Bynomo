@@ -82,7 +82,7 @@ export const cleanupStore = (): void => {
  * Export individual selectors for optimized re-renders
  */
 export const useWalletAddress = () => useOverflowStore(state => state.address);
-export const useWalletBalance = () => useOverflowStore(state => state.balance);
+export const useWalletBalance = () => useOverflowStore(state => state.walletBalance);
 export const useIsConnected = () => useOverflowStore(state => state.isConnected);
 export const useCurrentPrice = () => useOverflowStore(state => state.currentPrice);
 export const usePriceHistory = () => useOverflowStore(state => state.priceHistory);
@@ -107,8 +107,8 @@ export const useStore = useOverflowStore;
 export const useWalletActions = () => {
   const connect = useOverflowStore(state => state.connect);
   const disconnect = useOverflowStore(state => state.disconnect);
-  const refreshBalance = useOverflowStore(state => state.refreshBalance);
-  return { connect, disconnect, refreshBalance };
+  const refreshWalletBalance = useOverflowStore(state => state.refreshWalletBalance);
+  return { connect, disconnect, refreshWalletBalance };
 };
 
 export const useGameActions = () => {

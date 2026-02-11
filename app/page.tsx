@@ -4,9 +4,11 @@ import React, { useState, useRef } from 'react';
 import { GameBoard } from '@/components/game';
 import { BetHistory, MiniHistory } from '@/components/history';
 import { WalletConnect, WalletInfo } from '@/components/wallet';
+import { QuickTour } from '@/components/tour/QuickTour';
 import { useStore } from '@/lib/store';
 
 export default function Home() {
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
   const [demoActivated, setDemoActivated] = useState(false);
@@ -69,6 +71,13 @@ export default function Home() {
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={() => setIsTourOpen(true)}
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-purple-500/20 transition-all active:scale-95"
+          >
+            <span className="text-xs sm:text-sm">✨</span>
+            <span className="hidden xs:inline sm:inline">Quick</span> Tour
+          </button>
           <WalletConnect />
         </div>
       </header>
@@ -78,6 +87,9 @@ export default function Home() {
         <GameBoard />
         <MiniHistory />
       </main>
+
+      {/* Tour Component */}
+      <QuickTour isOpen={isTourOpen} onClose={() => setIsTourOpen(false)} />
     </div>
   );
 }

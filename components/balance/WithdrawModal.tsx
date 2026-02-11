@@ -21,7 +21,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { address, withdrawFunds, houseBalance, network } = useOverflowStore();
+  const { address, withdrawFunds, houseBalance, network, refreshWalletBalance } = useOverflowStore();
   const toast = useToast();
 
   const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
@@ -94,6 +94,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
       // Call the withdrawal store action
       const result = await withdrawFunds(address, withdrawAmount);
+
+      // Instant Balance Refetch
+      refreshWalletBalance();
 
       console.log('Withdrawal successful:', result.txHash);
 

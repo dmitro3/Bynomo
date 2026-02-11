@@ -11,7 +11,7 @@ import { StateCreator } from "zustand";
 export interface WalletState {
   // State
   address: string | null;
-  balance: string;
+  walletBalance: number;
   isConnected: boolean;
   isConnecting: boolean;
   network: 'BNB' | 'SOL' | null;
@@ -21,7 +21,7 @@ export interface WalletState {
   // Actions
   connect: () => Promise<void>;
   disconnect: () => void;
-  refreshBalance: () => Promise<void>;
+  refreshWalletBalance: () => Promise<void>;
   clearError: () => void;
 
   // Setters for wallet integration
@@ -38,7 +38,7 @@ export interface WalletState {
 export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   // Initial state
   address: null,
-  balance: "0.0",
+  walletBalance: 0,
   isConnected: false,
   isConnecting: false,
   network: null,
@@ -63,7 +63,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
     // Reset state
     set({
       address: null,
-      balance: "0.0",
+      walletBalance: 0,
       isConnected: false,
       isConnecting: false,
       network: null,
@@ -74,7 +74,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   /**
    * Refresh token balance for connected wallet
    */
-  refreshBalance: async () => {
+  refreshWalletBalance: async () => {
     const { address, isConnected, network } = get();
 
     if (!isConnected || !address || !network) {
@@ -82,13 +82,17 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
     }
 
     try {
-      // Balance is fetched by components or store hooks
-      console.log(`Balance refresh for ${network} - handled by components`);
+      if (network === 'BNB') {
+        const { getBNBBalance } = await import('@/lib/bnb/client');
+        const bal = await getBNBBalance(address);
+        set({ walletBalance: bal });
+      } else {
+        const { getSOLBalance } = await import('@/lib/solana/client');
+        const bal = await getSOLBalance(address);
+        set({ walletBalance: bal });
+      }
     } catch (error) {
-      console.error("Error refreshing balance:", error);
-      set({
-        error: error instanceof Error ? error.message : "Failed to refresh balance"
-      });
+      console.error("Error refreshing wallet balance:", error);
     }
   },
 

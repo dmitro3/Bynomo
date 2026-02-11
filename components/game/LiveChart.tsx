@@ -36,13 +36,23 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
     return <span className="font-black text-sm">{asset[0]}</span>;
   }
 
+  // Special handling for GOLD and SILVER to make them circular and hide white backgrounds
+  const isMetal = asset === 'GOLD' || asset === 'SILVER';
+
+  // Clean className to avoid conflicts when we want object-cover
+  const finalImageClass = isMetal
+    ? className.replace('object-contain', '').trim() + ' scale-[1.5] object-cover'
+    : `${className} object-contain`;
+
   return (
-    <img
-      src={src}
-      alt={asset}
-      className={className}
-      onError={() => setError(true)}
-    />
+    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''}`}>
+      <img
+        src={src}
+        alt={asset}
+        className={finalImageClass}
+        onError={() => setError(true)}
+      />
+    </div>
   );
 };
 
@@ -147,8 +157,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png' },
     BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' },
     // Metals
-    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.png' },
-    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.png' },
+    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg' },
+    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif' },
     // FX
     EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png' },
     GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png' },
@@ -917,6 +927,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           {/* Trigger Button */}
           <button
             onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+            data-tour="asset-selector"
             className="flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-purple-500/50 transition-all duration-300 group"
           >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${isAssetDropdownOpen ? 'bg-purple-500 text-white' : 'bg-white/5 text-purple-400'}`}>

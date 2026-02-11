@@ -32,34 +32,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     address: address,
   });
 
-  const { depositFunds, network } = useOverflowStore();
+  const { depositFunds, network, walletBalance, refreshWalletBalance } = useOverflowStore();
   const toast = useToast();
   const { sendTransactionAsync } = useSendTransaction();
 
   // Solana hooks
   const { publicKey: solanaPublicKey, sendTransaction } = useWallet();
 
-  const bnbBalance = balanceData ? parseFloat(ethers.formatUnits(balanceData.value, balanceData.decimals)) : 0;
-
-  // Solana Balance (State needed)
-  const [solBalance, setSolBalance] = useState(0);
-
-  useEffect(() => {
-    if (network === 'SOL' && solanaPublicKey) {
-      const fetchSolBalance = async () => {
-        try {
-          const { getSOLBalance } = await import('@/lib/solana/client');
-          const bal = await getSOLBalance(solanaPublicKey.toBase58());
-          setSolBalance(bal);
-        } catch (e) {
-          console.error('Failed to fetch SOL balance', e);
-        }
-      };
-      fetchSolBalance();
-    }
-  }, [network, solanaPublicKey]);
-
-  const activeWalletBalance = network === 'SOL' ? solBalance : bnbBalance;
+  const activeWalletBalance = walletBalance;
   const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
 
   // Quick select amounts
@@ -169,14 +149,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       const userAddr = network === 'SOL' ? solanaPublicKey!.toBase58() : address!;
       await depositFunds(userAddr, depositAmount, tx);
 
-      // Refetch balance
-      if (network === 'BNB') {
-        refetch?.();
-      } else {
-        const { getSOLBalance } = await import('@/lib/solana/client');
-        const bal = await getSOLBalance(solanaPublicKey!.toBase58());
-        setSolBalance(bal);
-      }
+      // Instant Balance Refetch (Both House and Wallet)
+      refreshWalletBalance();
 
       toast.success(
         `Successfully deposited ${depositAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
