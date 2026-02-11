@@ -93,6 +93,7 @@ export const useIsPlacingBet = () => useOverflowStore(state => state.isPlacingBe
 export const useIsSettling = () => useOverflowStore(state => state.isSettling);
 export const useHouseBalance = () => useOverflowStore(state => state.houseBalance);
 export const useIsLoadingBalance = () => useOverflowStore(state => state.isLoading);
+export const useUserTier = () => useOverflowStore(state => state.userTier);
 
 /**
  * Export main store hook (alias for convenience)

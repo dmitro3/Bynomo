@@ -48,7 +48,7 @@ export async function GET(
     // Query user_balances table by user_address
     const { data, error } = await supabase
       .from('user_balances')
-      .select('balance, updated_at')
+      .select('balance, updated_at, user_tier')
       .eq('user_address', address)
       .single();
 
@@ -59,6 +59,7 @@ export async function GET(
         return NextResponse.json({
           balance: 0,
           updatedAt: null,
+          tier: 'free'
         });
       }
 
@@ -74,6 +75,7 @@ export async function GET(
     return NextResponse.json({
       balance: parseFloat(data.balance),
       updatedAt: data.updated_at,
+      tier: data.user_tier || 'free'
     });
   } catch (error) {
     // Handle unexpected errors

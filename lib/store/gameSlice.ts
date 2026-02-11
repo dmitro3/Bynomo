@@ -89,6 +89,7 @@ export interface GameState {
   // Blitz Round Actions
   enableBlitzAccess: () => void;
   revokeBlitzAccess: () => void;
+  updateBlitzTimer: () => void;
   // Indicators Actions
   toggleIndicator: (indicatorId: string) => void;
   setIsIndicatorsOpen: (isOpen: boolean) => void;

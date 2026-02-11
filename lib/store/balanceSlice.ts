@@ -13,6 +13,7 @@ export interface BalanceState {
   houseBalance: number;
   demoBalance: number;
   accountType: 'real' | 'demo';
+  userTier: 'free' | 'standard' | 'vip';
   isLoading: boolean;
   error: string | null;
 
@@ -35,6 +36,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
   houseBalance: 0,
   demoBalance: 10000, // 10,000 demo BNB to start
   accountType: 'real', // Default to real mode, demo activated via logo click
+  userTier: 'free',
   isLoading: false,
   error: null,
 
@@ -67,6 +69,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
 
       set({
         houseBalance: data.balance || 0,
+        userTier: data.tier || 'free',
         isLoading: false,
         error: null
       });

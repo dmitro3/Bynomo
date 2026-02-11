@@ -60,6 +60,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const priceHistory = useStore((state) => state.priceHistory);
   const currentPrice = useStore((state) => state.currentPrice);
   const selectedAsset = useStore((state) => state.selectedAsset);
+  const userTier = useStore((state) => state.userTier);
   const setSelectedAsset = useStore((state) => state.setSelectedAsset);
   const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
   const activeBets = useStore((state) => state.activeBets);
@@ -1209,37 +1210,43 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   className="absolute top-full left-0 mt-2 w-64 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 p-2"
                 >
                   <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
-                    {(Object.keys(assetConfig) as AssetType[]).map((asset) => (
-                      <button
-                        key={asset}
-                        onClick={() => {
-                          setSelectedAsset(asset);
-                          setIsAssetDropdownOpen(false);
-                        }}
-                        className={`
+                    {(Object.keys(assetConfig) as AssetType[])
+                      .filter((asset) => {
+                        if (userTier === 'vip') return true;
+                        if (userTier === 'standard') return ['BTC', 'BNB', 'ETH', 'SOL', 'XRP', 'ADA', 'TRX', 'DOGE', 'GOLD', 'SILVER'].includes(asset);
+                        return ['BTC', 'BNB'].includes(asset);
+                      })
+                      .map((asset) => (
+                        <button
+                          key={asset}
+                          onClick={() => {
+                            setSelectedAsset(asset);
+                            setIsAssetDropdownOpen(false);
+                          }}
+                          className={`
                           flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200
                           ${selectedAsset === asset
-                            ? 'bg-purple-500/20 border border-purple-500/30'
-                            : 'hover:bg-white/5 border border-transparent'
-                          }
+                              ? 'bg-purple-500/20 border border-purple-500/30'
+                              : 'hover:bg-white/5 border border-transparent'
+                            }
                         `}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
-                          <AssetIcon
-                            src={assetConfig[asset].logo}
-                            asset={asset}
-                            className="w-7 h-7 object-contain"
-                          />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                          <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
-                        </div>
-                        {selectedAsset === asset && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                        )}
-                      </button>
-                    ))}
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                            <AssetIcon
+                              src={assetConfig[asset].logo}
+                              asset={asset}
+                              className="w-7 h-7 object-contain"
+                            />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
+                            <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                          </div>
+                          {selectedAsset === asset && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                          )}
+                        </button>
+                      ))}
                   </div>
                 </motion.div>
               </>

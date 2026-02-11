@@ -5,10 +5,12 @@ import { GameBoard } from '@/components/game';
 import { BetHistory, MiniHistory } from '@/components/history';
 import { WalletConnect, WalletInfo } from '@/components/wallet';
 import { QuickTour } from '@/components/tour/QuickTour';
-import { useStore } from '@/lib/store';
+import { TierStatusModal } from '@/components/game/TierStatusModal';
+import { useStore, useUserTier } from '@/lib/store';
 
 export default function Home() {
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
   const [demoActivated, setDemoActivated] = useState(false);
@@ -19,6 +21,9 @@ export default function Home() {
   const setIsConnected = useStore((state) => state.setIsConnected);
   const toggleAccountType = useStore((state) => state.toggleAccountType);
   const accountType = useStore((state) => state.accountType);
+  const userTier = useUserTier();
+
+  const tierIcon = userTier === 'vip' ? '⬢' : userTier === 'standard' ? '♢' : '△';
 
   const handleOverflowClick = () => {
     // Clear existing timer
@@ -72,11 +77,19 @@ export default function Home() {
 
         <div className="pointer-events-auto flex items-center gap-2 sm:gap-4">
           <button
+            onClick={() => setIsStatusOpen(true)}
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-amber-500/20 transition-all active:scale-95"
+          >
+            <span className="text-xs sm:text-sm">{tierIcon}</span>
+            Status
+          </button>
+
+          <button
             onClick={() => setIsTourOpen(true)}
             className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-purple-500/20 transition-all active:scale-95"
           >
             <span className="text-xs sm:text-sm">✨</span>
-            <span className="hidden xs:inline sm:inline">Quick</span> Tour
+            Tour
           </button>
           <WalletConnect />
         </div>
@@ -90,6 +103,9 @@ export default function Home() {
 
       {/* Tour Component */}
       <QuickTour isOpen={isTourOpen} onClose={() => setIsTourOpen(false)} />
+
+      {/* Status Component */}
+      <TierStatusModal isOpen={isStatusOpen} onClose={() => setIsStatusOpen(false)} />
     </div>
   );
 }

@@ -36,7 +36,8 @@ export const GameBoard: React.FC = () => {
     clearError,
     isLoading: isLoadingBalance,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    userTier
   } = useStore();
 
   // BNB specific for balance refetching if on BNB
@@ -134,6 +135,13 @@ export const GameBoard: React.FC = () => {
     return () => clearInterval(interval);
   }, [isBlitzActive, blitzEndTime, nextBlitzTime, updateBlitzTimer]);
 
+
+  // Force switch from Blitz tab if user is Free tier
+  useEffect(() => {
+    if (userTier === 'free' && activeTab === 'blitz') {
+      setActiveTab('bet');
+    }
+  }, [userTier, activeTab, setActiveTab]);
 
   // Sync selectedDuration with store's timeframeSeconds
   useEffect(() => {
@@ -294,15 +302,17 @@ export const GameBoard: React.FC = () => {
             >
               Wallet
             </button>
-            <button
-              onClick={() => setActiveTab('blitz')}
-              className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'blitz'
-                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
-                : 'text-orange-400/70 hover:text-orange-400 hover:bg-orange-400/5'
-                }`}
-            >
-              Blitz
-            </button>
+            {userTier !== 'free' && (
+              <button
+                onClick={() => setActiveTab('blitz')}
+                className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'blitz'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
+                  : 'text-orange-400/70 hover:text-orange-400 hover:bg-orange-400/5'
+                  }`}
+              >
+                Blitz
+              </button>
+            )}
           </div>
 
           {/* Content Area - Fixed Height */}
