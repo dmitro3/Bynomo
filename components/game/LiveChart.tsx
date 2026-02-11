@@ -338,6 +338,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return () => clearInterval(interval);
   }, [activeIndicators['social']]);
 
+  // Clear social trading dots when asset changes
+  useEffect(() => {
+    setSocialBets([]);
+  }, [selectedAsset]);
+
   // Handle classic (binomo) mode bet results at the graph tip
   const lastProcessedResultRef = useRef<number>(0);
   useEffect(() => {
@@ -405,11 +410,13 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const points = [...priceHistory, { timestamp: now, price: currentPrice }];
 
     // 1. Moving Average (SMA 20)
-    if (activeIndicators['ma'] && points.length >= 20) {
+    if (activeIndicators['ma'] && points.length >= 2) {
       const maPoints = [];
-      for (let i = 20; i < points.length; i++) {
-        const slice = points.slice(i - 20, i);
-        const avg = slice.reduce((sum, p) => sum + p.price, 0) / 20;
+      const period = 20;
+      for (let i = 1; i < points.length; i++) {
+        const currentPeriod = Math.min(i + 1, period);
+        const slice = points.slice(Math.max(0, i + 1 - currentPeriod), i + 1);
+        const avg = slice.reduce((sum, p) => sum + p.price, 0) / slice.length;
         maPoints.push({ timestamp: points[i].timestamp, price: avg });
       }
       const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
@@ -420,15 +427,21 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
 
     // 2. Bollinger Bands (20, 2)
-    if (activeIndicators['bollinger'] && points.length >= 20) {
+    if (activeIndicators['bollinger'] && points.length >= 2) {
       const topPoints = [];
       const bottomPoints = [];
       const midPoints = [];
+      const period = 20;
 
-      for (let i = 20; i < points.length; i++) {
-        const slice = points.slice(i - 20, i).map(p => p.price);
-        const avg = slice.reduce((a, b) => a + b, 0) / 20;
-        const stdDev = Math.sqrt(slice.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / 20);
+      for (let i = 1; i < points.length; i++) {
+        const currentPeriod = Math.min(i + 1, period);
+        const slice = points.slice(Math.max(0, i + 1 - currentPeriod), i + 1).map(p => p.price);
+        const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+
+        let stdDev = 0;
+        if (slice.length > 1) {
+          stdDev = Math.sqrt(slice.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / slice.length);
+        }
 
         topPoints.push({ timestamp: points[i].timestamp, price: avg + 2 * stdDev });
         bottomPoints.push({ timestamp: points[i].timestamp, price: avg - 2 * stdDev });
@@ -448,12 +461,13 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
 
     // 3. Alligator
-    if (activeIndicators['alligator'] && points.length >= 13) {
-      const calculateSMA = (period: number) => {
+    if (activeIndicators['alligator'] && points.length >= 2) {
+      const calculateDynamicSMA = (period: number) => {
         const sma = [];
-        for (let i = period; i < points.length; i++) {
-          const slice = points.slice(i - period, i);
-          const avg = slice.reduce((sum, p) => sum + p.price, 0) / period;
+        for (let i = 1; i < points.length; i++) {
+          const currentPeriod = Math.min(i + 1, period);
+          const slice = points.slice(Math.max(0, i + 1 - currentPeriod), i + 1);
+          const avg = slice.reduce((sum, p) => sum + p.price, 0) / slice.length;
           sma.push({ timestamp: points[i].timestamp, price: avg });
         }
         return sma;
@@ -465,31 +479,43 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         .curve(d3Shape.curveMonotoneX);
 
       paths.alligator = [
-        lineGen(calculateSMA(13)) || '', // Jaw
-        lineGen(calculateSMA(8)) || '',  // Teeth
-        lineGen(calculateSMA(5)) || ''   // Lips
+        lineGen(calculateDynamicSMA(13)) || '', // Jaw
       ];
     }
 
-    // 4. RSI (14) - This is tricky to draw on price chart, we'll draw it at the bottom
-    if (activeIndicators['rsi'] && points.length >= 14) {
+    // 4. RSI (14) - Improved with Wilder's Smoothing
+    if (activeIndicators['rsi'] && points.length >= 2) {
       const rsiPoints = [];
-      for (let i = 14; i < points.length; i++) {
-        const slice = points.slice(i - 14, i);
-        let gains = 0;
-        let losses = 0;
-        for (let j = 1; j < slice.length; j++) {
-          const diff = slice[j].price - slice[j - 1].price;
-          if (diff >= 0) gains += diff;
-          else losses -= diff;
+      let prevAvgGain = 0;
+      let prevAvgLoss = 0;
+      const period = 14;
+
+      for (let i = 1; i < points.length; i++) {
+        const change = points[i].price - points[i - 1].price;
+        const gain = change > 0 ? change : 0;
+        const loss = change < 0 ? -change : 0;
+
+        if (i < period) {
+          // Accumulate for initial average
+          prevAvgGain += gain;
+          prevAvgLoss += loss;
+
+          if (i === period - 1) {
+            prevAvgGain /= period;
+            prevAvgLoss /= period;
+          }
+          rsiPoints.push({ timestamp: points[i].timestamp, rsi: 50 });
+        } else {
+          // Wilder's Smoothing Method
+          prevAvgGain = (prevAvgGain * (period - 1) + gain) / period;
+          prevAvgLoss = (prevAvgLoss * (period - 1) + loss) / period;
+
+          const rs = prevAvgGain / (prevAvgLoss || 0.00001);
+          const rsiValue = 100 - (100 / (1 + rs));
+          rsiPoints.push({ timestamp: points[i].timestamp, rsi: rsiValue });
         }
-        const rs = (gains / 14) / ((losses / 14) || 1);
-        const rsi = 100 - (100 / (1 + rs));
-        // Normalize RSI to fit in chart height (bottom 20%)
-        const rsiY = rsi; // 0-100
-        rsiPoints.push({ timestamp: points[i].timestamp, rsi });
       }
-      paths.rsi = JSON.stringify(rsiPoints); // Send raw points to render in a separate overlay
+      paths.rsi = JSON.stringify(rsiPoints);
     }
 
     return paths;

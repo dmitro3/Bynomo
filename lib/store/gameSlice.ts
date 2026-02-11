@@ -38,6 +38,7 @@ export interface GameState {
   currentPrice: number;
   priceHistory: PricePoint[];
   assetPrices: Record<string, number>; // Global price tracking
+  assetHistories: Record<string, PricePoint[]>; // History for each asset
   rawAssetPrices: Record<string, number>; // Store original prices for delta amplification
   activeRound: ActiveRound | null;
   activeBets: ActiveBet[];
@@ -123,6 +124,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   currentPrice: 0,
   priceHistory: [],
   assetPrices: {},
+  assetHistories: {},
   rawAssetPrices: {},
 
   activeRound: null,
@@ -228,14 +230,13 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * Set selected asset for price tracking
    */
   setSelectedAsset: (asset: AssetType) => {
-    const { selectedAsset: currentAsset } = get();
+    const { selectedAsset: currentAsset, assetHistories, assetPrices } = get();
 
-    // Only reset if actually changing asset
     if (currentAsset !== asset) {
       set({
         selectedAsset: asset,
-        priceHistory: [], // Clear history when switching assets
-        currentPrice: 0,
+        priceHistory: assetHistories[asset] || [],
+        currentPrice: assetPrices[asset] || 0,
         activeRound: null
       });
     }
@@ -496,19 +497,27 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     const updatedRawPrices = { ...rawAssetPrices, [currentSelectedAsset]: price };
 
     // Primary update for the selected chart asset
-    if (currentSelectedAsset === selectedAsset) {
-      const newPoint: PricePoint = { timestamp: now, price: finalPrice };
-      const updatedHistory = [...priceHistory, newPoint].slice(-MAX_PRICE_HISTORY);
+    const newPoint: PricePoint = { timestamp: now, price: finalPrice };
+    const currentAssetHistory = get().assetHistories[currentSelectedAsset] || [];
+    const updatedHistory = [...currentAssetHistory, newPoint].slice(-MAX_PRICE_HISTORY);
 
+    const updatedAssetHistories = {
+      ...get().assetHistories,
+      [currentSelectedAsset]: updatedHistory
+    };
+
+    if (currentSelectedAsset === selectedAsset) {
       set({
         currentPrice: finalPrice,
         priceHistory: updatedHistory,
         assetPrices: updatedAssetPrices,
+        assetHistories: updatedAssetHistories,
         rawAssetPrices: updatedRawPrices
       });
     } else {
       set({
         assetPrices: updatedAssetPrices,
+        assetHistories: updatedAssetHistories,
         rawAssetPrices: updatedRawPrices
       });
     }
