@@ -97,6 +97,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Warning state for insufficient funds
   const [showInsufficientFunds, setShowInsufficientFunds] = useState(false);
 
+  // Asset search and category filtering
+  const [assetSearchQuery, setAssetSearchQuery] = useState('');
+  const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks'>('All');
+
   // Bet results for visual feedback (win/lose notifications)
   interface BetResult {
     id: string;
@@ -153,39 +157,54 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
 
   // Asset display configuration
-  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string }> = {
-    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png' },
-    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png' },
-    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png' },
-    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png' },
-    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png' },
-    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png' },
-    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png' },
-    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png' },
-    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png' },
+  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' }> = {
+    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto' },
+    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png', category: 'Crypto' },
+    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png', category: 'Crypto' },
+    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png', category: 'Crypto' },
+    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png', category: 'Crypto' },
+    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto' },
+    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png', category: 'Crypto' },
+    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto' },
+    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png', category: 'Crypto' },
+    SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
     // Metals
-    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg' },
-    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif' },
+    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
+    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
     // FX
-    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png' },
-    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png' },
-    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png' },
-    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png' },
-    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png' },
+    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png', category: 'Forex' },
+    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png', category: 'Forex' },
+    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png', category: 'Forex' },
+    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png', category: 'Forex' },
+    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png', category: 'Forex' },
     // Stocks
-    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png' },
-    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png' },
-    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png' },
-    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png' },
-    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png' },
-    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png' },
-    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png' },
-    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png' },
+    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png', category: 'Stocks' },
+    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png', category: 'Stocks' },
+    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png', category: 'Stocks' },
+    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png', category: 'Stocks' },
+    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png', category: 'Stocks' },
+    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png', category: 'Stocks' },
+    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png', category: 'Stocks' },
+    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png', category: 'Stocks' },
   };
 
 
 
   const currentAssetConfig = assetConfig[selectedAsset] || assetConfig.BTC;
+
+  // Filtered assets based on search and category
+  const filteredAssets = useMemo(() => {
+    return (Object.keys(assetConfig) as AssetType[]).filter(assetId => {
+      const asset = assetConfig[assetId];
+      const matchesSearch = asset.name.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+        asset.symbol.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+        asset.pair.toLowerCase().includes(assetSearchQuery.toLowerCase());
+
+      const matchesCategory = activeAssetCategory === 'All' || asset.category === activeAssetCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [assetSearchQuery, activeAssetCategory]);
 
 
   // Stable Y-Axis Domain
@@ -248,11 +267,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Configuration - Responsive + Timeframe
   const isMobile = dimensions.width < 640;
   const historyWidthRatio = isMobile ? 0.35 : 0.50;
-  const targetColWidthPx = 250;
+  const targetColWidthPx = isMobile ? 100 : 250;
   const gridInterval = (gameMode === 'box' ? timeframeSeconds : 30) * 1000; // ms per column
   const pixelsPerSecond = gameMode === 'box'
     ? Math.max(2, targetColWidthPx / (gridInterval / 1000))
-    : (isMobile ? 40 : 50);
+    : (isMobile ? 25 : 50);
   const numRows = 12; // Standardize for all assets to ensure consistent box size
 
   // Scales
@@ -273,7 +292,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   0.0020 // Default
     );
 
-    const rangePercent = gameMode === 'box' ? baseRange * 0.8 : baseRange;
+    const mobileZoomFactor = isMobile ? 5.0 : 1.0;
+    const rangePercent = (gameMode === 'box' ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
 
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);
@@ -1257,43 +1277,82 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute top-full left-0 mt-2 w-64 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 p-2"
+                  className="absolute top-full left-0 mt-2 w-72 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 p-3"
                 >
+                  {/* Search Input */}
+                  <div className="relative mb-3">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search assets..."
+                      value={assetSearchQuery}
+                      onChange={(e) => setAssetSearchQuery(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
+                    />
+                  </div>
+
+                  {/* Category Tabs */}
+                  <div className="flex gap-1 mb-3 bg-white/5 p-1 rounded-xl">
+                    {(['All', 'Crypto', 'Metals', 'Forex', 'Stocks'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setActiveAssetCategory(cat)}
+                        className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${activeAssetCategory === cat ? 'bg-purple-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Asset List */}
                   <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
-                    {(Object.keys(assetConfig) as AssetType[])
-                      .map((asset) => {
-                        return (
-                          <button
-                            key={asset}
-                            onClick={() => {
-                              setSelectedAsset(asset);
-                              setIsAssetDropdownOpen(false);
-                            }}
-                            className={`
+                    {filteredAssets.length > 0 ? (
+                      filteredAssets.map((asset) => (
+                        <button
+                          key={asset}
+                          onClick={() => {
+                            setSelectedAsset(asset);
+                            setIsAssetDropdownOpen(false);
+                            setAssetSearchQuery(''); // Reset search
+                          }}
+                          className={`
                             flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 group
                             ${selectedAsset === asset
-                                ? 'bg-purple-500/20 border border-purple-500/30'
-                                : 'hover:bg-white/5 border border-transparent'
-                              }
+                              ? 'bg-purple-500/20 border border-purple-500/30'
+                              : 'hover:bg-white/5 border border-transparent'
+                            }
                           `}
-                          >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
-                              <AssetIcon
-                                src={assetConfig[asset].logo}
-                                asset={asset}
-                                className="w-7 h-7 object-contain"
-                              />
-                            </div>
-                            <div className="flex-1 text-left">
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                            <AssetIcon
+                              src={assetConfig[asset].logo}
+                              asset={asset}
+                              className="w-7 h-7 object-contain"
+                            />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="flex items-center gap-2">
                               <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                              <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                              {assetConfig[asset].category === 'Crypto' && (
+                                <span className="text-[8px] px-1 bg-blue-500/20 text-blue-400 rounded-sm font-bold uppercase">Crypto</span>
+                              )}
                             </div>
-                            {selectedAsset === asset && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                            )}
-                          </button>
-                        );
-                      })}
+                            <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                          </div>
+                          {selectedAsset === asset && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center">
+                        <p className="text-gray-500 text-xs font-bold">No assets found</p>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </>

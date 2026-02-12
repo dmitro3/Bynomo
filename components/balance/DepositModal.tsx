@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { useAccount, useBalance, useSendTransaction, useConfig } from 'wagmi';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -7,8 +9,12 @@ import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getSuiConfig } from '@/lib/sui/config';
+import { buildDepositTransaction as buildSuiDepositTransaction } from '@/lib/sui/client';
 
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -24,26 +30,27 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   onError
 }) => {
   const [amount, setAmount] = useState<string>('');
-  const { address, isConnected } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: balanceData, refetch } = useBalance({
-    address: address,
-  });
+  const { wallets: privyWallets } = useWallets();
+  const { authenticated, user } = usePrivy();
 
-  const { depositFunds, network, walletBalance, refreshWalletBalance } = useOverflowStore();
+  // Solana Hook
+  const { signAndSendTransaction: signAndSendSolana, publicKey: solanaPublicKey } = useSolanaWallet();
+
+  // Sui Hooks
+  const { mutateAsync: signAndExecuteSui } = useSignAndExecuteTransaction();
+  const suiAccount = useCurrentAccount();
+
+  const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
-  const { sendTransactionAsync } = useSendTransaction();
 
-  // Solana hooks
-  const { publicKey: solanaPublicKey, sendTransaction } = useWallet();
-
-  const activeWalletBalance = walletBalance;
-  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
 
   // Quick select amounts
-  const quickAmounts = [0.1, 0.5, 1, 5];
+  const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -60,7 +67,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     }
 
     const numValue = parseFloat(value);
-
     if (isNaN(numValue)) {
       return 'Please enter a valid number';
     }
@@ -69,7 +75,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return 'Amount must be greater than zero';
     }
 
-    if (numValue > activeWalletBalance) {
+    if (numValue > walletBalance) {
       return `Insufficient ${currencySymbol} balance`;
     }
 
@@ -90,10 +96,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    if (activeWalletBalance > 0) {
-      // Leave a small amount for gas
-      const gasBuffer = network === 'SOL' ? 0.001 : 0.005;
-      const maxAmount = Math.max(0, activeWalletBalance - gasBuffer);
+    if (walletBalance > 0) {
+      // Leave a small amount for gas (except for Sui USDC)
+      const gasBuffer = network === 'SUI' ? 0 : network === 'SOL' ? 0.001 : 0.005;
+      const maxAmount = Math.max(0, walletBalance - gasBuffer);
       setAmount(maxAmount.toFixed(4));
       setError(null);
     }
@@ -106,13 +112,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       return;
     }
 
-    if (network === 'BNB' && (!address || !isConnected)) {
-      setError('Please connect your BNB wallet');
-      return;
-    }
-
-    if (network === 'SOL' && !solanaPublicKey) {
-      setError('Please connect your Solana wallet');
+    if (!address) {
+      setError('Please connect your wallet');
       return;
     }
 
@@ -121,62 +122,66 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       setError(null);
 
       const depositAmount = parseFloat(amount);
-      let tx: string;
+      let txHash: string;
 
-      if (network === 'SOL') {
-        const { buildDepositTransaction, getSolanaConnection } = await import('@/lib/solana/client');
-        const connection = getSolanaConnection();
-        const transaction = await buildDepositTransaction(depositAmount, solanaPublicKey!.toBase58());
+      if (network === 'SUI') {
+        if (!suiAccount) throw new Error('Sui wallet not connected');
+        toast.info('Please confirm the transaction in your Sui wallet...');
+
+        const tx = await buildSuiDepositTransaction(depositAmount, address);
+        const result = await signAndExecuteSui({ transaction: tx });
+        txHash = result.digest;
+
+      } else if (network === 'SOL') {
+        if (!solanaPublicKey) throw new Error('Solana wallet not connected');
+
+        const { buildDepositTransaction } = await import('@/lib/solana/client');
+        const transaction = await buildDepositTransaction(depositAmount, address);
 
         toast.info('Please confirm the transaction in your Solana wallet...');
-        tx = await sendTransaction(transaction, connection);
+
+        txHash = await signAndSendSolana(transaction);
       } else {
-        const config = getBNBConfig();
-        if (!config.treasuryAddress) {
-          throw new Error('Treasury address not configured');
-        }
+        // BNB (EVM via Privy)
+        if (!authenticated) throw new Error('Not authenticated with Privy');
+        const wallet = privyWallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+        if (!wallet) throw new Error('Privy wallet not found');
+
+        const ethereumProvider = await wallet.getEthereumProvider();
+        const provider = new ethers.BrowserProvider(ethereumProvider);
+        const signer = await provider.getSigner();
+
+        const bnbConfig = getBNBConfig();
+        if (!bnbConfig.treasuryAddress) throw new Error('Treasury address not configured');
 
         toast.info('Please confirm the transaction in your wallet...');
-        tx = await sendTransactionAsync({
-          to: getAddress(config.treasuryAddress),
+        const txResponse = await signer.sendTransaction({
+          to: getAddress(bnbConfig.treasuryAddress),
           value: ethers.parseEther(depositAmount.toString()),
         });
+        txHash = txResponse.hash;
       }
 
       toast.info('Transaction submitted. Waiting for confirmation...');
 
       // Update balance in database
-      const userAddr = network === 'SOL' ? solanaPublicKey!.toBase58() : address!;
-      await depositFunds(userAddr, depositAmount, tx);
+      await depositFunds(address, depositAmount, txHash!);
 
-      // Instant Balance Refetch (Both House and Wallet)
+      // Refresh balances
       refreshWalletBalance();
 
       toast.success(
         `Successfully deposited ${depositAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
       );
 
-      if (onSuccess) {
-        onSuccess(depositAmount, tx);
-      }
-
+      if (onSuccess) onSuccess(depositAmount, txHash!);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Deposit error:', err);
-      let errorMessage = 'Failed to deposit funds';
-      if (err instanceof Error) {
-        const msg = err.message || "";
-        if (msg.includes('rejected') || msg.includes('denied') || msg.includes('User rejected')) {
-          errorMessage = 'User rejected transaction';
-        } else {
-          errorMessage = msg;
-        }
-      }
+      const errorMessage = err.message || 'Failed to deposit funds';
       setError(errorMessage);
       toast.error(errorMessage);
-      if (onError) {
-        onError(errorMessage);
-      }
+      if (onError) onError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -192,16 +197,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       <div className="space-y-4">
         <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">
-            {network === 'SOL'
-              ? (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta')
-              : (process.env.NEXT_PUBLIC_BNB_NETWORK || 'mainnet')
-            }
+            {networkName}
           </div>
           <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1 font-mono">
             Wallet Balance
           </p>
-          <p className="text-[#00f5ff] text-xl font-bold font-mono">
-            {activeWalletBalance.toFixed(4)} {currencySymbol}
+          <p className="text-[#00f5ff] text-xl font-bold font-mono flex items-center gap-2">
+            {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {walletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>
 
@@ -234,7 +237,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               disabled={isLoading}
               className="text-[10px] text-[#00f5ff] hover:text-cyan-400 font-mono disabled:opacity-50 transition-colors uppercase tracking-wider"
             >
-              Use Max (minus gas)
+              Use Max
             </button>
           </div>
         </div>

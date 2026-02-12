@@ -21,18 +21,21 @@ export async function GET(
     // Await params in Next.js 15+
     const { address } = await params;
 
-    // Validate address (support both BNB and Solana)
+    // Validate address (support BNB, Solana, and Sui)
     let isValid = false;
 
-    // Check if it's a valid EVM address
+    // Check if it's a valid EVM address (BNB)
     if (ethers.isAddress(address)) {
+      isValid = true;
+    } else if (/^0x[0-9a-fA-F]{64}$/.test(address)) {
+      // Check if it's a valid Sui address
       isValid = true;
     } else {
       // Check if it's a valid Solana address
       try {
         const { PublicKey } = await import('@solana/web3.js');
         const pk = new PublicKey(address);
-        isValid = true;
+        isValid = pk.toBuffer().length === 32;
       } catch (e) {
         isValid = false;
       }
@@ -40,7 +43,7 @@ export async function GET(
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB or Solana required)' },
+        { error: 'Invalid wallet address format (BNB, Solana or Sui required)' },
         { status: 400 }
       );
     }

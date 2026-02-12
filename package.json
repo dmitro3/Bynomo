@@ -20,6 +20,9 @@
     "reconcile": "ts-node scripts/reconcile-balance.ts"
   },
   "dependencies": {
+    "@mysten/dapp-kit": "^0.14.39",
+    "@mysten/sui": "^1.45.2",
+    "@privy-io/react-auth": "^2.1.0",
     "@pythnetwork/hermes-client": "^2.1.0",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",

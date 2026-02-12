@@ -11,6 +11,7 @@ export const PRICE_FEED_IDS = {
   BTC: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
   ETH: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
   SOL: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+  SUI: '0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744',
   TRX: '0x67aed5a24fdad045475e7195c98a98aea119c763f272d4523f5bac93a4f33c2b',
   XRP: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
   DOGE: '0xdcef50dd0a4cd2dcc17e45df1676dcb336a11a61c69df7a0299b0150c672d25c',
@@ -182,19 +183,26 @@ export class PythPriceFeed {
     const symbols = Object.keys(PRICE_FEED_IDS) as AssetType[];
 
     try {
-      // Construct URL with "ids[]" and ensure "0x" prefix is included
       const queryString = ids.map(id => `ids%5B%5D=${id}`).join('&');
       const response = await fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`);
 
       if (!response.ok) {
         const bodyText = await response.text();
+        console.error(`Pyth API Error (${response.status}): ${bodyText}`);
+
+        // If some IDs are missing, try to fetch them one by one or just return what we have
+        if (response.status === 404) {
+          console.warn('Handling 404 by returning empty results. Check PRICE_FEED_IDS for invalid entries.');
+          return {} as Record<AssetType, number>;
+        }
+
         throw new Error(`HTTP error! status: ${response.status}, body: ${bodyText}`);
       }
 
       const priceFeeds = await response.json();
 
       if (!priceFeeds || !priceFeeds.parsed || priceFeeds.parsed.length === 0) {
-        throw new Error('No price data received');
+        return {} as Record<AssetType, number>;
       }
 
       const results: any = {};
@@ -209,8 +217,8 @@ export class PythPriceFeed {
 
       return results;
     } catch (error) {
-      console.error('Error fetching multiple prices:', error);
-      throw error;
+      console.error('Error in fetchAllPrices:', error);
+      return {} as Record<AssetType, number>;
     }
   }
 

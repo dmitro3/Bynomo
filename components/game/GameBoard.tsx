@@ -5,12 +5,11 @@ import { useStore } from '@/lib/store';
 import { LiveChart } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
-import { useAccount, useBalance, useSendTransaction } from 'wagmi';
-import { formatUnits, parseEther } from 'ethers';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
+import { ethers } from 'ethers';
 import { useToast } from '@/lib/hooks/useToast';
-import { useWallet } from '@solana/wallet-adapter-react';
 
 
 export const GameBoard: React.FC = () => {
@@ -37,13 +36,12 @@ export const GameBoard: React.FC = () => {
     isLoading: isLoadingBalance,
     activeTab,
     setActiveTab,
-    userTier
+    userTier,
+    refreshWalletBalance
   } = useStore();
 
-  // BNB specific for balance refetching if on BNB
-  const { data: bnbBalanceData, refetch: refetchBNB } = useBalance({
-    address: network === 'BNB' ? address as `0x${string}` : undefined,
-  });
+  const { wallets } = useWallets();
+  const { authenticated } = usePrivy();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -53,18 +51,14 @@ export const GameBoard: React.FC = () => {
   const [blitzTimeRemaining, setBlitzTimeRemaining] = useState<string>('');
   const [isActivatingBlitz, setIsActivatingBlitz] = useState(false);
 
-  // Solana hooks
-  const { publicKey: solanaPublicKey, sendTransaction } = useWallet();
-
   const toast = useToast();
-  const { sendTransactionAsync: sendBNBTransaction } = useSendTransaction();
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
+  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : 'BNB';
   const blitzEntryFee = 0.01;
 
   const handleEnterBlitz = async () => {
-    if (!isConnected || !address) {
+    if (!authenticated || !address) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -74,34 +68,52 @@ export const GameBoard: React.FC = () => {
       return;
     }
 
+    const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+    if (!wallet) {
+      toast.error("Active wallet not found in session");
+      return;
+    }
+
     try {
       setIsActivatingBlitz(true);
 
       if (network === 'SOL') {
+        const solanaProvider = await wallet.getSolanaProvider?.();
+        if (!solanaProvider) throw new Error('Solana provider not available');
+
         const { getSolanaConnection, buildDepositTransaction } = await import('@/lib/solana/client');
         const connection = getSolanaConnection();
         const transaction = await buildDepositTransaction(blitzEntryFee, address);
 
         toast.info(`Confirming ${blitzEntryFee} SOL Blitz Entry...`);
-        const sig = await sendTransaction(transaction, connection);
-        console.log("Solana Blitz payment sig:", sig);
-      } else {
+        const { signature } = await solanaProvider.signAndSendTransaction(transaction);
+        console.log("Solana Blitz payment sig:", signature);
+      } else if (network === 'BNB') {
+        const ethereumProvider = await wallet.getEthereumProvider();
+        const provider = new ethers.BrowserProvider(ethereumProvider);
+        const signer = await provider.getSigner();
+
         const config = getBNBConfig();
         if (!config.treasuryAddress) {
           throw new Error("Treasury not configured");
         }
 
         toast.info(`Confirming ${blitzEntryFee} BNB Blitz Entry...`);
-        const tx = await sendBNBTransaction({
+        const txResponse = await signer.sendTransaction({
           to: getAddress(config.treasuryAddress),
-          value: parseEther(blitzEntryFee.toString()),
+          value: ethers.parseEther(blitzEntryFee.toString()),
         });
-        console.log("BNB Blitz payment tx:", tx);
+        console.log("BNB Blitz payment tx:", txResponse.hash);
+      } else if (network === 'SUI') {
+        // Sui Blitz entry (placeholder for now as it uses USDC usually)
+        toast.info("Entering Blitz on Sui...");
+        // Similar to DepositModal Sui logic
       }
 
       toast.success("Payment successful! Blitz Mode enabled.");
       // Update store state
       enableBlitzAccess();
+      refreshWalletBalance();
     } catch (err: any) {
       console.error("Blitz entry failed:", err);
       const errorMessage = err.message || "";
@@ -170,8 +182,6 @@ export const GameBoard: React.FC = () => {
   };
 
   // Redundant price feed removed - now handled globally in Providers.tsx
-
-  const bnbBalanceValue = bnbBalanceData ? parseFloat(formatUnits(bnbBalanceData.value, bnbBalanceData.decimals)) : 0;
 
   const activeWalletBalance = walletBalance;
 

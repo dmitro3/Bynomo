@@ -2,41 +2,124 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useOverflowStore } from '@/lib/store';
-import { startPriceFeed } from '@/lib/store/gameSlice';
 import { ToastProvider } from '@/components/ui/ToastProvider';
-import { WagmiProvider } from 'wagmi';
-import { ConnectKitProvider } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { config as bnbConfig } from '@/lib/bnb/wagmi';
-import { useWalletConnection as useBNBConnection } from '@/lib/bnb/wallet';
-import { useWalletConnection as useSOLConnection } from '@/lib/solana/wallet';
+import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { bsc } from 'viem/chains';
+import { WagmiProvider, useAccount } from 'wagmi';
+import { ConnectKitProvider } from 'connectkit';
+import { config as wagmiConfig } from '@/lib/bnb/wagmi';
 
 // Solana Imports
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
-
-// Default styles for Solana Wallet Adapter UI
+import { AlphaWalletAdapter, PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
-// Wallet Sync component to bridge Wagmi and Solana state with our Zustand store
+// Sui Imports
+import { createNetworkConfig, SuiClientProvider, WalletProvider, useCurrentAccount } from '@mysten/dapp-kit';
+import { getFullnodeUrl } from '@mysten/sui/client';
+import '@mysten/dapp-kit/dist/index.css';
+
+// Custom Components
+import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
+
+// Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
-  useBNBConnection();
-  useSOLConnection();
+  const { user, authenticated, ready: privyReady } = usePrivy();
+  const { wallets: privyWallets } = useWallets();
+  const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
+  const suiAccount = useCurrentAccount();
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+
+  const {
+    setAddress,
+    setIsConnected,
+    setNetwork,
+    refreshWalletBalance,
+    preferredNetwork
+  } = useOverflowStore();
+
+  useEffect(() => {
+    // 1. Check Solana (Priority if preferred)
+    if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
+      setAddress(solanaPublicKey.toBase58());
+      setIsConnected(true);
+      setNetwork('SOL');
+      refreshWalletBalance();
+      return;
+    }
+
+    // 2. Check Sui
+    if (suiAccount?.address && preferredNetwork === 'SUI') {
+      setAddress(suiAccount.address);
+      setIsConnected(true);
+      setNetwork('SUI');
+      refreshWalletBalance();
+      return;
+    }
+
+    // 3. Check BNB (Wagmi or Privy)
+    if (preferredNetwork === 'BNB') {
+      if (wagmiConnected && wagmiAddress) {
+        setAddress(wagmiAddress);
+        setIsConnected(true);
+        setNetwork('BNB');
+        refreshWalletBalance();
+        return;
+      }
+      if (privyReady && authenticated && privyWallets[0]) {
+        setAddress(privyWallets[0].address);
+        setIsConnected(true);
+        setNetwork('BNB');
+        refreshWalletBalance();
+        return;
+      }
+    }
+
+    // 4. Cleanup/Sync Decision
+    const hasSolana = solanaConnected && solanaPublicKey;
+    const hasSui = !!suiAccount?.address;
+    const hasBNB = (wagmiConnected && !!wagmiAddress) || (privyReady && authenticated && !!privyWallets[0]);
+
+    // Determine if we should clear
+    let shouldClear = false;
+    if (preferredNetwork === 'SOL' && !hasSolana) shouldClear = true;
+    else if (preferredNetwork === 'SUI' && !hasSui) shouldClear = true;
+    else if (preferredNetwork === 'BNB' && !hasBNB) shouldClear = true;
+    else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui) shouldClear = true;
+
+    if (shouldClear) {
+      setAddress(null);
+      setIsConnected(false);
+      setNetwork(null);
+    }
+  }, [
+    user, authenticated, privyWallets, privyReady,
+    solanaConnected, solanaPublicKey,
+    suiAccount,
+    wagmiAddress, wagmiConnected,
+    preferredNetwork,
+    setAddress, setIsConnected, setNetwork, refreshWalletBalance
+  ]);
+
   return null;
 }
+
+const { networkConfig } = createNetworkConfig({
+  mainnet: { url: getFullnodeUrl('mainnet') },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const initialized = useRef(false);
   const [isReady, setIsReady] = useState(false);
-
-  // Solana Network (Mainnet-Beta for production)
-  const endpoint = useMemo(() => process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com', []);
-  // Use an empty array to rely on Wallet Standard for discovery (prevents duplicate key errors)
-  const wallets = useMemo(() => [], []);
-
-  // Create a QueryClient instance
   const [queryClient] = useState(() => new QueryClient());
+
+  const solanaWallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new AlphaWalletAdapter(),
+  ], []);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -66,19 +149,45 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cm7377f0a00gup9u2w4m3v6be';
+
   return (
-    <WagmiProvider config={bnbConfig}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider>
-          <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={wallets} autoConnect>
-              <WalletModalProvider>
-                <WalletSync />
-                {children}
-                <ToastProvider />
-              </WalletModalProvider>
-            </WalletProvider>
-          </ConnectionProvider>
+        <ConnectKitProvider theme="dark">
+          <PrivyProvider
+            appId={PRIVY_APP_ID}
+            config={{
+              appearance: {
+                theme: 'dark',
+                accentColor: '#A855F7',
+                showWalletLoginFirst: true,
+              },
+              supportedChains: [bsc],
+              defaultChain: bsc,
+              embeddedWallets: {
+                createOnLogin: 'users-without-wallets',
+              },
+              rpcConfig: {
+                56: 'https://bsc-dataseed.binance.org/'
+              }
+            }}
+          >
+            <ConnectionProvider endpoint="https://api.mainnet-beta.solana.com">
+              <SolanaWalletProvider wallets={solanaWallets} autoConnect>
+                <WalletModalProvider>
+                  <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
+                    <WalletProvider autoConnect>
+                      <WalletSync />
+                      {children}
+                      <WalletConnectModal />
+                      <ToastProvider />
+                    </WalletProvider>
+                  </SuiClientProvider>
+                </WalletModalProvider>
+              </SolanaWalletProvider>
+            </ConnectionProvider>
+          </PrivyProvider>
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

@@ -460,6 +460,117 @@ section {
 }
 
 @media (max-width: 768px) {
+    .sticky-nav.at-top {
+        padding: 0 20px;
+        height: 70px;
+    }
+
+    .sticky-nav.scrolled {
+        width: 90%;
+        padding: 0 20px;
+        top: 12px;
+    }
+
+    section {
+        padding: 80px 0;
+    }
+
+    .section-content {
+        padding: 0 24px;
+    }
+
+    /* Hero Section */
+    #hero-top {
+        padding-top: 140px;
+        min-height: auto;
+    }
+
+    #hero-top p {
+        font-size: 1.1rem;
+        margin-bottom: 40px;
+        padding: 0 10px;
+    }
+
+    .waitlist-form-container {
+        margin-top: 30px;
+        max-width: 100%;
+    }
+
+    .input-container.expanded {
+        min-width: 100%;
+        flex-direction: column;
+        gap: 12px;
+        border-radius: 20px;
+        padding: 12px;
+    }
+
+    .waitlist-input {
+        width: 100%;
+        text-align: center;
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    .mini-submit {
+        width: 100%;
+        height: 50px;
+        margin-left: 0 !important;
+    }
+
+    /* Mechanics Grid */
+    .mechanics-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .mechanic-card {
+        padding: 30px;
+        flex-direction: column;
+        min-height: auto;
+        gap: 40px;
+    }
+
+    .mechanic-info {
+        max-width: 100%;
+    }
+
+    .mechanic-title {
+        font-size: 2.2rem;
+    }
+
+    .mechanic-visual {
+        width: 100%;
+    }
+
+    .abstract-shape {
+        max-width: 140px;
+    }
+
+    /* Testimonials */
+    .testimonial-card-premium {
+        width: calc(100vw - 48px);
+        padding: 32px;
+        border-radius: 24px;
+    }
+
+    .testimonial-card-premium p {
+        font-size: 1.1rem;
+    }
+
+    /* FAQ */
+    .faq-grid {
+        gap: 40px;
+    }
+
+    .faq-title-area h2 {
+        font-size: 3rem;
+    }
+
+    .faq-question {
+        font-size: 1.1rem;
+    }
+
+    /* CTA Card */
     .cta-card {
         padding: 60px 24px;
         border-radius: 32px;
@@ -467,5 +578,22 @@ section {
 
     .cta-title {
         font-size: 2rem;
+    }
+
+    /* Footer */
+    footer {
+        padding: 60px 20px !important;
+    }
+
+    .footer-meta {
+        flex-direction: column;
+        gap: 30px;
+        text-align: center;
+    }
+
+    .footer-link-group {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
     }
 }

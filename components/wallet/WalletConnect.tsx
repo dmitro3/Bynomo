@@ -1,64 +1,82 @@
-import React, { useState } from 'react';
-import { ConnectKitButton } from 'connectkit';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useAccount, useDisconnect } from 'wagmi';
-import { WalletDiscoveryModal } from './WalletDiscoveryModal';
+import React from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useOverflowStore } from '@/lib/store';
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import { useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
 
 export const WalletConnect: React.FC = () => {
-  const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
-  const { connected: solanaConnected, publicKey, disconnect: solanaDisconnect } = useWallet();
-  const { isConnected: bnbConnected, address: bnbAddress } = useAccount();
-  const { disconnect: bnbDisconnect } = useDisconnect();
-  const { network, setNetwork, setIsConnected, setAddress, setPreferredNetwork } = useOverflowStore();
+  const { logout: logoutPrivy, authenticated, user, ready } = usePrivy();
+  const { disconnect: disconnectSolana, connected: solanaConnected } = useSolanaWallet();
+  const { mutate: disconnectSui } = useSuiDisconnect();
 
-  const handleDisconnect = () => {
-    if (solanaConnected) {
-      solanaDisconnect();
-    }
-    if (bnbConnected) {
-      bnbDisconnect();
-    }
-    setAddress(null);
-    setIsConnected(false);
-    setNetwork(null);
-    setPreferredNetwork(null);
-  };
+  const { network, address, setConnectModalOpen, disconnect: disconnectStore, setPreferredNetwork } = useOverflowStore();
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  const isAnyConnected = solanaConnected || bnbConnected;
-  const activeAddress = solanaConnected ? publicKey?.toBase58() : bnbAddress;
+  const handleDisconnect = () => {
+    if (network === 'BNB') logoutPrivy();
+    else if (network === 'SOL') disconnectSolana();
+    else if (network === 'SUI') disconnectSui();
+
+    // Explicitly reset our store state and preference
+    disconnectStore();
+    setPreferredNetwork(null);
+  };
+
+  const getNetworkIcon = () => {
+    switch (network) {
+      case 'SOL': return '/logos/solana-sol-logo.png';
+      case 'SUI': return '/sui-logo.png';
+      case 'BNB': return '/logos/bnb-bnb-logo.png';
+      default: return '/logos/bnb-bnb-logo.png';
+    }
+  };
+
+  const getNetworkName = () => {
+    switch (network) {
+      case 'SOL': return 'SOL';
+      case 'SUI': return 'SUI';
+      case 'BNB': return 'BNB';
+      default: return 'Connected';
+    }
+  };
+
+  const isConnected = !!address;
+
+  if (!ready) {
+    return (
+      <div className="w-20 h-8 bg-white/5 animate-pulse rounded-lg" />
+    );
+  }
 
   return (
     <div className="flex items-center gap-3">
-      {!isAnyConnected ? (
+      {!isConnected ? (
         <button
-          onClick={() => setIsDiscoveryOpen(true)}
+          onClick={() => setConnectModalOpen(true)}
           data-tour="connect-button"
           className="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/10 transition-all active:scale-95"
         >
           Connect
         </button>
       ) : (
-        <div className="flex items-center gap-2">
-          <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 flex items-center gap-2 sm:gap-2.5">
             <div className="w-4 h-4 shrink-0">
               <img
-                src={solanaConnected ? '/logos/solana-sol-logo.png' : '/logos/bnb-bnb-logo.png'}
+                src={getNetworkIcon()}
                 alt="Network"
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-center sm:items-end">
               <span className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">
-                {solanaConnected ? 'Solana Network' : 'BNB Smart Chain'}
+                {getNetworkName()}
               </span>
-              <span className="text-white text-[11px] font-mono leading-none">
-                {activeAddress ? formatAddress(activeAddress) : '...'}
+              <span className="text-white text-[10px] sm:text-[11px] font-mono leading-none">
+                {address ? `${address.slice(0, 4)}...${address.slice(-3)}` : '...'}
               </span>
             </div>
           </div>
@@ -74,11 +92,6 @@ export const WalletConnect: React.FC = () => {
           </button>
         </div>
       )}
-
-      <WalletDiscoveryModal
-        isOpen={isDiscoveryOpen}
-        onClose={() => setIsDiscoveryOpen(false)}
-      />
     </div>
   );
 };

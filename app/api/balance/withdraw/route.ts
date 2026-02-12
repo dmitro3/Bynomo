@@ -21,20 +21,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate address (support both BNB and Solana)
+    // Validate address (support BNB, Solana, and Sui)
     let isBNB = ethers.isAddress(userAddress);
     let isSOL = false;
+    let isSUI = false;
 
     if (!isBNB) {
-      try {
-        const { PublicKey } = await import('@solana/web3.js');
-        const pk = new PublicKey(userAddress);
-        isSOL = true;
-      } catch (e) {
-        return NextResponse.json(
-          { error: 'Invalid wallet address format (BNB or Solana required)' },
-          { status: 400 }
-        );
+      if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
+        isSUI = true;
+      } else {
+        try {
+          const { PublicKey } = await import('@solana/web3.js');
+          const pk = new PublicKey(userAddress);
+          isSOL = pk.toBuffer().length === 32;
+        } catch (e) {
+          return NextResponse.json(
+            { error: 'Invalid wallet address format (BNB, Solana or Sui required)' },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -74,9 +79,14 @@ export async function POST(request: NextRequest) {
     try {
       if (isBNB) {
         signature = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
-      } else {
+      } else if (isSOL) {
         const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
         signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
+      } else if (isSUI) {
+        const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
+        signature = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
+      } else {
+        throw new Error('Unsupported network for withdrawal');
       }
     } catch (e: any) {
       console.error('Transfer failed:', e);

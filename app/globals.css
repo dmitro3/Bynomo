@@ -17,6 +17,7 @@
   --color-neon-blue: var(--neon-blue);
   --color-neon-green: var(--neon-green);
   --color-neon-purple: var(--neon-purple);
+  --breakpoint-xs: 380px;
 }
 
 body {

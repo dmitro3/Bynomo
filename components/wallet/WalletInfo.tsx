@@ -28,8 +28,8 @@ export const WalletInfo: React.FC = () => {
     return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
   };
 
-  const currencySymbol = network === 'SOL' ? 'SOL' : 'BNB';
-  const networkName = network === 'SOL' ? 'Solana' : 'Binance';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
 
   const balance = walletBalance.toFixed(4);
   const isLoading = false; // Store doesn't have isLoading for wallet balance yet, but fetch is fast
@@ -40,7 +40,7 @@ export const WalletInfo: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10 shrink-0">
             <img
-              src={network === 'SOL' ? '/logos/solana-sol-logo.png' : '/logos/bnb-bnb-logo.png'}
+              src={network === 'SUI' ? '/logos/sui-logo.png' : network === 'SOL' ? '/logos/solana-sol-logo.png' : '/logos/bnb-bnb-logo.png'}
               alt={networkName}
               className="w-full h-full object-contain"
             />

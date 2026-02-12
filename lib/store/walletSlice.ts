@@ -14,26 +14,28 @@ export interface WalletState {
   walletBalance: number;
   isConnected: boolean;
   isConnecting: boolean;
-  network: 'BNB' | 'SOL' | null;
-  preferredNetwork: 'BNB' | 'SOL' | null;
+  network: 'BNB' | 'SOL' | 'SUI' | null;
+  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | null;
   error: string | null;
+  isConnectModalOpen: boolean;
 
   // Actions
   connect: () => Promise<void>;
   disconnect: () => void;
   refreshWalletBalance: () => Promise<void>;
   clearError: () => void;
+  setConnectModalOpen: (open: boolean) => void;
 
   // Setters for wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
-  setNetwork: (network: 'BNB' | 'SOL' | null) => void;
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | null) => void;
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => void;
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => void;
 }
 
 /**
  * Create wallet slice for Zustand store
- * Handles wallet state management for BNB integration
+ * Handles wallet state management for multi-chain integration
  */
 export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   // Initial state
@@ -42,23 +44,24 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnected: false,
   isConnecting: false,
   network: null,
-  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | null : null,
+  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | null : null,
   error: null,
+  isConnectModalOpen: false,
 
   /**
    * Connect wallet
-   * Note: Actual connection is handled by BNB or Solana Wallet integration
+   * Note: Actual connection is handled by Privy integration
    */
   connect: async () => {
-    console.log('Connect called - handled by adapter');
+    set({ isConnectModalOpen: true });
   },
 
   /**
    * Disconnect wallet
-   * Note: Actual disconnection is handled by BNB or Solana Wallet integration
+   * Note: Actual disconnection is handled by Privy integration
    */
   disconnect: () => {
-    console.log('Disconnect called - handled by adapter');
+    console.log('Disconnect called - handled by Privy');
 
     // Reset state
     set({
@@ -86,9 +89,13 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         const { getBNBBalance } = await import('@/lib/bnb/client');
         const bal = await getBNBBalance(address);
         set({ walletBalance: bal });
-      } else {
+      } else if (network === 'SOL') {
         const { getSOLBalance } = await import('@/lib/solana/client');
         const bal = await getSOLBalance(address);
+        set({ walletBalance: bal });
+      } else if (network === 'SUI') {
+        const { getUSDCBalance } = await import('@/lib/sui/client');
+        const bal = await getUSDCBalance(address);
         set({ walletBalance: bal });
       }
     } catch (error) {
@@ -101,6 +108,13 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
    */
   clearError: () => {
     set({ error: null });
+  },
+
+  /**
+   * Set connect modal visibility
+   */
+  setConnectModalOpen: (open: boolean) => {
+    set({ isConnectModalOpen: open });
   },
 
   /**
@@ -118,16 +132,16 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Set active network (BNB or SOL)
+   * Set active network (BNB, SOL or SUI)
    */
-  setNetwork: (network: 'BNB' | 'SOL' | null) => {
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => {
     set({ network });
   },
 
   /**
    * Set preferred network (manually chosen by user)
    */
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | null) => {
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => {
     set({ preferredNetwork: network });
     if (typeof window !== 'undefined') {
       if (network) {
