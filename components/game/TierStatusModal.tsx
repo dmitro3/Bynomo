@@ -15,10 +15,11 @@ const TIER_DATA = [
         name: 'Free',
         color: 'from-gray-400 to-gray-600',
         icon: '△',
-        assets: 2,
-        blitz: false,
+        assets: 'All',
+        blitz: true,
         payout: '80%',
-        withdrawal: '7 days',
+        withdrawal: 'Instant',
+        fee: '2.0%',
         requirement: '$0',
     },
     {
@@ -26,10 +27,11 @@ const TIER_DATA = [
         name: 'Standard',
         color: 'from-amber-400 to-amber-600',
         icon: '♢',
-        assets: 10,
+        assets: 'All',
         blitz: true,
         payout: '85%',
-        withdrawal: '3 days',
+        withdrawal: 'Instant',
+        fee: '1.75%',
         requirement: '$50',
     },
     {
@@ -40,7 +42,8 @@ const TIER_DATA = [
         assets: 'All',
         blitz: true,
         payout: '90%',
-        withdrawal: '24 hours',
+        withdrawal: 'Instant',
+        fee: '1.5%',
         requirement: '$500',
     }
 ];
@@ -139,6 +142,7 @@ export const TierStatusModal: React.FC<TierStatusModalProps> = ({ isOpen, onClos
                                     { label: 'Blitz Mode', key: 'blitz', type: 'bool' },
                                     { label: 'Max Payout', key: 'payout' },
                                     { label: 'Withdrawal', key: 'withdrawal' },
+                                    { label: 'Withdrawal Fee', key: 'fee' },
                                 ].map((row, i) => (
                                     <div key={i} className="grid grid-cols-4 px-4 py-4 bg-white/[0.02] border border-white/5 rounded-2xl items-center">
                                         <div className="text-xs text-gray-400 font-medium">{row.label}</div>

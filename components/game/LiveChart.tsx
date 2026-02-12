@@ -483,11 +483,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       ];
     }
 
-    // 4. RSI (14) - Improved with Wilder's Smoothing
+    // 4. RSI (14) - Refined Wilder's Smoothing
     if (activeIndicators['rsi'] && points.length >= 2) {
       const rsiPoints = [];
-      let prevAvgGain = 0;
-      let prevAvgLoss = 0;
+      let avgGain = 0;
+      let avgLoss = 0;
       const period = 14;
 
       for (let i = 1; i < points.length; i++) {
@@ -495,22 +495,22 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         const gain = change > 0 ? change : 0;
         const loss = change < 0 ? -change : 0;
 
-        if (i < period) {
-          // Accumulate for initial average
-          prevAvgGain += gain;
-          prevAvgLoss += loss;
-
-          if (i === period - 1) {
-            prevAvgGain /= period;
-            prevAvgLoss /= period;
+        if (i <= period) {
+          avgGain += gain;
+          avgLoss += loss;
+          if (i === period) {
+            avgGain /= period;
+            avgLoss /= period;
+            const rs = avgGain / (avgLoss || 0.00001);
+            rsiPoints.push({ timestamp: points[i].timestamp, rsi: 100 - (100 / (1 + rs)) });
+          } else {
+            rsiPoints.push({ timestamp: points[i].timestamp, rsi: 50 });
           }
-          rsiPoints.push({ timestamp: points[i].timestamp, rsi: 50 });
         } else {
-          // Wilder's Smoothing Method
-          prevAvgGain = (prevAvgGain * (period - 1) + gain) / period;
-          prevAvgLoss = (prevAvgLoss * (period - 1) + loss) / period;
-
-          const rs = prevAvgGain / (prevAvgLoss || 0.00001);
+          // Precise Wilder's Smoothing
+          avgGain = (avgGain * (period - 1) + gain) / period;
+          avgLoss = (avgLoss * (period - 1) + loss) / period;
+          const rs = avgGain / (avgLoss || 0.00001);
           const rsiValue = 100 - (100 / (1 + rs));
           rsiPoints.push({ timestamp: points[i].timestamp, rsi: rsiValue });
         }
@@ -1120,21 +1120,45 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                       </g>
                     )}
 
-                    {/* RSI */}
+                    {/* RSI Advanced Visualization */}
                     {activeIndicators['rsi'] && indicatorPaths.rsi && (() => {
                       try {
                         const rsiPoints = JSON.parse(indicatorPaths.rsi as string);
                         const rsiLine = d3Shape.line<{ timestamp: number, rsi: number }>()
                           .x(d => scales.xScale(d.timestamp))
-                          .y(d => dimensions.height - 20 - (d.rsi / 100) * 40)
+                          .y(d => dimensions.height - 40 - (d.rsi / 100) * 80)
                           .curve(d3Shape.curveMonotoneX);
 
+                        const panelHeight = 100;
+                        const panelY = dimensions.height - panelHeight - 20;
+
                         return (
-                          <g>
-                            <rect x={0} y={dimensions.height - 70} width={dimensions.width} height={60} fill="rgba(168,85,247,0.05)" />
-                            <line x1={0} y1={dimensions.height - 70} x2={dimensions.width} y2={dimensions.height - 70} stroke="rgba(168,85,247,0.2)" strokeWidth="1" />
-                            <path d={rsiLine(rsiPoints) || ''} fill="none" stroke="#a855f7" strokeWidth="2" />
-                            <text x={dimensions.width - 15} y={dimensions.height - 55} fill="#a855f7" fontSize="10" fontWeight="bold" textAnchor="end">RSI (14)</text>
+                          <g transform={`translate(0, ${panelY})`}>
+                            {/* Panel Background */}
+                            <rect x={0} y={0} width={dimensions.width} height={panelHeight} fill="rgba(0,0,0,0.4)" backdrop-blur="md" />
+                            <line x1={0} y1={0} x2={dimensions.width} y2={0} stroke="rgba(168,85,247,0.3)" strokeWidth="1" />
+
+                            {/* Zones (70-30) */}
+                            <line x1={0} y1={30} x2={dimensions.width} y2={30} stroke="rgba(239, 68, 68, 0.3)" strokeWidth="1" strokeDasharray="4 4" />
+                            <line x1={0} y1={70} x2={dimensions.width} y2={70} stroke="rgba(34, 197, 94, 0.3)" strokeWidth="1" strokeDasharray="4 4" />
+
+                            {/* Labels */}
+                            <text x={10} y={25} fill="rgba(239, 68, 68, 0.5)" fontSize="8" fontWeight="bold">70 OVERBOUGHT</text>
+                            <text x={10} y={65} fill="rgba(34, 197, 94, 0.5)" fontSize="8" fontWeight="bold">30 OVERSOLD</text>
+
+                            {/* RSI Line */}
+                            <path
+                              d={d3Shape.line<{ timestamp: number, rsi: number }>()
+                                .x(d => scales.xScale(d.timestamp))
+                                .y(d => panelHeight - (d.rsi / 100) * panelHeight)
+                                .curve(d3Shape.curveMonotoneX)(rsiPoints) || ''}
+                              fill="none"
+                              stroke="#a855f7"
+                              strokeWidth="2"
+                              filter="drop-shadow(0 0 4px rgba(168,85,247,0.5))"
+                            />
+
+                            <text x={dimensions.width - 15} y={15} fill="#a855f7" fontSize="10" fontWeight="black" textAnchor="end" opacity="0.8">RSI PRO (14)</text>
                           </g>
                         );
                       } catch (e) { return null; }
@@ -1238,15 +1262,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
                     {(Object.keys(assetConfig) as AssetType[])
                       .map((asset) => {
-                        const isUnlocked = userTier === 'vip' ||
-                          (userTier === 'standard' && ['BTC', 'BNB', 'ETH', 'SOL', 'XRP', 'ADA', 'TRX', 'DOGE', 'GOLD', 'SILVER'].includes(asset)) ||
-                          (userTier === 'free' && ['BTC', 'BNB'].includes(asset));
-
                         return (
                           <button
                             key={asset}
                             onClick={() => {
-                              if (!isUnlocked) return;
                               setSelectedAsset(asset);
                               setIsAssetDropdownOpen(false);
                             }}
@@ -1254,7 +1273,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                             flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 group
                             ${selectedAsset === asset
                                 ? 'bg-purple-500/20 border border-purple-500/30'
-                                : isUnlocked ? 'hover:bg-white/5 border border-transparent' : 'opacity-40 cursor-not-allowed'
+                                : 'hover:bg-white/5 border border-transparent'
                               }
                           `}
                           >
@@ -1262,19 +1281,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                               <AssetIcon
                                 src={assetConfig[asset].logo}
                                 asset={asset}
-                                className={`w-7 h-7 object-contain ${!isUnlocked ? 'grayscale' : ''}`}
+                                className="w-7 h-7 object-contain"
                               />
                             </div>
                             <div className="flex-1 text-left">
-                              <div className="flex items-center gap-2">
-                                <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                                {!isUnlocked && <span className="text-[8px] px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-500 font-black uppercase tracking-widest flex items-center gap-1">
-                                  <svg className="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                  Locked
-                                </span>}
-                              </div>
+                              <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
                               <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
                             </div>
                             {selectedAsset === asset && (
