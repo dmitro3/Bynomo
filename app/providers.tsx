@@ -77,17 +77,31 @@ function WalletSync() {
       }
     }
 
-    // 4. Cleanup/Sync Decision
+    // 4. Check Stellar
+    if (preferredNetwork === 'XLM') {
+      // For Stellar, we usually rely on manual connection which sets the store,
+      // but we should ensure the state is persisted if possible.
+      // However, if it's already set in store by handleStellarConnect, we don't need to do much here
+      // unless we want to "reconnect" automatically. 
+      // For now, let's just make sure it doesn't clear if network is XLM and address exists.
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') {
+        return;
+      }
+    }
+
+    // 5. Cleanup/Sync Decision
     const hasSolana = solanaConnected && solanaPublicKey;
     const hasSui = !!suiAccount?.address;
     const hasBNB = (wagmiConnected && !!wagmiAddress) || (privyReady && authenticated && !!privyWallets[0]);
+    const hasStellar = useOverflowStore.getState().network === 'XLM' && !!useOverflowStore.getState().address;
 
     // Determine if we should clear
     let shouldClear = false;
     if (preferredNetwork === 'SOL' && !hasSolana) shouldClear = true;
     else if (preferredNetwork === 'SUI' && !hasSui) shouldClear = true;
     else if (preferredNetwork === 'BNB' && !hasBNB) shouldClear = true;
-    else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui) shouldClear = true;
+    else if (preferredNetwork === 'XLM' && !hasStellar) shouldClear = true;
+    else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar) shouldClear = true;
 
     if (shouldClear) {
       setAddress(null);
@@ -128,6 +142,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const initializeApp = async () => {
       try {
         const { updateAllPrices, loadTargetCells, startGlobalPriceFeed } = useOverflowStore.getState();
+
+        // Initialize Stellar Wallet Kit
+        const { initWalletKit } = await import('@/lib/stellar/wallet-kit');
+        await initWalletKit().catch(console.error);
+
         await loadTargetCells().catch(console.error);
         const stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
         setIsReady(true);

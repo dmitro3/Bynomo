@@ -48,6 +48,20 @@ export const WalletConnectModal: React.FC = () => {
         setOpen(false);
     };
 
+    const handleStellarConnect = async () => {
+        const { openWalletModal } = await import('@/lib/stellar/wallet-kit');
+        const address = await openWalletModal();
+        if (address) {
+            setPreferredNetwork('XLM');
+            useOverflowStore.getState().setNetwork('XLM');
+            useOverflowStore.getState().setAddress(address);
+            useOverflowStore.getState().setIsConnected(true);
+            // Fetch Stellar mainnet XLM balance
+            useOverflowStore.getState().refreshWalletBalance();
+        }
+        setOpen(false);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -140,6 +154,25 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-xs text-gray-400 mt-0.5">Connect Sui Wallet, BlueMove, etc.</p>
                             </div>
                             <Wallet className="w-5 h-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                        </button>
+
+                        {/* Stellar Option */}
+                        <button
+                            onClick={handleStellarConnect}
+                            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-12 h-12 rounded-lg bg-blue-400/10 flex items-center justify-center border border-blue-400/20 group-hover:scale-110 transition-transform">
+                                <img src="/logos/stellar-xlm-logo.png" alt="Stellar" className="w-7 h-7" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white">Stellar Network</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-400/20 text-blue-400 font-bold uppercase tracking-wider">Mainnet</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5">Connect Freighter, Lobster, etc.</p>
+                            </div>
+                            <Globe className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}

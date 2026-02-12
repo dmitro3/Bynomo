@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import * as d3Shape from 'd3-shape';
 import { useStore } from '@/lib/store';
 import { AssetType } from '@/lib/utils/priceFeed';
@@ -82,6 +83,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [now, setNow] = useState(Date.now());
   const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
+  const assetSelectorRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
 
   // Loading state for price feed
@@ -168,6 +171,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto' },
     BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png', category: 'Crypto' },
     SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
+    XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
     // Metals
     GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
     SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
@@ -1232,11 +1236,18 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       </svg>
 
       {/* Price Header with Asset Selector - Dropdown Version */}
-      <div className="absolute top-12 sm:top-20 left-3 sm:left-6 z-40 pointer-events-auto">
+      <div className="absolute top-12 sm:top-20 left-3 sm:left-6 pointer-events-auto z-40">
         <div className="relative mb-4">
           {/* Trigger Button */}
           <button
-            onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+            ref={assetSelectorRef}
+            onClick={() => {
+              if (!isAssetDropdownOpen && assetSelectorRef.current) {
+                const rect = assetSelectorRef.current.getBoundingClientRect();
+                setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+              }
+              setIsAssetDropdownOpen(!isAssetDropdownOpen);
+            }}
             data-tour="asset-selector"
             className="flex items-center gap-3 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-purple-500/50 transition-all duration-300 group"
           >
@@ -1262,102 +1273,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
               </div>
             </div>
           </button>
-
-          {/* Dropdown Menu */}
-          <AnimatePresence>
-            {isAssetDropdownOpen && (
-              <>
-                {/* Backdrop to close */}
-                <div
-                  className="fixed inset-0 z-[-1]"
-                  onClick={() => setIsAssetDropdownOpen(false)}
-                />
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute top-full left-0 mt-2 w-72 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 p-3"
-                >
-                  {/* Search Input */}
-                  <div className="relative mb-3">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Search assets..."
-                      value={assetSearchQuery}
-                      onChange={(e) => setAssetSearchQuery(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
-                    />
-                  </div>
-
-                  {/* Category Tabs */}
-                  <div className="flex gap-1 mb-3 bg-white/5 p-1 rounded-xl">
-                    {(['All', 'Crypto', 'Metals', 'Forex', 'Stocks'] as const).map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setActiveAssetCategory(cat)}
-                        className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${activeAssetCategory === cat ? 'bg-purple-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Asset List */}
-                  <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
-                    {filteredAssets.length > 0 ? (
-                      filteredAssets.map((asset) => (
-                        <button
-                          key={asset}
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setIsAssetDropdownOpen(false);
-                            setAssetSearchQuery(''); // Reset search
-                          }}
-                          className={`
-                            flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 group
-                            ${selectedAsset === asset
-                              ? 'bg-purple-500/20 border border-purple-500/30'
-                              : 'hover:bg-white/5 border border-transparent'
-                            }
-                          `}
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
-                            <AssetIcon
-                              src={assetConfig[asset].logo}
-                              asset={asset}
-                              className="w-7 h-7 object-contain"
-                            />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="flex items-center gap-2">
-                              <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                              {assetConfig[asset].category === 'Crypto' && (
-                                <span className="text-[8px] px-1 bg-blue-500/20 text-blue-400 rounded-sm font-bold uppercase">Crypto</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
-                          </div>
-                          {selectedAsset === asset && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                          )}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="py-8 text-center">
-                        <p className="text-gray-500 text-xs font-bold">No assets found</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* Price Display */}
@@ -1547,6 +1462,103 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           );
         })}
       </div>
+
+      {/* Asset Dropdown - rendered via Portal to escape all stacking contexts */}
+      {isAssetDropdownOpen && typeof document !== 'undefined' && createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[9998]"
+            onClick={() => setIsAssetDropdownOpen(false)}
+          />
+
+          {/* Dropdown Panel */}
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left }}
+            className="w-72 bg-black/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-[9999] p-3"
+          >
+            {/* Search Input */}
+            <div className="relative mb-3">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search assets..."
+                value={assetSearchQuery}
+                onChange={(e) => setAssetSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
+              />
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex gap-1 mb-3 bg-white/5 p-1 rounded-xl">
+              {(['All', 'Crypto', 'Metals', 'Forex', 'Stocks'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveAssetCategory(cat)}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${activeAssetCategory === cat ? 'bg-purple-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Asset List */}
+            <div className="max-h-[320px] overflow-y-auto scrollbar-none no-scrollbar grid grid-cols-1 gap-1">
+              {filteredAssets.length > 0 ? (
+                filteredAssets.map((asset) => (
+                  <button
+                    key={asset}
+                    onClick={() => {
+                      setSelectedAsset(asset);
+                      setIsAssetDropdownOpen(false);
+                      setAssetSearchQuery('');
+                    }}
+                    className={`
+                      flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 group
+                      ${selectedAsset === asset
+                        ? 'bg-purple-500/20 border border-purple-500/30'
+                        : 'hover:bg-white/5 border border-transparent'
+                      }
+                    `}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
+                      <AssetIcon
+                        src={assetConfig[asset].logo}
+                        asset={asset}
+                        className="w-7 h-7 object-contain"
+                      />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2">
+                        <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
+                        {assetConfig[asset].category === 'Crypto' && (
+                          <span className="text-[8px] px-1 bg-blue-500/20 text-blue-400 rounded-sm font-bold uppercase">Crypto</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                    </div>
+                    {selectedAsset === asset && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-gray-500 text-xs font-bold">No assets found</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </>,
+        document.body
+      )}
     </div>
   );
 };

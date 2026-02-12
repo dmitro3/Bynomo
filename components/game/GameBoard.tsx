@@ -54,7 +54,7 @@ export const GameBoard: React.FC = () => {
   const toast = useToast();
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : 'BNB';
+  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : 'BNB';
   const blitzEntryFee = 0.01;
 
   const handleEnterBlitz = async () => {
@@ -197,7 +197,7 @@ export const GameBoard: React.FC = () => {
   return (
     <div className="relative w-full h-full flex overflow-hidden">
       {/* Main Interactive Chart */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0">
         <LiveChart
           betAmount={betAmount}
           setBetAmount={setBetAmount}

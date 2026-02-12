@@ -19,6 +19,9 @@ export const WalletConnect: React.FC = () => {
     if (network === 'BNB') logoutPrivy();
     else if (network === 'SOL') disconnectSolana();
     else if (network === 'SUI') disconnectSui();
+    else if (network === 'XLM') {
+      import('@/lib/stellar/wallet-kit').then(m => m.disconnectWallet());
+    }
 
     // Explicitly reset our store state and preference
     disconnectStore();
@@ -30,6 +33,7 @@ export const WalletConnect: React.FC = () => {
       case 'SOL': return '/logos/solana-sol-logo.png';
       case 'SUI': return '/sui-logo.png';
       case 'BNB': return '/logos/bnb-bnb-logo.png';
+      case 'XLM': return '/logos/stellar-xlm-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   };
@@ -39,6 +43,7 @@ export const WalletConnect: React.FC = () => {
       case 'SOL': return 'SOL';
       case 'SUI': return 'SUI';
       case 'BNB': return 'BNB';
+      case 'XLM': return 'XLM';
       default: return 'Connected';
     }
   };

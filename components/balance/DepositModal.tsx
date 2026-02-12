@@ -46,7 +46,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : 'BNB';
   const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
 
   // Quick select amounts

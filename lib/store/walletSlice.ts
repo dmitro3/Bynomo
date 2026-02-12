@@ -14,8 +14,8 @@ export interface WalletState {
   walletBalance: number;
   isConnected: boolean;
   isConnecting: boolean;
-  network: 'BNB' | 'SOL' | 'SUI' | null;
-  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | null;
+  network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null;
+  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null;
   error: string | null;
   isConnectModalOpen: boolean;
 
@@ -29,8 +29,8 @@ export interface WalletState {
   // Setters for wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => void;
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => void;
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null) => void;
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null) => void;
 }
 
 /**
@@ -44,7 +44,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnected: false,
   isConnecting: false,
   network: null,
-  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | null : null,
+  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | 'XLM' | null : null,
   error: null,
   isConnectModalOpen: false,
 
@@ -97,6 +97,10 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         const { getUSDCBalance } = await import('@/lib/sui/client');
         const bal = await getUSDCBalance(address);
         set({ walletBalance: bal });
+      } else if (network === 'XLM') {
+        const { getXLMBalance } = await import('@/lib/stellar/client');
+        const bal = await getXLMBalance(address);
+        set({ walletBalance: bal });
       }
     } catch (error) {
       console.error("Error refreshing wallet balance:", error);
@@ -132,16 +136,16 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Set active network (BNB, SOL or SUI)
+   * Set active network (BNB, SOL, SUI or XLM)
    */
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => {
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null) => {
     set({ network });
   },
 
   /**
    * Set preferred network (manually chosen by user)
    */
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | null) => {
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | null) => {
     set({ preferredNetwork: network });
     if (typeof window !== 'undefined') {
       if (network) {

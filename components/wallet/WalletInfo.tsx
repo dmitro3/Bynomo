@@ -28,7 +28,7 @@ export const WalletInfo: React.FC = () => {
     return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
   };
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : 'BNB';
   const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
 
   const balance = walletBalance.toFixed(4);

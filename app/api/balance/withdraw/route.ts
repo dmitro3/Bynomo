@@ -21,22 +21,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate address (support BNB, Solana, and Sui)
+    // Validate address (support BNB, Solana, Sui, and Stellar)
     let isBNB = ethers.isAddress(userAddress);
     let isSOL = false;
     let isSUI = false;
+    let isXLM = false;
 
     if (!isBNB) {
       if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
         isSUI = true;
+      } else if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
+        isXLM = true;
       } else {
         try {
           const { PublicKey } = await import('@solana/web3.js');
           const pk = new PublicKey(userAddress);
           isSOL = pk.toBuffer().length === 32;
         } catch (e) {
+          // If all checks fail
           return NextResponse.json(
-            { error: 'Invalid wallet address format (BNB, Solana or Sui required)' },
+            { error: 'Invalid wallet address format (BNB, Solana, Sui or Stellar required)' },
             { status: 400 }
           );
         }
@@ -85,6 +89,9 @@ export async function POST(request: NextRequest) {
       } else if (isSUI) {
         const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
         signature = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
+      } else if (isXLM) {
+        const { transferXLMFromTreasury } = await import('@/lib/stellar/backend-client');
+        signature = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error('Unsupported network for withdrawal');
       }

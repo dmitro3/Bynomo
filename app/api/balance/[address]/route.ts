@@ -37,13 +37,18 @@ export async function GET(
         const pk = new PublicKey(address);
         isValid = pk.toBuffer().length === 32;
       } catch (e) {
-        isValid = false;
+        // Check if it's a valid Stellar address (starts with G, 56 characters)
+        if (/^G[A-Z2-7]{55}$/.test(address)) {
+          isValid = true;
+        } else {
+          isValid = false;
+        }
       }
     }
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana or Sui required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui or Stellar required)' },
         { status: 400 }
       );
     }
