@@ -60,6 +60,35 @@ export const WalletConnectModal: React.FC = () => {
         setOpen(false);
     };
 
+    const handleTezosConnect = async () => {
+        try {
+            const { BeaconWallet } = await import('@taquito/beacon-wallet');
+            const { NetworkType } = await import('@airgap/beacon-sdk');
+
+            const wallet = new BeaconWallet({
+                name: "Binomo Protocol",
+                preferredNetwork: NetworkType.MAINNET
+            });
+
+            await wallet.requestPermissions();
+            const address = await wallet.getPKH();
+
+            if (address) {
+                setPreferredNetwork('XTZ');
+                useOverflowStore.getState().setNetwork('XTZ');
+                useOverflowStore.getState().setAddress(address);
+                useOverflowStore.getState().setIsConnected(true);
+                // Fetch Tezos mainnet XTZ balance
+                useOverflowStore.getState().refreshWalletBalance();
+                // Fetch Binomo house balance for Tezos
+                useOverflowStore.getState().fetchBalance(address);
+            }
+        } catch (error) {
+            console.error("Tezos connection error:", error);
+        }
+        setOpen(false);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -171,6 +200,25 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-xs text-gray-400 mt-0.5">Connect Freighter, Lobster, etc.</p>
                             </div>
                             <Globe className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                        </button>
+
+                        {/* Tezos Option */}
+                        <button
+                            onClick={handleTezosConnect}
+                            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-12 h-12 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                                <img src="/logos/tezos-xtz-logo.png" alt="Tezos" className="w-7 h-7" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white">Tezos Mainnet</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-500 font-bold uppercase tracking-wider">XTZ</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5">Temple, Kukai, and more</p>
+                            </div>
+                            <Globe className="w-5 h-5 text-gray-600 group-hover:text-indigo-500 transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}

@@ -12,6 +12,7 @@ import { ethers } from 'ethers';
 interface WinRequest {
     userAddress: string;
     winAmount: number;
+    currency: string;
     betId: string;
 }
 
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     try {
         // Parse request body
         const body: WinRequest = await request.json();
-        const { userAddress, winAmount, betId } = body;
+        const { userAddress, winAmount, currency = 'BNB', betId } = body;
 
         // Validate required fields
         if (!userAddress || winAmount === undefined || winAmount === null) {
@@ -29,10 +30,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate BNB (EVM) address
-        if (!ethers.isAddress(userAddress)) {
+        // Validate address using utility
+        const { isValidAddress } = await import('@/lib/utils/address');
+        if (!(await isValidAddress(userAddress))) {
             return NextResponse.json(
-                { error: 'Invalid BNB address format' },
+                { error: 'Invalid wallet address format' },
                 { status: 400 }
             );
         }
@@ -45,62 +47,38 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get current balance
-        const { data: userData, error: fetchError } = await supabase
-            .from('user_balances')
-            .select('balance')
-            .eq('user_address', userAddress)
-            .single();
+        // Call credit_balance_for_payout stored procedure
+        const { data, error } = await supabase.rpc('credit_balance_for_payout', {
+            p_user_address: userAddress,
+            p_payout_amount: winAmount,
+            p_currency: currency,
+            p_bet_id: betId,
+        });
 
-        if (fetchError || !userData) {
-            console.error('Error fetching user balance:', fetchError);
+        // Handle database errors
+        if (error) {
+            console.error('Database error in win credit:', error);
             return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
+                { error: 'Service temporarily unavailable. Please try again.' },
+                { status: 503 }
             );
         }
 
-        const currentBalance = parseFloat(userData.balance.toString());
-        const newBalance = currentBalance + winAmount;
+        // Parse the JSON result from the stored procedure
+        const result = data as { success: boolean; error: string | null; new_balance: number };
 
-        // Update balance
-        const { error: updateError } = await supabase
-            .from('user_balances')
-            .update({
-                balance: newBalance,
-                updated_at: new Date().toISOString()
-            })
-            .eq('user_address', userAddress);
-
-        if (updateError) {
-            console.error('Error updating balance:', updateError);
+        // Check if the procedure reported an error
+        if (!result.success) {
             return NextResponse.json(
-                { error: 'Failed to credit winnings' },
-                { status: 500 }
+                { error: result.error || 'Failed to credit winnings' },
+                { status: 400 }
             );
-        }
-
-        // Insert audit log entry
-        const { error: auditError } = await supabase
-            .from('balance_audit_log')
-            .insert({
-                user_address: userAddress,
-                operation_type: 'bet_won',
-                amount: winAmount,
-                balance_before: currentBalance,
-                balance_after: newBalance,
-                metadata: { betId }
-            });
-
-        if (auditError) {
-            console.error('Error inserting audit log:', auditError);
-            // Don't fail the request for audit log errors
         }
 
         // Return success with new balance
         return NextResponse.json({
             success: true,
-            newBalance: newBalance,
+            newBalance: parseFloat(result.new_balance.toString()),
             winAmount: winAmount
         });
 

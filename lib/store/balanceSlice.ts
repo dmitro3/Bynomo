@@ -43,22 +43,22 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
   /**
    * Fetch house balance for a user address
    * Queries the balance API endpoint
-   * @param address - BNB wallet address
+   * @param address - Wallet address
    */
   fetchBalance: async (address: string) => {
     const { accountType } = get();
+    // Access network from combined store if available, or default to BNB
+    const network = (get() as any).network || 'BNB';
 
     // Skip API fetch for demo mode as it uses local state only
     if (!address || accountType === 'demo' || address.startsWith('0xDEMO')) {
       return;
     }
 
-    const formattedAddress = address;
-
     try {
       set({ isLoading: true, error: null });
 
-      const response = await fetch(`/api/balance/${formattedAddress}`);
+      const response = await fetch(`/api/balance/${address}?currency=${network}`);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -127,11 +127,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    * Process deposit funds operation
    * Called after deposit transaction completes to update database
    * @param address - User wallet address
-   * @param amount - Deposit amount in USDC
+   * @param amount - Deposit amount
    * @param txHash - Transaction hash for audit trail
    */
   depositFunds: async (address: string, amount: number, txHash: string) => {
-    const formattedAddress = address;
+    const network = (get() as any).network || 'BNB';
 
     try {
       set({ isLoading: true, error: null });
@@ -142,9 +142,10 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: formattedAddress,
+          userAddress: address,
           amount,
           txHash,
+          currency: network
         }),
       });
 
@@ -179,11 +180,10 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    * Process withdraw funds operation
    * Called after withdrawal transaction completes to update database
    * @param address - User wallet address
-   * @param amount - Withdrawal amount in USDC
-   * @param txHash - Transaction hash for audit trail
+   * @param amount - Withdrawal amount
    */
   withdrawFunds: async (address: string, amount: number) => {
-    const formattedAddress = address;
+    const network = (get() as any).network || 'BNB';
 
     try {
       set({ isLoading: true, error: null });
@@ -194,8 +194,9 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: formattedAddress,
+          userAddress: address,
           amount,
+          currency: network
         }),
       });
 

@@ -37,7 +37,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { authenticated, user } = usePrivy();
 
   // Solana Hook
-  const { signAndSendTransaction: signAndSendSolana, publicKey: solanaPublicKey } = useSolanaWallet();
+  const { sendTransaction: signAndSendSolana, publicKey: solanaPublicKey } = useSolanaWallet();
 
   // Sui Hooks
   const { mutateAsync: signAndExecuteSui } = useSignAndExecuteTransaction();
@@ -46,8 +46,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : 'BNB Chain';
 
   // Quick select amounts
   const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
@@ -129,7 +129,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         toast.info('Please confirm the transaction in your Sui wallet...');
 
         const tx = await buildSuiDepositTransaction(depositAmount, address);
-        const result = await signAndExecuteSui({ transaction: tx });
+        const result = await signAndExecuteSui({ transaction: tx as any });
         txHash = result.digest;
 
       } else if (network === 'SOL') {
@@ -204,6 +204,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           </p>
           <p className="text-[#00f5ff] text-xl font-bold font-mono flex items-center gap-2">
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {walletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

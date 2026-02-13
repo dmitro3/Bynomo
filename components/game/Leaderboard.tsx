@@ -72,14 +72,14 @@ export const Leaderboard: React.FC = () => {
             {/* Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isOpen
+                className={`px-3 sm:px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-1.5 sm:gap-2 group shadow-lg shrink-0 ${isOpen
                     ? 'bg-amber-500 text-white border-amber-400 shadow-amber-500/30'
                     : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
                     }`}
                 title="Leaderboard"
             >
                 <span className="text-sm">🏆</span>
-                <span className="text-[10px] font-black uppercase tracking-widest">Leaderboard</span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Leaderboard</span>
             </button>
 
             {/* Leaderboard Panel */}
@@ -96,7 +96,7 @@ export const Leaderboard: React.FC = () => {
                             initial={{ opacity: 0, y: 20, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                            className="fixed bottom-20 right-16 sm:right-20 z-[9999] w-80 bg-[#0d0d0d]/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-4 shadow-2xl overflow-hidden"
+                            className="fixed bottom-20 right-4 sm:right-20 z-[9999] w-[calc(100vw-32px)] sm:w-80 max-w-sm bg-[#0d0d0d]/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-4 shadow-2xl overflow-hidden"
                         >
                             {/* Header */}
                             <div className="flex justify-between items-center mb-4">

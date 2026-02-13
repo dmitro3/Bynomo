@@ -16,7 +16,7 @@ export const MiniHistory: React.FC = () => {
     const recentBets = bets.slice(0, 10);
 
     return (
-        <div className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2">
+        <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[60] flex flex-col items-end gap-2 max-w-[calc(100vw-24px)]">
             {/* Mini History List */}
             <AnimatePresence>
                 {isOpen && (
@@ -24,7 +24,7 @@ export const MiniHistory: React.FC = () => {
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className="w-64 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden mb-2"
+                        className="w-[280px] sm:w-64 bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden mb-2"
                     >
                         <div className="p-3 border-b border-white/5 bg-white/5 flex justify-between items-center">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Trade History</h4>
@@ -80,36 +80,38 @@ export const MiniHistory: React.FC = () => {
             </AnimatePresence>
 
             {/* Trigger Buttons Row */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-full pb-1">
                 {/* Leaderboard */}
                 <Leaderboard />
 
                 {/* Indicators Toggle */}
                 <button
                     onClick={() => setIsIndicatorsOpen(!isIndicatorsOpen)}
-                    className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isIndicatorsOpen || Object.values(activeIndicators).some(v => v)
+                    className={`px-3 sm:px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-1.5 sm:gap-2 group shadow-lg shrink-0 ${isIndicatorsOpen || Object.values(activeIndicators).some(v => v)
                         ? 'bg-purple-600 text-white border-purple-500 shadow-purple-500/30'
                         : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
                         }`}
                 >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    <span className="text-[10px] font-black uppercase tracking-widest">Indicators</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Indicators</span>
                     {Object.values(activeIndicators).some(v => v) && (
                         <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
                     )}
                 </button>
 
-                {/* History Trigger Button */}
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-2 group shadow-lg ${isOpen
+                    className={`px-3 sm:px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-1.5 sm:gap-2 group shadow-lg shrink-0 ${isOpen
                         ? 'bg-white text-black border-white'
                         : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
                         }`}
                 >
-                    <span className="text-[10px] font-black uppercase tracking-widest">History</span>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">History</span>
                     <div className={`w-1.5 h-1.5 rounded-full ${bets.length > 0 && bets[0].won ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
                 </button>
             </div>

@@ -6,12 +6,13 @@ import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 interface WithdrawRequest {
   userAddress: string;
   amount: number;
+  currency: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: WithdrawRequest = await request.json();
-    const { userAddress, amount } = body;
+    const { userAddress, amount, currency = 'BNB' } = body;
 
     // Validate required fields
     if (!userAddress || amount === undefined || amount === null) {
@@ -21,29 +22,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate address (support BNB, Solana, Sui, and Stellar)
+    // Validate address using utility
+    const { isValidAddress } = await import('@/lib/utils/address');
+    if (!(await isValidAddress(userAddress))) {
+      return NextResponse.json(
+        { error: 'Invalid wallet address format' },
+        { status: 400 }
+      );
+    }
+
+    // Detect network flags for backend transfer
     let isBNB = ethers.isAddress(userAddress);
     let isSOL = false;
     let isSUI = false;
     let isXLM = false;
+    let isXTZ = false;
 
     if (!isBNB) {
       if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
         isSUI = true;
       } else if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
         isXLM = true;
+      } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
+        isXTZ = true;
       } else {
-        try {
-          const { PublicKey } = await import('@solana/web3.js');
-          const pk = new PublicKey(userAddress);
-          isSOL = pk.toBuffer().length === 32;
-        } catch (e) {
-          // If all checks fail
-          return NextResponse.json(
-            { error: 'Invalid wallet address format (BNB, Solana, Sui or Stellar required)' },
-            { status: 400 }
-          );
-        }
+        // Must be Solana if isValidAddress passed
+        isSOL = true;
       }
     }
 
@@ -59,24 +63,23 @@ export async function POST(request: NextRequest) {
       .from('user_balances')
       .select('balance')
       .eq('user_address', userAddress)
+      .eq('currency', currency)
       .single();
 
     if (userError || !userData) {
-      return NextResponse.json({ error: 'User balance record not found' }, { status: 404 });
+      return NextResponse.json({ error: 'User balance record not found for this currency' }, { status: 404 });
     }
 
     if (userData.balance < amount) {
-      return NextResponse.json({ error: 'Insufficient house balance' }, { status: 400 });
+      return NextResponse.json({ error: `Insufficient house balance in ${currency}` }, { status: 400 });
     }
 
     // 2. Apply 2% Treasury Fee
-    // The user's house balance is deducted by the full 'amount', 
-    // but they only receive 98% in their wallet.
     const feePercent = 0.02;
     const feeAmount = amount * feePercent;
     const netWithdrawAmount = amount - feeAmount;
 
-    console.log(`Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}`);
+    console.log(`Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}, Currency=${currency}`);
 
     // 3. Perform transfer from treasury based on network
     let signature: string;
@@ -92,6 +95,9 @@ export async function POST(request: NextRequest) {
       } else if (isXLM) {
         const { transferXLMFromTreasury } = await import('@/lib/stellar/backend-client');
         signature = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
+      } else if (isXTZ) {
+        const { transferXTZFromTreasury } = await import('@/lib/tezos/backend-client');
+        signature = await transferXTZFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error('Unsupported network for withdrawal');
       }
@@ -104,6 +110,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('update_balance_for_withdrawal', {
       p_user_address: userAddress,
       p_withdrawal_amount: amount,
+      p_currency: currency,
       p_transaction_hash: signature,
     });
 

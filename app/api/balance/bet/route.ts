@@ -17,6 +17,7 @@ import { ethers } from 'ethers';
 interface BetRequest {
   userAddress: string;
   betAmount: number;
+  currency: string;
   roundId: number;
   targetPrice: number;
   isOver: boolean;
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: BetRequest = await request.json();
-    const { userAddress, betAmount, roundId, targetPrice, isOver, multiplier, targetCell } = body;
+    const { userAddress, betAmount, currency = 'BNB', roundId, targetPrice, isOver, multiplier, targetCell } = body;
 
     // Validate required fields
     if (!userAddress || betAmount === undefined || betAmount === null) {
@@ -43,10 +44,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate BNB (EVM) address
-    if (!ethers.isAddress(userAddress)) {
+    // Validate address using utility
+    const { isValidAddress } = await import('@/lib/utils/address');
+    if (!(await isValidAddress(userAddress))) {
       return NextResponse.json(
-        { error: 'Invalid BNB address format' },
+        { error: 'Invalid wallet address format' },
         { status: 400 }
       );
     }
@@ -84,6 +86,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('deduct_balance_for_bet', {
       p_user_address: userAddress,
       p_bet_amount: betAmount,
+      p_currency: currency,
     });
 
     // Handle database errors
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
       // Return specific error message for insufficient balance
       if (result.error === 'Insufficient balance') {
         return NextResponse.json(
-          { error: 'Insufficient house balance. Please deposit more BNB.' },
+          { error: `Insufficient house balance. Please deposit more ${currency}.` },
           { status: 400 }
         );
       }

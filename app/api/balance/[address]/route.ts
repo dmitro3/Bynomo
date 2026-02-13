@@ -21,7 +21,10 @@ export async function GET(
     // Await params in Next.js 15+
     const { address } = await params;
 
-    // Validate address (support BNB, Solana, and Sui)
+    const { searchParams } = new URL(request.url);
+    const currency = searchParams.get('currency') || 'BNB';
+
+    // Validate address (support BNB, Solana, Sui, Stellar and Tezos)
     let isValid = false;
 
     // Check if it's a valid EVM address (BNB)
@@ -29,6 +32,9 @@ export async function GET(
       isValid = true;
     } else if (/^0x[0-9a-fA-F]{64}$/.test(address)) {
       // Check if it's a valid Sui address
+      isValid = true;
+    } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
+      // Check if it's a valid Tezos address
       isValid = true;
     } else {
       // Check if it's a valid Solana address
@@ -48,16 +54,17 @@ export async function GET(
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana, Sui or Stellar required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui, Stellar or Tezos required)' },
         { status: 400 }
       );
     }
 
-    // Query user_balances table by user_address
+    // Query user_balances table by user_address and currency
     const { data, error } = await supabase
       .from('user_balances')
       .select('balance, updated_at, user_tier')
       .eq('user_address', address)
+      .eq('currency', currency)
       .single();
 
     // Handle database errors

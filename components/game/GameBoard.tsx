@@ -54,7 +54,7 @@ export const GameBoard: React.FC = () => {
   const toast = useToast();
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : 'BNB';
+  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB';
   const blitzEntryFee = 0.01;
 
   const handleEnterBlitz = async () => {

@@ -272,8 +272,6 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         throw new Error("Invalid bet amount");
       }
 
-      // Ensure address starts with 0x
-      const formattedAddress = userAddress.startsWith('0x') ? userAddress : `0x${userAddress}`;
 
       let target: TargetCell;
       let direction: 'UP' | 'DOWN' = 'UP';
@@ -356,6 +354,9 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
 
       set({ isPlacingBet: true, error: null });
 
+      // Get current network from store (e.g., BNB, SOL, SUI, XLM, XTZ)
+      const network = (get() as any).network || 'BNB';
+
       // Call API endpoint to place bet from house balance
       const response = await fetch('/api/balance/bet', {
         method: 'POST',
@@ -363,8 +364,9 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: formattedAddress,
+          userAddress: userAddress, // Use the provided address directly
           betAmount,
+          currency: network,
           roundId: Date.now(),
           targetPrice: currentPrice,
           isOver: direction === 'UP',
@@ -565,12 +567,14 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
 
         // Update real balance if necessary
         if (accountType === 'real' && address && won) {
+          const network = (get() as any).network || 'BNB';
           fetch('/api/balance/win', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userAddress: address,
               winAmount: payout,
+              currency: network,
               betId: bet.id
             })
           }).then(() => {

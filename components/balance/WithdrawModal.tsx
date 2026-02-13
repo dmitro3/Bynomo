@@ -28,8 +28,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const { authenticated } = usePrivy();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : 'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -137,6 +137,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
           </p>
           <p className="text-[#FF006E] text-xl font-bold font-mono flex items-center gap-2">
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>
