@@ -14,7 +14,7 @@ export interface HistoryState {
   bets: BetRecord[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   fetchHistory: (playerAddress: string) => Promise<void>;
   addBet: (bet: BetRecord) => void;
@@ -34,20 +34,58 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
   bets: [],
   isLoading: false,
   error: null,
-  
+
   /**
-   * Fetch bet history
-   * Note: After Sui migration, bet history is stored locally
-   * @param playerAddress - The player's Sui address
+   * Fetch bet history from Supabase, with localStorage fallback
+   * @param playerAddress - The player's wallet address
    */
   fetchHistory: async (playerAddress: string) => {
     try {
       set({ isLoading: true, error: null });
-      
-      // Bet history is managed locally in localStorage
-      // No blockchain queries needed for game logic
+
+      // Try fetching from Supabase first
+      try {
+        const res = await fetch(`/api/bets/history?wallet=${encodeURIComponent(playerAddress)}&limit=50`);
+        if (res.ok) {
+          const { bets: serverBets } = await res.json();
+          if (serverBets && serverBets.length > 0) {
+            // Map Supabase rows to BetRecord format
+            const mappedBets: BetRecord[] = serverBets.map((row: any) => ({
+              id: row.id,
+              timestamp: new Date(row.resolved_at).getTime(),
+              amount: row.amount.toString(),
+              won: row.won,
+              payout: row.payout.toString(),
+              startPrice: parseFloat(row.strike_price) || 0,
+              endPrice: parseFloat(row.end_price) || 0,
+              actualChange: (parseFloat(row.end_price) || 0) - (parseFloat(row.strike_price) || 0),
+              target: {
+                id: row.mode === 'binomo' ? 'classic' : 'box',
+                label: `${row.direction} ${row.multiplier}x`,
+                multiplier: parseFloat(row.multiplier) || 1.9,
+                priceChange: 0,
+                direction: row.direction as 'UP' | 'DOWN',
+              }
+            }));
+
+            set({
+              bets: mappedBets,
+              isLoading: false,
+              error: null
+            });
+
+            // Also cache in localStorage
+            saveBetsToLocalStorage(mappedBets.slice(0, MAX_STORED_BETS));
+            return;
+          }
+        }
+      } catch (fetchError) {
+        console.warn('Failed to fetch from Supabase, falling back to localStorage:', fetchError);
+      }
+
+      // Fallback to localStorage
       const cachedBets = loadBetsFromLocalStorage();
-      
+
       set({
         bets: cachedBets,
         isLoading: false,
@@ -61,7 +99,7 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
       });
     }
   },
-  
+
   /**
    * Add a new bet to history
    * Used when a bet is placed to immediately update UI
@@ -69,10 +107,10 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
    */
   addBet: (bet: BetRecord) => {
     const { bets } = get();
-    
+
     // Check if bet already exists
     const existingIndex = bets.findIndex(b => b.id === bet.id);
-    
+
     let updatedBets: BetRecord[];
     if (existingIndex >= 0) {
       // Update existing bet
@@ -82,16 +120,16 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
       // Add new bet at the beginning
       updatedBets = [bet, ...bets];
     }
-    
+
     // Sort by timestamp (newest first)
     updatedBets.sort((a, b) => b.timestamp - a.timestamp);
-    
+
     set({ bets: updatedBets });
-    
+
     // Persist to localStorage
     saveBetsToLocalStorage(updatedBets.slice(0, MAX_STORED_BETS));
   },
-  
+
   /**
    * Clear all bet history
    */
@@ -101,7 +139,7 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
       localStorage.removeItem('overflow_bet_history');
     }
   },
-  
+
   /**
    * Clear error message
    */
@@ -161,22 +199,22 @@ export const restoreBetHistory = (setBets: (bets: BetRecord[]) => void): void =>
  */
 export const calculateBetStats = (bets: BetRecord[]) => {
   const settledBets = bets.filter(bet => bet.endPrice > 0);
-  
+
   const wins = settledBets.filter(bet => bet.won).length;
   const losses = settledBets.filter(bet => !bet.won).length;
-  
+
   const totalWagered = settledBets.reduce(
     (sum, bet) => sum + parseFloat(bet.amount),
     0
   );
-  
+
   const totalPayout = settledBets.reduce(
     (sum, bet) => sum + (bet.won ? parseFloat(bet.payout) : 0),
     0
   );
-  
+
   const netProfit = totalPayout - totalWagered;
-  
+
   return {
     totalBets: settledBets.length,
     wins,

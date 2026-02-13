@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Leaderboard } from '@/components/game/Leaderboard';
 
 export const MiniHistory: React.FC = () => {
     const bets = useStore((state) => state.bets);
@@ -80,6 +81,9 @@ export const MiniHistory: React.FC = () => {
 
             {/* Trigger Buttons Row */}
             <div className="flex items-center gap-2">
+                {/* Leaderboard */}
+                <Leaderboard />
+
                 {/* Indicators Toggle */}
                 <button
                     onClick={() => setIsIndicatorsOpen(!isIndicatorsOpen)}

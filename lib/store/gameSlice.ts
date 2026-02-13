@@ -618,7 +618,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param payout - The payout amount if won
    */
   resolveBet: (betId: string, won: boolean, payout: number) => {
-    const { activeBets, settledBets, currentPrice } = get();
+    const { activeBets, settledBets, currentPrice, address, network } = get();
     const resolvedBet = activeBets.find((b: ActiveBet) => b.id === betId);
 
     if (resolvedBet) {
@@ -651,6 +651,28 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             direction: resolvedBet.direction
           }
         });
+      }
+
+      // Save to Supabase for persistent history & leaderboard (non-blocking)
+      if (address) {
+        fetch('/api/bets/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: resolvedBet.id,
+            walletAddress: address,
+            asset: resolvedBet.asset || 'BNB',
+            direction: resolvedBet.direction,
+            amount: resolvedBet.amount,
+            multiplier: resolvedBet.multiplier,
+            strikePrice: resolvedBet.strikePrice || 0,
+            endPrice: currentPrice,
+            payout: payout,
+            won: won,
+            mode: resolvedBet.mode,
+            network: network || 'BNB',
+          })
+        }).catch(err => console.error('Failed to save bet to Supabase:', err));
       }
     }
 
