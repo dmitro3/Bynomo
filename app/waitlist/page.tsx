@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
+import HowItWorksDemo from './HowItWorksDemo';
 import './waitlist.css';
 
 const steps = [
@@ -157,142 +158,132 @@ export default function WaitlistPage() {
             </nav>
 
             {/* HERO SECTION */}
-            <section id="hero-top" className="min-h-screen justify-center">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    className="text-center z-10 max-w-4xl"
-                >
-                    <div className="mb-10">
-                        <TrueFocus
-                            sentence="Binomo | The future is decentralized."
-                            separator=" | "
-                            manualMode={false}
-                            blurAmount={12}
-                            borderColor="#FF9FFC"
-                            glowColor="rgba(255, 159, 252, 0.4)"
-                            animationDuration={2.0}
-                            pauseBetweenAnimations={3.0}
-                        />
+            <section id="hero-top" className="min-h-screen flex flex-col justify-center relative overflow-hidden px-4 md:px-20">
+                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-24">
+
+                    {/* LEFT SIDE: Big Brand Name */}
+                    <div className="flex flex-col justify-center select-none mix-blend-difference">
+                        <motion.div
+                            initial="hidden"
+                            animate="visible"
+                            variants={{
+                                hidden: { opacity: 0 },
+                                visible: {
+                                    opacity: 1,
+                                    transition: {
+                                        staggerChildren: 0.15,
+                                        delayChildren: 0.2
+                                    }
+                                }
+                            }}
+                            className="flex"
+                        >
+                            {Array.from("BINOMO").map((letter, index) => (
+                                <motion.h1
+                                    key={index}
+                                    variants={{
+                                        hidden: { opacity: 0, x: -50, filter: "blur(20px)" },
+                                        visible: {
+                                            opacity: 1,
+                                            x: 0,
+                                            filter: "blur(0px)",
+                                            transition: {
+                                                type: "spring",
+                                                damping: 20,
+                                                stiffness: 100
+                                            }
+                                        }
+                                    }}
+                                    className="text-[15vw] lg:text-[12rem] font-black leading-[0.8] tracking-tighter text-white"
+                                    style={{ fontFamily: 'var(--font-orbitron)' }}
+                                >
+                                    {letter}
+                                </motion.h1>
+                            ))}
+                        </motion.div>
                     </div>
 
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3, duration: 0.8 }}
-                        className="text-white/40 text-xl font-medium mb-16 max-w-2xl mx-auto leading-relaxed"
+                    {/* RIGHT SIDE: Tagline & Form */}
+                    <motion.div
+                        initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
+                        animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
+                        transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex flex-col justify-center items-start lg:pl-10"
                     >
-                        Secure your spot in the next evolution of binary options trading. Early access members get lifetime zero-fee trading and exclusive perks.
-                    </motion.p>
+                        <motion.h2
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                            className="text-4xl lg:text-7xl font-bold text-white mb-12 tracking-normal"
+                        >
+                            Predict the next tick.
+                        </motion.h2>
 
-                    <div className="waitlist-form-container mx-auto">
-                        {!isSubmitted ? (
-                            <motion.form
-                                onSubmit={handleSubmit}
-                                className="waitlist-form"
-                            >
-                                <div
-                                    className={`input-container mx-auto ${isExpanded ? 'expanded' : ''}`}
-                                    onMouseEnter={() => setIsHovered(true)}
-                                    onMouseLeave={() => setIsHovered(false)}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                        <AnimatePresence initial={false}>
-                                            {isExpanded && (
-                                                <motion.div
-                                                    key="input-field"
-                                                    initial={{ width: 0, opacity: 0 }}
-                                                    animate={{ width: 260, opacity: 1 }}
-                                                    exit={{ width: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                                                    style={{ overflow: 'hidden' }}
-                                                >
-                                                    <input
-                                                        type="email"
-                                                        placeholder="your@email.com"
-                                                        value={email}
-                                                        onChange={(e) => setEmail(e.target.value)}
-                                                        required
-                                                        className="waitlist-input"
-                                                        autoFocus
-                                                    />
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                        <motion.button
-                                            layout
+                        <div className="w-full max-w-md">
+                            {!isSubmitted ? (
+                                <form onSubmit={handleSubmit} className="w-full">
+                                    <div
+                                        className={`relative flex items-center bg-white/5 border border-white/10 rounded-full p-2 transition-all duration-300 ${isHovered || email ? 'bg-white/10 border-white/20' : ''}`}
+                                        onMouseEnter={() => setIsHovered(true)}
+                                        onMouseLeave={() => setIsHovered(false)}
+                                    >
+                                        <input
+                                            type="email"
+                                            placeholder="Enter your email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                            className="bg-transparent border-none outline-none text-white px-6 py-3 w-full placeholder:text-white/30 font-medium"
+                                        />
+                                        <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="mini-submit text-nowrap"
-                                            style={{ marginLeft: 'auto', flexShrink: 0 }}
+                                            className="px-8 py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider text-sm hover:bg-gray-200 transition-colors shrink-0"
                                         >
                                             {isSubmitting ? '...' : 'Join'}
-                                        </motion.button>
+                                        </button>
                                     </div>
-                                </div>
-                            </motion.form>
-                        ) : (
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="p-12 rounded-[40px] border border-purple-500/30 bg-purple-500/5 backdrop-blur-xl">
-                                <div className="text-5xl mb-6">✨</div>
-                                <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter">You're in the elite!</h3>
-                                <p className="text-white/40 text-lg font-medium">An invitation will be sent to your inbox shortly. Welcome to the future of trading.</p>
-                            </motion.div>
-                        )}
-                    </div>
-                </motion.div>
+                                </form>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="p-6 rounded-3xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium flex items-center gap-3"
+                                >
+                                    <span className="text-xl">✨</span> You're on the list.
+                                </motion.div>
+                            )}
+                        </div>
+                    </motion.div>
+
+                </div>
+
+                {/* Decorative Red Abstract Blur - keeping consistent with the requested style */}
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen opacity-50 block lg:hidden" />
             </section>
 
-            {/* HOW IT WORKS SECTION - Game Mechanics */}
-            <section className="bg-white/[0.01]">
-                <div className="section-content">
-                    <div className="text-center mb-32">
-                        <div className="text-purple-500 font-black uppercase tracking-[0.4em] text-xs mb-6">Execution Protocol</div>
-                        <h2 className="text-6xl font-black tracking-tighter mb-8 bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent">How Binomo Works</h2>
-                        <div className="h-0.5 w-16 bg-purple-500/30 mx-auto rounded-full" />
+            {/* HOW IT WORKS SECTION - Interactive Demo */}
+            <section className="relative py-32 bg-[#02040a] overflow-hidden">
+                <div className="section-content relative z-10 max-w-[1200px] mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <div className="text-[#ff4444] font-mono text-xs mb-4 uppercase tracking-[0.3em] opacity-80 flex items-center justify-center gap-2">
+                            <span className="w-2 h-2 bg-[#ff4444] rounded-full animate-pulse" />
+                            Protocol Interface
+                        </div>
+                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-6" style={{ fontFamily: 'var(--font-orbitron)' }}>
+                            See It In Action
+                        </h2>
+                        <p className="text-white/40 max-w-2xl mx-auto text-lg leading-relaxed">
+                            Connect any wallet. Select your network. Execute trades with millisecond precision.
+                        </p>
                     </div>
 
-                    <div className="mechanics-grid">
-                        {steps.map((step, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 40 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.15, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                                className="mechanic-card group"
-                            >
-                                <div className="mechanic-info">
-                                    <div className="mechanic-number">{step.id}</div>
-                                    <h3 className="mechanic-title group-hover:text-purple-400 transition-colors">
-                                        {step.title}
-                                    </h3>
-                                    <p className="mechanic-desc">
-                                        {step.desc}
-                                    </p>
-                                </div>
-
-                                <div className="mechanic-visual">
-                                    <div className="abstract-shape">
-                                        <div className="abstract-inner" style={{
-                                            animationDelay: `${i * 0.8}s`,
-                                            borderRadius:
-                                                i === 0 ? '30% 70% 70% 30% / 30% 30% 70% 70%' :
-                                                    i === 1 ? '50% 50% 50% 50% / 20% 20% 80% 80%' :
-                                                        i === 2 ? '70% 30% 30% 70% / 60% 40% 60% 40%' :
-                                                            '40% 60% 40% 60% / 10% 90% 10% 90%',
-                                            transform: `rotate(${i * 45}deg)`,
-                                            background:
-                                                i === 0 ? 'linear-gradient(135deg, rgba(255, 159, 252, 0.4), rgba(168, 85, 247, 0.1))' :
-                                                    i === 1 ? 'linear-gradient(45deg, rgba(255, 107, 107, 0.3), rgba(255, 159, 252, 0.1))' :
-                                                        i === 2 ? 'linear-gradient(225deg, rgba(72, 219, 251, 0.3), rgba(168, 85, 247, 0.1))' :
-                                                            'linear-gradient(315deg, rgba(29, 209, 161, 0.3), rgba(168, 85, 247, 0.1))'
-                                        }} />
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                    <div className="relative z-10">
+                        <HowItWorksDemo />
                     </div>
+
+                    {/* Background glow for the demo */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[#ff4444]/15 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
                 </div>
             </section>
 

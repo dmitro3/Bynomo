@@ -28,8 +28,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const { authenticated } = usePrivy();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : 'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {

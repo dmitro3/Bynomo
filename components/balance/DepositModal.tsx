@@ -46,8 +46,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : 'BNB Chain';
 
   // Quick select amounts
   const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
@@ -141,6 +141,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         toast.info('Please confirm the transaction in your Solana wallet...');
 
         txHash = await signAndSendSolana(transaction);
+      } else if (network === 'NEAR') {
+        const { depositNEAR } = await import('@/lib/near/wallet');
+        toast.info('Please confirm the transaction in your NEAR wallet...');
+        txHash = await depositNEAR(amount);
       } else {
         // BNB (EVM via Privy)
         if (!authenticated) throw new Error('Not authenticated with Privy');

@@ -14,8 +14,8 @@ export interface WalletState {
   walletBalance: number;
   isConnected: boolean;
   isConnecting: boolean;
-  network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null;
-  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null;
+  network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null;
+  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null;
   error: string | null;
   isConnectModalOpen: boolean;
 
@@ -29,8 +29,8 @@ export interface WalletState {
   // Setters for wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null) => void;
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null) => void;
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => void;
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => void;
 }
 
 /**
@@ -44,7 +44,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnected: false,
   isConnecting: false,
   network: null,
-  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null : null,
+  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null : null,
   error: null,
   isConnectModalOpen: false,
 
@@ -105,6 +105,10 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         const { getXTZBalance } = await import('@/lib/tezos/client');
         const bal = await getXTZBalance(address);
         set({ walletBalance: bal });
+      } else if (network === 'NEAR') {
+        const { getNearBalance } = await import('@/lib/near/wallet');
+        const bal = await getNearBalance(address);
+        set({ walletBalance: bal });
       }
     } catch (error) {
       console.error("Error refreshing wallet balance:", error);
@@ -140,16 +144,16 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   },
 
   /**
-   * Set active network (BNB, SOL, SUI, XLM or XTZ)
+   * Set active network (BNB, SOL, SUI, XLM, XTZ or NEAR)
    */
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null) => {
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => {
     set({ network });
   },
 
   /**
    * Set preferred network (manually chosen by user)
    */
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | null) => {
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => {
     set({ preferredNetwork: network });
     if (typeof window !== 'undefined') {
       if (network) {

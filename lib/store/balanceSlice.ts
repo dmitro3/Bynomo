@@ -48,7 +48,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
   fetchBalance: async (address: string) => {
     const { accountType } = get();
     // Access network from combined store if available, or default to BNB
-    const network = (get() as any).network || 'BNB';
+    let network = (get() as any).network || 'BNB';
+
+    if (address && (address.endsWith('.near') || address.endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address))) {
+      network = 'NEAR';
+    }
 
     // Skip API fetch for demo mode as it uses local state only
     if (!address || accountType === 'demo' || address.startsWith('0xDEMO')) {
@@ -131,7 +135,12 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    * @param txHash - Transaction hash for audit trail
    */
   depositFunds: async (address: string, amount: number, txHash: string) => {
-    const network = (get() as any).network || 'BNB';
+    let network = (get() as any).network || 'BNB';
+
+    // Override network for NEAR addresses if not already set correctly
+    if (address.endsWith('.near') || address.endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address)) {
+      network = 'NEAR';
+    }
 
     try {
       set({ isLoading: true, error: null });

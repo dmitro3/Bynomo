@@ -89,6 +89,27 @@ export const WalletConnectModal: React.FC = () => {
         setOpen(false);
     };
 
+    const handleNearConnect = async () => {
+        setOpen(false);
+        try {
+            const { connectNearWallet } = await import('@/lib/near/wallet');
+            const address = await connectNearWallet() as string;
+
+            if (address) {
+                setPreferredNetwork('NEAR');
+                useOverflowStore.getState().setNetwork('NEAR');
+                useOverflowStore.getState().setAddress(address);
+                useOverflowStore.getState().setIsConnected(true);
+                // Fetch NEAR house balance
+                useOverflowStore.getState().fetchBalance(address);
+                // Global balance of the wallet
+                useOverflowStore.getState().refreshWalletBalance();
+            }
+        } catch (error) {
+            console.error("NEAR connection error:", error);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -219,6 +240,25 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-xs text-gray-400 mt-0.5">Temple, Kukai, and more</p>
                             </div>
                             <Globe className="w-5 h-5 text-gray-600 group-hover:text-indigo-500 transition-colors" />
+                        </button>
+
+                        {/* NEAR Option */}
+                        <button
+                            onClick={handleNearConnect}
+                            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/0 via-white/5 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform">
+                                <img src="/logos/near-logo.svg" alt="NEAR" className="w-7 h-7 invert brightness-200" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white">NEAR Protocol</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 text-white font-bold uppercase tracking-wider">NEAR</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5">MyNearWallet, Meteor, Here, etc.</p>
+                            </div>
+                            <Globe className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}

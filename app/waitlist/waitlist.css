@@ -115,10 +115,11 @@ section {
 }
 
 /* Game Mechanics Section (2x2 Grid from Reference) */
+/* Game Mechanics Section (2x2 Grid from Reference) */
 .mechanics-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
+    gap: 24px;
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
@@ -126,79 +127,46 @@ section {
 
 .mechanic-card {
     position: relative;
-    padding: 60px;
-    background: rgba(255, 255, 255, 0.012);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 40px;
+    padding: 48px;
+    background: rgba(10, 10, 10, 0.6);
+    /* Darker background for contrast with glow */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Subtle border */
+    border-radius: 32px;
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    min-height: 420px;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+    min-height: 400px;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
 }
 
 .mechanic-card:hover {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateY(-10px);
-}
-
-.mechanic-info {
-    max-width: 65%;
-    display: flex;
-    flex-direction: column;
-}
-
-.mechanic-number {
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: #fff;
-    margin-bottom: 50px;
-    opacity: 0.4;
-    font-family: var(--font-orbitron);
-}
-
-.mechanic-title {
-    font-size: 3.2rem;
-    font-weight: 950;
-    letter-spacing: -0.05em;
-    margin-bottom: 24px;
-    line-height: 1;
-    color: #fff;
-}
-
-.mechanic-desc {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.3);
-    line-height: 1.6;
-    font-weight: 500;
-}
-
-.mechanic-visual {
-    width: 30%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: rgba(20, 20, 20, 0.8);
+    border-color: rgba(255, 68, 68, 0.3);
+    /* Red border on hover */
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
 }
 
 .abstract-shape {
     width: 100%;
-    max-width: 200px;
+    max-width: 240px;
     aspect-ratio: 1;
     position: relative;
-    filter: drop-shadow(0 0 40px rgba(168, 85, 247, 0.1));
+    animation: floating-visual 8s ease-in-out infinite;
 }
 
 .abstract-inner {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255, 159, 252, 0.25), rgba(168, 85, 247, 0.1));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transform: rotate(45deg);
-    animation: floating-visual 8s ease-in-out infinite;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transform: rotate(0deg);
+    /* Rotation handled in inline style if needed, or remove */
 }
 
 @keyframes floating-visual {

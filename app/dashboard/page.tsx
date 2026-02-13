@@ -63,25 +63,49 @@ export default function AdminDashboard() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [marketTokens, setMarketTokens] = useState<MarketToken[]>([]);
     const [gameHistory, setGameHistory] = useState<BetHistory[]>([]);
+    const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger'>('users');
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
 
     useEffect(() => {
-        fetchData();
+        const auth = localStorage.getItem('admin_authorized');
+        if (auth === 'true') {
+            setIsAuthorized(true);
+            fetchData();
+        }
     }, []);
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (passwordInput === '1704') {
+            setIsAuthorized(true);
+            localStorage.setItem('admin_authorized', 'true');
+            fetchData();
+        } else {
+            alert('Yanlış şifre!');
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthorized) {
+            fetchData();
+        }
+    }, [isAuthorized]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [statsRes, usersRes, txRes, mktRes, gameRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes] = await Promise.all([
                 fetch('/api/admin/stats'),
                 fetch('/api/admin/users'),
                 fetch('/api/admin/transactions'),
                 fetch('/api/admin/currencies'),
-                fetch('/api/admin/game-history')
+                fetch('/api/admin/game-history'),
+                fetch('/api/admin/danger-zone')
             ]);
-
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) {
                 const data = await usersRes.json();
@@ -99,6 +123,10 @@ export default function AdminDashboard() {
                 const data = await gameRes.json();
                 setGameHistory(data.bets || []);
             }
+            if (dangerRes.ok) {
+                const data = await dangerRes.json();
+                setSuspiciousUsers(data.suspiciousUsers || []);
+            }
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
         } finally {
@@ -106,13 +134,60 @@ export default function AdminDashboard() {
         }
     };
 
+    const updateUserStatus = async (userAddress: string, status: string) => {
+        try {
+            const res = await fetch('/api/admin/users/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress, status })
+            });
+            if (res.ok) {
+                fetchData();
+            }
+        } catch (error) {
+            console.error('Failed to update status:', error);
+        }
+    };
+
     const marketSummary = useMemo(() => {
         const summary: Record<string, number> = {};
         marketTokens.forEach(t => {
-            summary[t.category] = (summary[t.category] || 0) + 1;
+            if (!summary[t.category]) summary[t.category] = 0;
+            summary[t.category]++;
         });
         return summary;
     }, [marketTokens]);
+
+    if (!isAuthorized) {
+        return (
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+                <div className="w-full max-w-sm bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                    <div className="text-center mb-8">
+                        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Neural Access</h2>
+                        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold mt-2">Restricted Area</p>
+                    </div>
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="relative">
+                            <input
+                                type="password"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                placeholder="ACCESS KEY"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center text-white font-mono text-sm tracking-[0.5em] placeholder:tracking-normal placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all"
+                                autoFocus
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-white text-black font-bold uppercase tracking-widest text-xs py-3 rounded-xl hover:bg-white/90 transition-colors"
+                        >
+                            Authorize
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
 
     const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : 'N/A';
 
@@ -155,6 +230,7 @@ export default function AdminDashboard() {
                             <TabBtn active={activeTab === 'gameplay'} onClick={() => setActiveTab('gameplay')} label="Gameplay" />
                             <TabBtn active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Financials" />
                             <TabBtn active={activeTab === 'markets'} onClick={() => setActiveTab('markets')} label="Inventory" />
+                            <TabBtn active={activeTab === 'danger'} onClick={() => setActiveTab('danger')} label="Danger Zone" />
                         </div>
                         <div className="w-full md:w-96 relative">
                             <input
@@ -252,6 +328,75 @@ export default function AdminDashboard() {
                                             <p className="text-4xl font-black text-white text-center tracking-tighter">{marketTokens.length}</p>
                                         </div>
                                     </div>
+                                )}
+
+                                {activeTab === 'danger' && (
+                                    <Table key="danger">
+                                        <THead labels={['Node Identity', 'Max Streak', 'Pattern', 'Current Status', 'Operations']} />
+                                        <tbody>
+                                            {loading ? <LoadingRow /> : suspiciousUsers.map(u => (
+                                                <tr key={u.user_address} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono text-white text-sm">{shortenAddress(u.user_address)}</span>
+                                                            <span className="text-[10px] text-white/20">Balance: {parseFloat(u.balance).toFixed(4)}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <span className="text-rose-500 font-black text-xl tracking-tighter">{u.maxStreak} wins</span>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex gap-1">
+                                                            {u.latestBets.map((won: boolean, i: number) => (
+                                                                <div key={i} className={`w-1.5 h-4 rounded-full ${won ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500/20'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${u.status === 'banned' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' :
+                                                            u.status === 'frozen' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                                                                'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                                            }`}>
+                                                            {u.status || 'active'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            {u.status !== 'frozen' && u.status !== 'banned' && (
+                                                                <button
+                                                                    onClick={() => updateUserStatus(u.user_address, 'frozen')}
+                                                                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded text-[9px] font-bold text-amber-500 uppercase transition-all"
+                                                                >
+                                                                    Freeze
+                                                                </button>
+                                                            )}
+                                                            {u.status !== 'banned' && (
+                                                                <button
+                                                                    onClick={() => updateUserStatus(u.user_address, 'banned')}
+                                                                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded text-[9px] font-bold text-rose-500 uppercase transition-all"
+                                                                >
+                                                                    Ban
+                                                                </button>
+                                                            )}
+                                                            {(u.status === 'frozen' || u.status === 'banned') && (
+                                                                <button
+                                                                    onClick={() => updateUserStatus(u.user_address, 'active')}
+                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-bold text-white uppercase transition-all"
+                                                                >
+                                                                    Reactivate
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {suspiciousUsers.length === 0 && !loading && (
+                                                <tr>
+                                                    <td colSpan={5} className="px-8 py-32 text-center text-[10px] font-black uppercase tracking-widest text-white/10"> No suspicious activity detected in core neural layers.</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </Table>
                                 )}
                             </AnimatePresence>
                         </div>

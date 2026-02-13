@@ -3,7 +3,7 @@ import { PRICE_FEED_IDS } from '@/lib/utils/priceFeed';
 
 export async function GET(request: NextRequest) {
     try {
-        const cryptoTokens = ['BTC', 'ETH', 'SOL', 'SUI', 'TRX', 'XRP', 'DOGE', 'ADA', 'BCH', 'BNB', 'XLM', 'XTZ'];
+        const cryptoTokens = ['BTC', 'ETH', 'SOL', 'SUI', 'TRX', 'XRP', 'DOGE', 'ADA', 'BCH', 'BNB', 'XLM', 'XTZ', 'NEAR'];
         const stockTokens = ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'];
         const commodityTokens = ['GOLD', 'SILVER'];
         const forexTokens = ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'];

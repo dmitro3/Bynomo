@@ -20,6 +20,7 @@ export const PRICE_FEED_IDS = {
   BNB: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
   XLM: '0xb7a8eba68a997cd0210c2e1e4ee811ad2d174b3611c22d9ebf16f4cb7e9ba850',
   XTZ: '0x0affd4b8ad136a21d79bc82450a325ee12ff55a235abc242666e423b8bcffd03',
+  NEAR: '0xc415de8d2eba7db216527dff4b60e8f3a5311c740dadb233e13e12547e226750', // Corrected Pyth ID
   // Metals
   GOLD: '0x765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2',
   SILVER: '0xf2fb02c32b055c805e7238d628e5e9dadef274376114eb1f012337cabe93871e',
@@ -71,9 +72,8 @@ export class PythPriceFeed {
   async fetchPrice(): Promise<PriceData> {
     try {
       // Ensure ID has 0x prefix and use ids[] format
-      const id = PRICE_FEED_IDS[this.asset].startsWith('0x')
-        ? PRICE_FEED_IDS[this.asset]
-        : `0x${PRICE_FEED_IDS[this.asset]}`;
+      const assetId = PRICE_FEED_IDS[this.asset];
+      const id = assetId.startsWith('0x') ? assetId : `0x${assetId}`;
 
       const response = await fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?ids%5B%5D=${id}`);
 
@@ -184,44 +184,30 @@ export class PythPriceFeed {
     const ids = Object.values(PRICE_FEED_IDS).map(id => id.startsWith('0x') ? id : `0x${id}`);
     const symbols = Object.keys(PRICE_FEED_IDS) as AssetType[];
 
+    const results: any = {};
+
+    // 1. Fetch Pyth Prices
     try {
       const queryString = ids.map(id => `ids%5B%5D=${id}`).join('&');
       const response = await fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`);
 
-      if (!response.ok) {
-        const bodyText = await response.text();
-        console.error(`Pyth API Error (${response.status}): ${bodyText}`);
-
-        // If some IDs are missing, try to fetch them one by one or just return what we have
-        if (response.status === 404) {
-          console.warn('Handling 404 by returning empty results. Check PRICE_FEED_IDS for invalid entries.');
-          return {} as Record<AssetType, number>;
+      if (response.ok) {
+        const priceFeeds = await response.json();
+        if (priceFeeds && priceFeeds.parsed) {
+          priceFeeds.parsed.forEach((feed: any) => {
+            const symbol = symbols.find(s => PRICE_FEED_IDS[s].replace('0x', '') === feed.id);
+            if (symbol) {
+              const price = Number(feed.price.price) * Math.pow(10, feed.price.expo);
+              results[symbol] = price;
+            }
+          });
         }
-
-        throw new Error(`HTTP error! status: ${response.status}, body: ${bodyText}`);
       }
-
-      const priceFeeds = await response.json();
-
-      if (!priceFeeds || !priceFeeds.parsed || priceFeeds.parsed.length === 0) {
-        return {} as Record<AssetType, number>;
-      }
-
-      const results: any = {};
-      priceFeeds.parsed.forEach((feed: any) => {
-        // Result ID from Hermes v2 usually doesn't have 0x, but our constant does
-        const symbol = symbols.find(s => PRICE_FEED_IDS[s].replace('0x', '') === feed.id);
-        if (symbol) {
-          const price = Number(feed.price.price) * Math.pow(10, feed.price.expo);
-          results[symbol] = price;
-        }
-      });
-
-      return results;
     } catch (error) {
-      console.error('Error in fetchAllPrices:', error);
-      return {} as Record<AssetType, number>;
+      console.error('Error in fetchAllPrices (Pyth):', error);
     }
+
+    return results;
   }
 
   /**

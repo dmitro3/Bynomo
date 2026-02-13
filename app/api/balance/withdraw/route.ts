@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     let isSUI = false;
     let isXLM = false;
     let isXTZ = false;
+    let isNEAR = false;
 
     if (!isBNB) {
       if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
         isXLM = true;
       } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
         isXTZ = true;
+      } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(userAddress) || /^[0-9a-fA-F]{64}$/.test(userAddress)) {
+        isNEAR = true;
       } else {
         // Must be Solana if isValidAddress passed
         isSOL = true;
@@ -58,16 +61,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Get house balance from Supabase and validate
+    // 1. Get house balance and status from Supabase and validate
     const { data: userData, error: userError } = await supabase
       .from('user_balances')
-      .select('balance')
+      .select('balance, status')
       .eq('user_address', userAddress)
       .eq('currency', currency)
       .single();
 
     if (userError || !userData) {
-      return NextResponse.json({ error: 'User balance record not found for this currency' }, { status: 404 });
+      return NextResponse.json({ error: 'User record not found' }, { status: 404 });
+    }
+
+    if (userData.status === 'frozen') {
+      return NextResponse.json({ error: 'Account is frozen. Withdrawals are disabled.' }, { status: 403 });
+    }
+
+    if (userData.status === 'banned') {
+      return NextResponse.json({ error: 'Account is banned.' }, { status: 403 });
     }
 
     if (userData.balance < amount) {
@@ -98,6 +109,9 @@ export async function POST(request: NextRequest) {
       } else if (isXTZ) {
         const { transferXTZFromTreasury } = await import('@/lib/tezos/backend-client');
         signature = await transferXTZFromTreasury(userAddress, netWithdrawAmount);
+      } else if (isNEAR) {
+        const { transferNEARFromTreasury } = await import('@/lib/near/backend-client');
+        signature = await transferNEARFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error('Unsupported network for withdrawal');
       }

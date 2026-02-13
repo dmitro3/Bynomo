@@ -39,6 +39,7 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
 
   // Special handling for GOLD and SILVER to make them circular and hide white backgrounds
   const isMetal = asset === 'GOLD' || asset === 'SILVER';
+  const isNear = asset === 'NEAR';
 
   // Clean className to avoid conflicts when we want object-cover
   const finalImageClass = isMetal
@@ -46,7 +47,7 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
     : `${className} object-contain`;
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''} ${isNear ? 'bg-white rounded-full scale-90' : ''}`}>
       <img
         src={src}
         alt={asset}
@@ -173,6 +174,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
     XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
     XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
+    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near-logo.svg', category: 'Crypto' },
     // Metals
     GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
     SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },

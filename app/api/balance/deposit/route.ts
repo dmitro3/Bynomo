@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
         // Check if it's a valid Stellar address (starts with G, 56 characters)
         if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
           isValid = true;
+        } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.(near|testnet))$/.test(userAddress) || /^[0-9a-fA-F]{64}$/.test(userAddress)) {
+          // Check if it's a valid NEAR address (named account ending in .near/.testnet OR implicit 64-char hex)
+          isValid = true;
         } else {
           isValid = false;
         }
