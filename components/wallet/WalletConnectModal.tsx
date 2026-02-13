@@ -4,6 +4,7 @@ import React from 'react';
 import { useOverflowStore } from '@/lib/store';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useWalletConnection as useSuiConnection } from '@/lib/sui/wallet';
 import { useModal } from 'connectkit';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +17,7 @@ export const WalletConnectModal: React.FC = () => {
 
     const { login: loginPrivy } = usePrivy();
     const { select: selectSolanaWallet } = useWallet();
+    const { setVisible: setSolanaModalVisible } = useWalletModal();
     const { connect: connectSui } = useSuiConnection();
     const { setOpen: openConnectKit } = useModal();
 
@@ -33,13 +35,9 @@ export const WalletConnectModal: React.FC = () => {
 
     const handleSolanaConnect = () => {
         setPreferredNetwork('SOL');
-        selectSolanaWallet('Phantom' as any); // Or just open the selection modal if we can
-        // Most solana adapters require opening their own modal
-        const solanaButton = document.querySelector('.wallet-adapter-button-trigger') as HTMLButtonElement;
-        if (solanaButton) {
-            solanaButton.click();
-        }
         setOpen(false);
+        // Use the official Solana wallet adapter modal
+        setTimeout(() => setSolanaModalVisible(true), 100);
     };
 
     const handleSuiConnect = () => {

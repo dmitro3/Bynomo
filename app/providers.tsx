@@ -13,7 +13,6 @@ import { config as wagmiConfig } from '@/lib/bnb/wagmi';
 // Solana Imports
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { AlphaWalletAdapter, PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Sui Imports
@@ -129,11 +128,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [queryClient] = useState(() => new QueryClient());
 
-  const solanaWallets = useMemo(() => [
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter(),
-    new AlphaWalletAdapter(),
-  ], []);
+  // Solana wallet adapter v2+ auto-discovers installed wallets via Wallet Standard
+  // No need to explicitly add adapters - this avoids duplicate key errors (e.g. MetaMask)
+  const solanaWallets = useMemo(() => [], []);
 
   useEffect(() => {
     if (initialized.current) return;
