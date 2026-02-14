@@ -6,6 +6,7 @@ import { LiveChart } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
 import { ethers } from 'ethers';
@@ -42,6 +43,7 @@ export const GameBoard: React.FC = () => {
 
   const { wallets } = useWallets();
   const { authenticated } = usePrivy();
+  const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -78,15 +80,12 @@ export const GameBoard: React.FC = () => {
       setIsActivatingBlitz(true);
 
       if (network === 'SOL') {
-        const solanaProvider = await wallet.getSolanaProvider?.();
-        if (!solanaProvider) throw new Error('Solana provider not available');
-
         const { getSolanaConnection, buildDepositTransaction } = await import('@/lib/solana/client');
         const connection = getSolanaConnection();
         const transaction = await buildDepositTransaction(blitzEntryFee, address);
 
         toast.info(`Confirming ${blitzEntryFee} SOL Blitz Entry...`);
-        const { signature } = await solanaProvider.signAndSendTransaction(transaction);
+        const signature = await sendSolanaTransaction(transaction, connection);
         console.log("Solana Blitz payment sig:", signature);
       } else if (network === 'BNB') {
         const ethereumProvider = await wallet.getEthereumProvider();
