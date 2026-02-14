@@ -22,12 +22,31 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "Binomo",
-  description: "Real-time BTC/BNB price prediction platform on BNB Smart Chain",
+  title: "BYNOMO — On-Chain Binary Options",
+  description:
+    "The first on-chain binary options trading dapp. Trade on BNB, SOL, SUI, XLM, XTZ, NEAR. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust.",
+  keywords: [
+    "binary options",
+    "crypto trading",
+    "Pyth oracle",
+    "BNB",
+    "Solana",
+    "Sui",
+    "Stellar",
+    "Tezos",
+    "NEAR",
+    "Web3",
+    "prediction",
+  ],
   icons: {
     icon: "/overflowlogo.ico",
     shortcut: "/overflowlogo.ico",
     apple: "/overflowlogo.ico",
+  },
+  openGraph: {
+    title: "BYNOMO — On-Chain Binary Options",
+    description:
+      "Trade binary options with oracle-bound resolution and minimal trust. Real-time Pyth oracles, 5s–1m rounds, 300+ assets. BNB, SOL, SUI, XLM, XTZ, NEAR.",
   },
 };
 

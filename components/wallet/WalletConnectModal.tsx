@@ -66,7 +66,7 @@ export const WalletConnectModal: React.FC = () => {
             const { NetworkType } = await import('@airgap/beacon-sdk');
 
             const wallet = new BeaconWallet({
-                name: "Binomo Protocol",
+                name: "BYNOMO Protocol",
                 preferredNetwork: NetworkType.MAINNET
             });
 
@@ -80,7 +80,7 @@ export const WalletConnectModal: React.FC = () => {
                 useOverflowStore.getState().setIsConnected(true);
                 // Fetch Tezos mainnet XTZ balance
                 useOverflowStore.getState().refreshWalletBalance();
-                // Fetch Binomo house balance for Tezos
+                // Fetch BYNOMO house balance for Tezos
                 useOverflowStore.getState().fetchBalance(address);
             }
         } catch (error) {
@@ -135,7 +135,7 @@ export const WalletConnectModal: React.FC = () => {
                     <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-purple-500/10 to-transparent">
                         <div>
                             <h2 className="text-xl font-bold text-white tracking-tight">Connect Wallet</h2>
-                            <p className="text-sm text-gray-400 mt-1">Select your preferred blockchain</p>
+                            <p className="text-sm text-gray-400 mt-1">BNB, SOL, SUI, XLM, XTZ, or NEAR</p>
                         </div>
                         <button
                             onClick={() => setOpen(false)}
@@ -284,8 +284,9 @@ export const WalletConnectModal: React.FC = () => {
                     {/* Footer */}
                     <div className="p-4 bg-white/5 text-center">
                         <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
-                            Securely powered by Binomo Protocol
+                            Trade binary options with oracle-bound resolution and minimal trust
                         </p>
+                        <p className="text-[9px] text-gray-600 mt-1">Powered by Pyth Hermes · BYNOMO Protocol</p>
                     </div>
                 </motion.div>
             </div>

@@ -177,7 +177,7 @@ export const GameBoard: React.FC = () => {
         address
       );
     } catch (err) {
-      console.error("Failed to place Binomo bet:", err);
+      console.error("Failed to place bet:", err);
     }
   };
 

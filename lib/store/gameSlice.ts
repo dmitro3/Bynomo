@@ -24,7 +24,7 @@ export interface ActiveBet {
   direction: 'UP' | 'DOWN';
   timestamp: number;
   status: 'active' | 'settled';
-  // Binomo mode specific
+  // Classic mode specific
   strikePrice?: number;
   endTime?: number;
   // Box mode specific

@@ -1,5 +1,5 @@
 /**
- * Main Zustand store for Binomo dApp
+ * Main Zustand store for BYNOMO dApp
  * Combines wallet, game, and history slices
  * 
  * Note: After BNB migration, blockchain events are handled
@@ -60,7 +60,7 @@ export const initializeStore = async (): Promise<void> => {
     };
 
 
-    console.log("Binomo store initialized successfully");
+    console.log("BYNOMO store initialized successfully");
   } catch (error) {
     console.error("Error initializing store:", error);
   }

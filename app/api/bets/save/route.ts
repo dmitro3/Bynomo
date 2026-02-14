@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
                 end_price: parseFloat(endPrice) || 0,
                 payout: parseFloat(payout) || 0,
                 won: !!won,
-                mode: mode || 'binomo',
+                mode: mode || 'bynomo',
                 network: network || 'BNB',
                 resolved_at: new Date().toISOString(),
             }, { onConflict: 'id' });

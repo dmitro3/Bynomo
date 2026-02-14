@@ -14,10 +14,10 @@ export const config = createConfig(
         walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'dummy-id',
 
         // Required App Info
-        appName: 'Binomo',
+        appName: 'BYNOMO',
 
         // Optional App Info
-        appDescription: 'Binomo on BNB Smart Chain',
+        appDescription: 'BYNOMO on BNB Smart Chain',
         appUrl: 'https://family.co', // your app's url
         appIcon: 'https://family.co/logo.png', // your app's icon
     }),
