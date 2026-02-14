@@ -135,12 +135,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       } else if (network === 'SOL') {
         if (!solanaPublicKey) throw new Error('Solana wallet not connected');
 
-        const { buildDepositTransaction } = await import('@/lib/solana/client');
+        const { buildDepositTransaction, getSolanaConnection } = await import('@/lib/solana/client');
         const transaction = await buildDepositTransaction(depositAmount, address);
+        const connection = getSolanaConnection();
 
         toast.info('Please confirm the transaction in your Solana wallet...');
 
-        txHash = await signAndSendSolana(transaction);
+        txHash = await signAndSendSolana(transaction, connection);
       } else if (network === 'NEAR') {
         const { depositNEAR } = await import('@/lib/near/wallet');
         toast.info('Please confirm the transaction in your NEAR wallet...');
