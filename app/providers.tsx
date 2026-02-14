@@ -184,9 +184,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
               embeddedWallets: {
                 createOnLogin: 'users-without-wallets',
               },
-              rpcConfig: {
-                56: 'https://bsc-dataseed.binance.org/'
-              }
             }}
           >
             <ConnectionProvider endpoint="https://api.mainnet-beta.solana.com">
