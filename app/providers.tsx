@@ -170,7 +170,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider theme="dark">
+        <ConnectKitProvider mode="dark">
           <PrivyProvider
             appId={PRIVY_APP_ID}
             config={{
