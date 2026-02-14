@@ -1,21 +1,20 @@
 /**
  * Tezos Client Utils
- * Handles Tezos bakiye fetching and wallet interactions using Taquito
+ * Handles Tezos balance fetching and wallet interactions using Taquito
+ * Uses dynamic import so the build does not require @taquito/taquito to be resolved at bundle time.
  */
 
-import { TezosToolkit } from '@taquito/taquito';
-
-// Tezos Mainnet RPC
 const RPC_URL = 'https://mainnet.ecadinfra.com';
-const tezos = new TezosToolkit(RPC_URL);
 
 /**
- * Get XTZ bakiye for an address
+ * Get XTZ balance for an address
  * @param address Tezos address (tz1...)
- * @returns Bakiye in XTZ
+ * @returns Balance in XTZ
  */
 export const getXTZBalance = async (address: string): Promise<number> => {
     try {
+        const { TezosToolkit } = await import('@taquito/taquito');
+        const tezos = new TezosToolkit(RPC_URL);
         const balance = await tezos.tz.getBalance(address);
         // Balance is in mutez (1 XTZ = 1,000,000 mutez)
         return balance.toNumber() / 1000000;

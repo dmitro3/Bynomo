@@ -1,15 +1,18 @@
 /**
  * Tezos Backend Client
  * Used for administrative operations like withdrawals signing with Treasury Private Key
+ * Uses dynamic imports so the build does not require @taquito/* at bundle time.
  */
-
-import { TezosToolkit } from '@taquito/taquito';
-import { InMemorySigner } from '@taquito/signer';
 
 /**
  * Get the Tezos provider with Treasury signer
  */
 export async function getTezosTreasuryClient() {
+    const [{ TezosToolkit }, { InMemorySigner }] = await Promise.all([
+        import('@taquito/taquito'),
+        import('@taquito/signer'),
+    ]);
+
     const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://mainnet.ecadinfra.com';
     const secretKey = process.env.TEZOS_TREASURY_SECRET_KEY;
 
