@@ -189,7 +189,9 @@ void main() {
         const mesh = new Mesh(gl, { geometry, program });
 
         const resize = () => {
-            const { clientWidth: w, clientHeight: h } = containerRef.current;
+            const container = containerRef.current;
+            if (!container) return;
+            const { clientWidth: w, clientHeight: h } = container;
             renderer.setSize(w, h);
             uniforms.iResolution.value = [w, h];
         };
