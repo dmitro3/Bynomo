@@ -52,6 +52,8 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
 
     if (address && (address.endsWith('.near') || address.endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address))) {
       network = 'NEAR';
+    } else if (address && /^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
+      network = 'XTZ';
     }
 
     // Skip API fetch for demo mode as it uses local state only

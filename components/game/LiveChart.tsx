@@ -1,4 +1,6 @@
 'use client';
+// Force reload - v4
+
 
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -123,153 +125,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const toggleIndicator = useStore((state) => state.toggleIndicator);
   const [socialBets, setSocialBets] = useState<{ id: number; x: number; y: number; direction: 'UP' | 'DOWN' }[]>([]);
 
-
-  // Auto-remove bet results after 3 seconds
-  useEffect(() => {
-    if (betResults.length === 0) return;
-    const timer = setTimeout(() => {
-      setBetResults(prev => prev.filter((r: BetResult) => Date.now() - r.timestamp < 3000));
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [betResults, now]);
-
-  // Sync cellBets from store's activeBets (important when switching modes or assets)
-  useEffect(() => {
-    const boxBets = activeBets.filter((bet: any) =>
-      bet.mode === 'box' &&
-      bet.asset === selectedAsset &&
-      bet.status === 'active' &&
-      bet.cellId
-    );
-
-    setCellBets(prev => {
-      const newMap = new Map();
-      boxBets.forEach((bet: any) => {
-        newMap.set(bet.cellId, {
-          cellId: bet.cellId,
-          betId: bet.id,
-          amount: bet.amount,
-          multiplier: bet.multiplier,
-          direction: bet.direction
-        });
-      });
-      return newMap;
-    });
-  }, [activeBets, selectedAsset]);
-
-
-
-  // Asset display configuration
-  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' }> = {
-    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto' },
-    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png', category: 'Crypto' },
-    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png', category: 'Crypto' },
-    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png', category: 'Crypto' },
-    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png', category: 'Crypto' },
-    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto' },
-    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png', category: 'Crypto' },
-    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto' },
-    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png', category: 'Crypto' },
-    SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
-    XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
-    XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
-    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near-logo.svg', category: 'Crypto' },
-    // Metals
-    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
-    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
-    // FX
-    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png', category: 'Forex' },
-    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png', category: 'Forex' },
-    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png', category: 'Forex' },
-    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png', category: 'Forex' },
-    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png', category: 'Forex' },
-    // Stocks
-    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png', category: 'Stocks' },
-    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png', category: 'Stocks' },
-    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png', category: 'Stocks' },
-    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png', category: 'Stocks' },
-    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png', category: 'Stocks' },
-    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png', category: 'Stocks' },
-    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png', category: 'Stocks' },
-    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png', category: 'Stocks' },
-  };
-
-
-
-  const currentAssetConfig = assetConfig[selectedAsset] || assetConfig.BTC;
-
-  // Filtered assets based on search and category
-  const filteredAssets = useMemo(() => {
-    return (Object.keys(assetConfig) as AssetType[]).filter(assetId => {
-      const asset = assetConfig[assetId];
-      const matchesSearch = asset.name.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
-        asset.symbol.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
-        asset.pair.toLowerCase().includes(assetSearchQuery.toLowerCase());
-
-      const matchesCategory = activeAssetCategory === 'All' || asset.category === activeAssetCategory;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [assetSearchQuery, activeAssetCategory]);
-
-
-  // Stable Y-Axis Domain
+  // Stable Y-Axis Domain - MUST BE BEFORE SCALESuseMemo
   const yDomain = useRef({ min: 0, max: 100, initialized: false });
-
-  // Reset Y-axis domain when asset changes
-  useEffect(() => {
-    yDomain.current = { min: 0, max: 100, initialized: false };
-    setResolvedCells([]); // Clear resolved cells
-    setBetResults([]); // Clear bet results
-    setCellBets(new Map()); // Clear cell bets
-    setIsLoadingPrice(true); // Show loading when switching assets
-  }, [selectedAsset]);
-
-  // Hide loading when price data arrives
-  useEffect(() => {
-    if (currentPrice > 0 && priceHistory.length >= 2) {
-      setIsLoadingPrice(false);
-    }
-  }, [currentPrice, priceHistory]);
-
-  // Update dimensions
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
-        });
-      }
-    };
-    window.addEventListener('resize', updateDimensions);
-    updateDimensions();
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
-
-  // Reset Y-axis domain when asset changes to avoid getting stuck at old price levels
-  useEffect(() => {
-    yDomain.current.initialized = false;
-  }, [selectedAsset]);
-
-  // Animation Loop - Optimized for performance
-  useEffect(() => {
-    let frameId: number;
-    let lastTime = Date.now();
-
-    const animate = () => {
-      const currentTime = Date.now();
-      // Throttle to ~20fps for better performance
-      if (currentTime - lastTime > 50) {
-        setNow(currentTime);
-        lastTime = currentTime;
-      }
-      frameId = requestAnimationFrame(animate);
-    };
-    frameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frameId);
-  }, []);
 
   // Configuration - Responsive + Timeframe
   const isMobile = dimensions.width < 640;
@@ -332,6 +189,147 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return { yScale, xScale, tipX, minY, maxY };
   }, [dimensions, priceHistory, currentPrice, now, selectedAsset]);
 
+  // Continuous Grid Generation
+  // Cells are now positioned based on PRICE LEVELS, not fixed pixels
+  const betCells = useMemo(() => {
+    if (!scales || dimensions.height === 0) return [];
+
+    const cells = [];
+    const colWidth = (gridInterval / 1000) * pixelsPerSecond;
+
+    // Calculate a stable price step based on the current range to ensure the grid "slides" correctly
+    const rawStep = (scales.maxY - scales.minY) / 10;
+    // Snap to "nice" numbers (e.g., 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100...)
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+    let priceStep;
+    if (normalized < 1.5) priceStep = 1 * magnitude;
+    else if (normalized < 3) priceStep = 2 * magnitude;
+    else if (normalized < 7) priceStep = 5 * magnitude;
+    else priceStep = 10 * magnitude;
+
+
+    // Calculate visible price range with large buffer (2x viewport)
+    const viewPadding = (scales.maxY - scales.minY) * 1.5;
+
+    const gridMaxY = scales.maxY + viewPadding;
+    const gridMinY = scales.minY - viewPadding;
+
+    // Stable snap points
+    const startPrice = Math.floor(gridMaxY / priceStep) * priceStep;
+    const endPrice = Math.ceil(gridMinY / priceStep) * priceStep;
+
+    const priceRange = scales.maxY - scales.minY;
+
+    // Time-based generation for stable keys
+    const startTime = Math.floor(now / gridInterval) * gridInterval - gridInterval;
+    const endTime = now + ((dimensions.width - scales.tipX) / pixelsPerSecond) * 1000 + gridInterval * 2;
+
+    for (let colTimestamp = startTime; colTimestamp <= endTime; colTimestamp += gridInterval) {
+      const colX = scales.xScale(colTimestamp);
+
+      if (colX + colWidth < 0) continue;
+      if (colX > dimensions.width + 100) continue;
+
+      const isCrossing = colX <= scales.tipX && colX + colWidth > scales.tipX;
+      const isPast = colX + colWidth <= scales.tipX;
+
+
+      // Loop through price levels
+      for (let rowPriceTop = startPrice; rowPriceTop >= endPrice; rowPriceTop -= priceStep) {
+        const rowPriceBottom = rowPriceTop - priceStep;
+        const rowPriceCenter = (rowPriceTop + rowPriceBottom) / 2;
+        const priceLevelIndex = Math.round(rowPriceTop / priceStep);
+
+        // Convert price to Y position using the scale
+        const y = scales.yScale(rowPriceTop);
+        const cellBottom = scales.yScale(rowPriceBottom);
+        const rowHeight = cellBottom - y;
+
+        // Skip if completely off screen vertically to save performance
+        if (y > dimensions.height + 50 || cellBottom < -50) continue;
+
+        // Determine win/loss for cells crossing or past
+        let status: 'future' | 'active' | 'won' | 'lost' = 'future';
+
+        if (isCrossing) {
+          if (currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom) {
+            status = 'won';
+          } else {
+            status = 'active';
+          }
+        } else if (isPast) {
+          status = 'lost';
+        }
+
+
+        const isUp = rowPriceCenter > currentPrice;
+        const priceInRow = currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom;
+
+        let baseMultiplier: number;
+        if (priceInRow) {
+          baseMultiplier = 1.01;
+        } else {
+          // Distance from CURRENT PRICE in price terms
+          const priceDist = Math.abs(rowPriceCenter - currentPrice);
+          const normalizedDist = Math.min(priceDist / (priceRange * 0.8), 1);
+          baseMultiplier = 1.05 + Math.pow(normalizedDist, 1.3) * 3.95;
+        }
+
+        const timeBonus = Math.max(0, (colX - scales.tipX) / 800) * 0.25;
+        let calculatedMultiplier = Math.min(baseMultiplier + timeBonus, 10.0);
+
+        // BLITZ MODE BOOST (x2 Multiplier) - Reduced density as requested
+        const colIndex = Math.floor(colTimestamp / gridInterval);
+        const isHighStake = baseMultiplier > 2.2; // Only very high risk cells
+        const isLuckyDiagonal = (priceLevelIndex + colIndex) % 5 === 0; // Less frequent (1 in 5 instead of 1 in 3)
+        const isBlitzBoosted = isBlitzActive && hasBlitzAccess && (isHighStake || isLuckyDiagonal);
+
+
+
+        if (isBlitzBoosted) {
+          calculatedMultiplier = calculatedMultiplier * blitzMultiplier;
+        }
+
+        const multiplier = Math.min(calculatedMultiplier, 20).toFixed(2);
+
+        // Visual properties
+        const distFromCenter = Math.abs(rowPriceCenter - currentPrice) / priceRange;
+        const intensity = Math.min(distFromCenter * 1.5, 1);
+
+        // Orange hue for Blitz, Purple otherwise
+        const hue = isBlitzBoosted ? 25 : 270;
+        const saturation = isBlitzBoosted ? 80 + intensity * 15 : 50 + intensity * 30;
+        const lightness = isBlitzBoosted ? 55 : 45;
+        const alpha = isBlitzBoosted ? 0.5 - intensity * 0.2 : 0.4 - intensity * 0.35;
+
+        const cellColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${Math.max(0.05, alpha)})`;
+        const borderColor = isBlitzBoosted
+          ? `hsla(${hue}, 90%, 60%, ${0.7 - intensity * 0.3})`
+          : `hsla(${hue}, 70%, 55%, ${Math.max(0.1, 0.5 - intensity * 0.4)})`;
+
+        cells.push({
+          id: `cell-${colTimestamp}-${priceLevelIndex}`,
+          x: colX,
+          y,
+          width: colWidth - 3,
+          height: Math.max(rowHeight - 3, 5),
+          multiplier,
+          isUp,
+          status,
+          color: cellColor,
+          borderColor: borderColor,
+          priceTop: rowPriceTop,
+          priceBottom: rowPriceBottom,
+          colTimestamp: colTimestamp,
+          isBlitzBoosted
+        });
+      }
+    }
+
+    return cells;
+  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset, isBlitzActive, hasBlitzAccess, blitzMultiplier]);
+
   const scalesRef = useRef(scales);
   const currentPriceRef = useRef(currentPrice);
 
@@ -339,66 +337,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     scalesRef.current = scales;
     currentPriceRef.current = currentPrice;
   }, [scales, currentPrice]);
-
-  // SIMULATE SOCIAL TRADING SENSORY DATA
-  useEffect(() => {
-    if (!activeIndicators['social']) return;
-
-    const interval = setInterval(() => {
-      if (Math.random() > 0.4) {
-        const currentScales = scalesRef.current;
-        if (!currentScales) return;
-
-        const timestamp = Date.now();
-        const direction: 'UP' | 'DOWN' = Math.random() > 0.5 ? 'UP' : 'DOWN';
-        const offset = (Math.random() - 0.5) * 60;
-
-        setSocialBets(prev => [...prev, {
-          id: timestamp,
-          x: currentScales.tipX,
-          y: currentScales.yScale(currentPriceRef.current) + offset,
-          direction
-        }].slice(-30));
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeIndicators['social']]);
-
-  // Clear social trading dots when asset changes
-  useEffect(() => {
-    setSocialBets([]);
-  }, [selectedAsset]);
-
-  // Handle classic (binomo) mode bet results at the graph tip
-  const lastProcessedResultRef = useRef<number>(0);
-  useEffect(() => {
-    if (lastResult && gameMode === 'binomo' && scales && lastResult.timestamp > lastProcessedResultRef.current) {
-      lastProcessedResultRef.current = lastResult.timestamp;
-
-      const multiplier = lastResult.amount > 0 ? lastResult.payout / lastResult.amount : 0;
-
-      const result: BetResult = {
-        id: `classic-${lastResult.timestamp}`,
-        won: lastResult.won,
-        amount: lastResult.amount,
-        payout: lastResult.payout,
-        multiplier: Number(multiplier.toFixed(2)),
-        timestamp: Date.now(),
-        x: scales.tipX,
-        y: scales.yScale(currentPrice)
-      };
-
-      setBetResults(prev => [...prev, result]);
-
-      // Play sound effects
-      if (lastResult.won) {
-        playWinSound();
-      } else {
-        playLoseSound();
-      }
-    }
-  }, [lastResult, gameMode, scales, currentPrice, playWinSound, playLoseSound]);
 
   // Chart Path
   const chartPath = useMemo(() => {
@@ -548,232 +486,240 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     return paths;
   }, [scales, priceHistory, now, currentPrice, activeIndicators]);
 
-  // Continuous Grid Generation
-  // Cells are now positioned based on PRICE LEVELS, not fixed pixels
-  const betCells = useMemo(() => {
-    if (!scales || dimensions.height === 0) return [];
 
-    const cells = [];
-    const colWidth = (gridInterval / 1000) * pixelsPerSecond;
+  // Auto-remove bet results after 3 seconds
+  useEffect(() => {
+    if (betResults.length === 0) return;
+    const timer = setTimeout(() => {
+      setBetResults(prev => prev.filter((r: BetResult) => Date.now() - r.timestamp < 3000));
+    }, 100);
 
-    // Calculate a stable price step based on the current range to ensure the grid "slides" correctly
-    const rawStep = (scales.maxY - scales.minY) / 10;
-    // Snap to "nice" numbers (e.g., 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100...)
-    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-    const normalized = rawStep / magnitude;
-    let priceStep;
-    if (normalized < 1.5) priceStep = 1 * magnitude;
-    else if (normalized < 3) priceStep = 2 * magnitude;
-    else if (normalized < 7) priceStep = 5 * magnitude;
-    else priceStep = 10 * magnitude;
+    return () => clearTimeout(timer);
+  }, [betResults, now]);
 
+  // Sync cellBets from store's activeBets (important when switching modes or assets)
+  useEffect(() => {
+    const boxBets = activeBets.filter((bet: any) =>
+      bet.mode === 'box' &&
+      bet.asset === selectedAsset &&
+      bet.status === 'active' &&
+      bet.cellId
+    );
 
-    // Calculate visible price range with large buffer (2x viewport)
-    const viewPadding = (scales.maxY - scales.minY) * 1.5;
-
-    const gridMaxY = scales.maxY + viewPadding;
-    const gridMinY = scales.minY - viewPadding;
-
-    // Stable snap points
-    const startPrice = Math.floor(gridMaxY / priceStep) * priceStep;
-    const endPrice = Math.ceil(gridMinY / priceStep) * priceStep;
-
-    const priceRange = scales.maxY - scales.minY;
-
-    // Time-based generation for stable keys
-    const startTime = Math.floor(now / gridInterval) * gridInterval - gridInterval;
-    const endTime = now + ((dimensions.width - scales.tipX) / pixelsPerSecond) * 1000 + gridInterval * 2;
-
-    for (let colTimestamp = startTime; colTimestamp <= endTime; colTimestamp += gridInterval) {
-      const colX = scales.xScale(colTimestamp);
-
-      if (colX + colWidth < 0) continue;
-      if (colX > dimensions.width + 100) continue;
-
-      const isCrossing = colX <= scales.tipX && colX + colWidth > scales.tipX;
-      const isPast = colX + colWidth <= scales.tipX;
-
-
-      // Loop through price levels
-      for (let rowPriceTop = startPrice; rowPriceTop >= endPrice; rowPriceTop -= priceStep) {
-        const rowPriceBottom = rowPriceTop - priceStep;
-        const rowPriceCenter = (rowPriceTop + rowPriceBottom) / 2;
-        const priceLevelIndex = Math.round(rowPriceTop / priceStep);
-
-        // Convert price to Y position using the scale
-        const y = scales.yScale(rowPriceTop);
-        const cellBottom = scales.yScale(rowPriceBottom);
-        const rowHeight = cellBottom - y;
-
-        // Skip if completely off screen vertically to save performance
-        if (y > dimensions.height + 50 || cellBottom < -50) continue;
-
-        // Determine win/loss for cells crossing or past
-        let status: 'future' | 'active' | 'won' | 'lost' = 'future';
-
-        if (isCrossing) {
-          if (currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom) {
-            status = 'won';
-          } else {
-            status = 'active';
-          }
-        } else if (isPast) {
-          status = 'lost';
-        }
-
-
-        const isUp = rowPriceCenter > currentPrice;
-        const priceInRow = currentPrice <= rowPriceTop && currentPrice >= rowPriceBottom;
-
-        let baseMultiplier: number;
-        if (priceInRow) {
-          baseMultiplier = 1.01;
-        } else {
-          // Distance from CURRENT PRICE in price terms
-          const priceDist = Math.abs(rowPriceCenter - currentPrice);
-          const normalizedDist = Math.min(priceDist / (priceRange * 0.8), 1);
-          baseMultiplier = 1.05 + Math.pow(normalizedDist, 1.3) * 3.95;
-        }
-
-        const timeBonus = Math.max(0, (colX - scales.tipX) / 800) * 0.25;
-        let calculatedMultiplier = Math.min(baseMultiplier + timeBonus, 10.0);
-
-        // BLITZ MODE BOOST (x2 Multiplier) - Reduced density as requested
-        const colIndex = Math.floor(colTimestamp / gridInterval);
-        const isHighStake = baseMultiplier > 2.2; // Only very high risk cells
-        const isLuckyDiagonal = (priceLevelIndex + colIndex) % 5 === 0; // Less frequent (1 in 5 instead of 1 in 3)
-        const isBlitzBoosted = isBlitzActive && hasBlitzAccess && (isHighStake || isLuckyDiagonal);
+    setCellBets(prev => {
+      const newMap = new Map();
+      boxBets.forEach((bet: any) => {
+        newMap.set(bet.cellId, {
+          cellId: bet.cellId,
+          betId: bet.id,
+          amount: bet.amount,
+          multiplier: bet.multiplier,
+          direction: bet.direction
+        });
+      });
+      return newMap;
+    });
+  }, [activeBets, selectedAsset]);
 
 
 
-        if (isBlitzBoosted) {
-          calculatedMultiplier = calculatedMultiplier * blitzMultiplier;
-        }
+  // Asset display configuration
+  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' }> = {
+    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto' },
+    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png', category: 'Crypto' },
+    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png', category: 'Crypto' },
+    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png', category: 'Crypto' },
+    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png', category: 'Crypto' },
+    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto' },
+    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png', category: 'Crypto' },
+    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto' },
+    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png', category: 'Crypto' },
+    SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
+    XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
+    XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
+    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near-logo.svg', category: 'Crypto' },
+    // Metals
+    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
+    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
+    // FX
+    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png', category: 'Forex' },
+    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png', category: 'Forex' },
+    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png', category: 'Forex' },
+    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png', category: 'Forex' },
+    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png', category: 'Forex' },
+    // Stocks
+    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png', category: 'Stocks' },
+    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png', category: 'Stocks' },
+    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png', category: 'Stocks' },
+    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png', category: 'Stocks' },
+    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png', category: 'Stocks' },
+    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png', category: 'Stocks' },
+    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png', category: 'Stocks' },
+    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png', category: 'Stocks' },
+  };
 
-        const multiplier = Math.min(calculatedMultiplier, 20).toFixed(2);
 
-        // Visual properties
-        const distFromCenter = Math.abs(rowPriceCenter - currentPrice) / priceRange;
-        const intensity = Math.min(distFromCenter * 1.5, 1);
 
-        // Orange hue for Blitz, Purple otherwise
-        const hue = isBlitzBoosted ? 25 : 270;
-        const saturation = isBlitzBoosted ? 80 + intensity * 15 : 50 + intensity * 30;
-        const lightness = isBlitzBoosted ? 55 : 45;
-        const alpha = isBlitzBoosted ? 0.5 - intensity * 0.2 : 0.4 - intensity * 0.35;
+  const currentAssetConfig = assetConfig[selectedAsset] || assetConfig.BTC;
 
-        const cellColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${Math.max(0.05, alpha)})`;
-        const borderColor = isBlitzBoosted
-          ? `hsla(${hue}, 90%, 60%, ${0.7 - intensity * 0.3})`
-          : `hsla(${hue}, 70%, 55%, ${Math.max(0.1, 0.5 - intensity * 0.4)})`;
+  // Filtered assets based on search and category
+  const filteredAssets = useMemo(() => {
+    return (Object.keys(assetConfig) as AssetType[]).filter(assetId => {
+      const asset = assetConfig[assetId];
+      const matchesSearch = asset.name.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+        asset.symbol.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+        asset.pair.toLowerCase().includes(assetSearchQuery.toLowerCase());
 
-        cells.push({
-          id: `cell-${colTimestamp}-${priceLevelIndex}`,
-          x: colX,
-          y,
-          width: colWidth - 3,
-          height: Math.max(rowHeight - 3, 5),
-          multiplier,
-          isUp,
-          status,
-          color: cellColor,
-          borderColor: borderColor,
-          priceTop: rowPriceTop,
-          priceBottom: rowPriceBottom,
-          isBlitzBoosted
+      const matchesCategory = activeAssetCategory === 'All' || asset.category === activeAssetCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [assetSearchQuery, activeAssetCategory]);
+
+
+  // Stable Y-Axis Domain
+
+  // Reset Y-axis domain when asset changes
+  useEffect(() => {
+    yDomain.current = { min: 0, max: 100, initialized: false };
+    setResolvedCells([]); // Clear resolved cells
+    setBetResults([]); // Clear bet results
+    setCellBets(new Map()); // Clear cell bets
+    setIsLoadingPrice(true); // Show loading when switching assets
+  }, [selectedAsset]);
+
+  // Hide loading when price data arrives
+  useEffect(() => {
+    if (currentPrice > 0 && priceHistory.length >= 2) {
+      setIsLoadingPrice(false);
+    }
+  }, [currentPrice, priceHistory]);
+
+  // Update dimensions
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
         });
       }
-    }
+    };
+    window.addEventListener('resize', updateDimensions);
+    updateDimensions();
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
-    return cells;
-  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset, isBlitzActive, hasBlitzAccess, blitzMultiplier]);
 
-
-
-
-  // Handle bet resolution when chart crosses cells with active bets
+  // Animation Loop - Optimized for performance
   useEffect(() => {
-    if (!scales || cellBets.size === 0 || gameMode !== 'box') return;
+    let frameId: number;
+    let lastTime = Date.now();
 
-    betCells.forEach((cell: any) => {
-      const bet = cellBets.get(cell.id);
-      if (!bet) return;
+    const animate = () => {
+      const currentTime = Date.now();
+      // Throttle to ~20fps for better performance
+      if (currentTime - lastTime > 50) {
+        setNow(currentTime);
+        lastTime = currentTime;
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
-      // Check if this cell is being crossed or has been passed
-      const isCrossing = cell.status === 'active' || cell.status === 'won' || cell.status === 'lost';
 
-      if (isCrossing) {
-        // Determine if bet won or lost based on current price
-        const won = currentPrice <= cell.priceTop && currentPrice >= cell.priceBottom;
-        const payout = won ? bet.amount * bet.multiplier : 0;
+  // SIMULATE SOCIAL TRADING SENSORY DATA
+  useEffect(() => {
+    if (!activeIndicators['social']) return;
 
-        // Remove from cellBets
-        setCellBets(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(cell.id);
-          return newMap;
-        });
+    const interval = setInterval(() => {
+      if (Math.random() > 0.4) {
+        const currentScales = scalesRef.current;
+        if (!currentScales) return;
 
-        // Resolve the bet in the store
-        resolveBet(bet.betId, won, payout);
+        const timestamp = Date.now();
+        const direction: 'UP' | 'DOWN' = Math.random() > 0.5 ? 'UP' : 'DOWN';
+        const offset = (Math.random() - 0.5) * 60;
 
-        // Add bet result notification
-        setBetResults(prev => [...prev, {
-          id: `result-${bet.betId}`,
-          won,
-          amount: bet.amount,
-          payout,
-          multiplier: bet.multiplier,
-          timestamp: Date.now(),
-          x: cell.x,
-          y: cell.y
-        }]);
+        setSocialBets(prev => [...prev, {
+          id: timestamp,
+          x: currentScales.tipX,
+          y: currentScales.yScale(currentPriceRef.current) + offset,
+          direction
+        }].slice(-30));
+      }
+    }, 1000);
 
-        // Play sound effect
-        if (won) {
-          playWinSound();
-        } else {
-          playLoseSound();
-        }
+    return () => clearInterval(interval);
+  }, [activeIndicators['social']]);
 
-        // Update house balance via API (skip for demo mode)
-        const isDemoMode = userAddress?.startsWith('0xDEMO');
+  // Clear social trading dots when asset changes
+  useEffect(() => {
+    setSocialBets([]);
+  }, [selectedAsset]);
 
-        if (userAddress && !isDemoMode) {
-          // Real mode - use API
-          if (won) {
-            fetch('/api/balance/win', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userAddress,
-                winAmount: payout,
-                betId: bet.betId
-              })
-            }).then(() => {
-              fetchBalance(userAddress);
-            }).catch(console.error);
-          } else {
-            // If lost, just refresh balance (already deducted)
-            fetchBalance(userAddress);
-          }
-        } else if (isDemoMode && won) {
-          // Demo mode - update locally on win (bet amount already subtracted)
-          updateBalance(payout, 'add');
-        }
 
-        // Add to resolved cells for visual feedback
+
+
+
+
+
+
+
+
+  const lastProcessedResultRef = useRef<string>('');
+  useEffect(() => {
+    if (!lastResult || !scales || lastResult.timestamp.toString() === lastProcessedResultRef.current) return;
+    lastProcessedResultRef.current = lastResult.timestamp.toString();
+
+    const isBox = !!lastResult.cellId;
+    let x = scales.tipX;
+    let y = scales.yScale(currentPrice);
+
+    // For box mode, try to find the actual cell position
+    if (isBox) {
+      const cell = betCells.find((c: any) => c.id === lastResult.cellId);
+      if (cell) {
+        x = cell.x + cell.width / 2;
+        y = cell.y + cell.height / 2;
+
+        // Add to resolved cells for visual "explosion"
         setResolvedCells(prev => [...prev, {
           id: cell.id,
           row: 0,
-          won,
+          won: lastResult.won,
           timestamp: Date.now()
         }]);
-
-        console.log(`Bet resolved: ${won ? 'WON' : 'LOST'} - Amount: ${bet.amount}, Multiplier: ${bet.multiplier}, Payout: ${payout}`);
       }
-    });
-  }, [betCells, cellBets, scales, currentPrice, resolveBet, userAddress, fetchBalance, playWinSound, playLoseSound, gameMode]);
+    }
+
+    const multiplier = lastResult.amount > 0 ? lastResult.payout / lastResult.amount : 0;
+
+    const result: BetResult = {
+      id: `res-${lastResult.timestamp}`,
+      won: lastResult.won,
+      amount: lastResult.amount,
+      payout: lastResult.payout,
+      multiplier: Number(multiplier.toFixed(2)),
+      timestamp: Date.now(),
+      x,
+      y
+    };
+
+    setBetResults(prev => [...prev, result]);
+  }, [lastResult, scales, currentPrice, betCells]);
+
+
+
+
+  // Handle bet resolution is now managed by gameSlice.ts to ensure persistence and consistency
+  // across different components and sessions (even when LiveChart is not mounted).
+  useEffect(() => {
+    // We only keep this for visual feedback (vibrating cells that have bets)
+    // but the actual resolution happens in the store.
+  }, [activeBets, selectedAsset]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-0 bg-[#02040A] overflow-hidden select-none">
@@ -875,7 +821,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                     betAmount,
                     targetId,
                     userAddress,
-                    cell.id
+                    cell.id,
+                    {
+                      priceTop: cell.priceTop,
+                      priceBottom: cell.priceBottom,
+                      endTime: cell.colTimestamp
+                    }
                   );
 
                   if (result && result.bet) {
@@ -992,7 +943,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 fontFamily="monospace"
                 className="font-bold opacity-80"
               >
-                {bet.direction} {bet.amount} BNB {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
+                {bet.direction} {bet.amount} NEAR {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
               </text>
             </g>
           );
@@ -1449,7 +1400,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                         ? `+${result.payout.toFixed(4)}`
                         : `-${result.amount.toFixed(4)}`
                       }
-                      <span className="text-xs ml-1 opacity-70">BNB</span>
+                      <span className="text-xs ml-1 opacity-70">NEAR</span>
                     </p>
                   </div>
 

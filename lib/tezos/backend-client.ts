@@ -13,7 +13,7 @@ export async function getTezosTreasuryClient() {
         import('@taquito/signer'),
     ]);
 
-    const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://mainnet.ecadinfra.com';
+    const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
     const secretKey = process.env.TEZOS_TREASURY_SECRET_KEY;
 
     if (!secretKey) {
@@ -36,13 +36,15 @@ export async function transferXTZFromTreasury(
     try {
         const tezos = await getTezosTreasuryClient();
 
-        // Taquito handles mutez conversion internally when using .transfer
-        // But to be explicit and safe:
-        console.log(`Initiating Tezos withdrawal: ${amountXTZ} XTZ to ${toAddress}`);
+        // Convert XTZ to mutez (integer) to avoid float precision issues
+        const amountMutez = Math.round(amountXTZ * 1_000_000);
+
+        console.log(`Initiating Tezos withdrawal: ${amountXTZ} XTZ (${amountMutez} mutez) to ${toAddress}`);
 
         const op = await tezos.contract.transfer({
             to: toAddress,
-            amount: amountXTZ,
+            amount: amountMutez,
+            mutez: true,
         });
 
         console.log(`Tezos withdrawal operation sent: ${op.hash}`);

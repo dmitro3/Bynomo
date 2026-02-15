@@ -30,6 +30,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export interface UserBalance {
   user_address: string;
   balance: number;
+  currency: string;
+  user_tier: 'free' | 'standard' | 'gold' | 'vip';
+  status: 'active' | 'frozen' | 'banned';
   updated_at: string;
   created_at: string;
 }

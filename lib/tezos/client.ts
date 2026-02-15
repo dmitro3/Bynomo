@@ -4,7 +4,15 @@
  * Uses dynamic import so the build does not require @taquito/taquito to be resolved at bundle time.
  */
 
-const RPC_URL = 'https://mainnet.ecadinfra.com';
+const RPC_URL = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
+
+/**
+ * Get a TezosToolkit instance configured with the RPC URL.
+ */
+export const getTezosClient = async () => {
+    const { TezosToolkit } = await import('@taquito/taquito');
+    return new TezosToolkit(RPC_URL);
+};
 
 /**
  * Get XTZ balance for an address

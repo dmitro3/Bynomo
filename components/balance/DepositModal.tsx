@@ -146,6 +146,34 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         const { depositNEAR } = await import('@/lib/near/wallet');
         toast.info('Please confirm the transaction in your NEAR wallet...');
         txHash = await depositNEAR(amount);
+      } else if (network === 'XTZ') {
+        const { BeaconWallet } = await import('@taquito/beacon-wallet');
+        const { NetworkType } = await import('@airgap/beacon-types');
+        const { getTezosClient } = await import('@/lib/tezos/client');
+
+        const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
+        const wallet = new BeaconWallet({
+          name: "BYNOMO",
+          preferredNode: rpcUrl,
+          network: {
+            type: NetworkType.MAINNET,
+            rpcUrl,
+          },
+        } as any);
+
+        // Clear any cached connection that might use old ecadinfra RPC
+        await wallet.clearActiveAccount();
+        await wallet.requestPermissions();
+
+        const tezos = await getTezosClient();
+        tezos.setWalletProvider(wallet);
+
+        const treasuryAddress = process.env.NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS;
+        if (!treasuryAddress) throw new Error('Tezos treasury not configured');
+
+        toast.info('Please confirm the transaction in your Tezos wallet...');
+        const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: depositAmount }).send();
+        txHash = op.opHash;
       } else {
         // BNB (EVM via Privy)
         if (!authenticated) throw new Error('Not authenticated with Privy');

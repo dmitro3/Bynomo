@@ -29,6 +29,8 @@ export interface ActiveBet {
   endTime?: number;
   // Box mode specific
   cellId?: string;
+  priceTop?: number;
+  priceBottom?: number;
 }
 
 export interface GameState {
@@ -52,6 +54,7 @@ export interface GameState {
     payout: number;
     timestamp: number;
     asset: AssetType; // Track which asset this result belongs to
+    cellId?: string; // For box mode visual feedback
   } | null;
   error: string | null;
   timeframeSeconds: number;
@@ -72,7 +75,7 @@ export interface GameState {
   setSelectedAsset: (asset: AssetType) => void;
   setTimeframeSeconds: (seconds: number) => void;
   placeBet: (amount: string, targetId: string) => Promise<void>;
-  placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
+  placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string, metadata?: { priceTop?: number; priceBottom?: number; endTime?: number }) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
   updatePrice: (price: number, asset?: AssetType) => void;
   updateAllPrices: (prices: Record<string, number>) => void;
   startGlobalPriceFeed: (updateAllPrices: (prices: Record<string, number>) => void) => (() => void);
@@ -261,8 +264,9 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param targetId - Dynamic grid target (e.g., "UP-2.50") containing direction and multiplier
    * @param userAddress - User's wallet address
    * @param cellId - Optional: The specific cell ID this bet is placed on
+   * @param metadata - Optional: Extra resolution info (price bounds, end time)
    */
-  placeBetFromHouseBalance: async (amount: string, targetId: string, userAddress: string, cellId?: string) => {
+  placeBetFromHouseBalance: async (amount: string, targetId: string, userAddress: string, cellId?: string, metadata?: { priceTop?: number; priceBottom?: number; endTime?: number }) => {
     const { targetCells, currentPrice, addActiveBet, gameMode, timeframeSeconds, selectedAsset } = get();
 
     try {
@@ -332,7 +336,10 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             strikePrice: currentPrice,
             endTime: Date.now() + (durationSeconds * 1000)
           } : {
-            cellId: cellId || targetId
+            cellId: cellId || targetId,
+            priceTop: metadata?.priceTop,
+            priceBottom: metadata?.priceBottom,
+            endTime: metadata?.endTime
           })
         };
 
@@ -401,7 +408,10 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
           strikePrice: currentPrice,
           endTime: Date.now() + (durationSeconds * 1000)
         } : {
-          cellId: cellId || targetId
+          cellId: cellId || targetId,
+          priceTop: metadata?.priceTop,
+          priceBottom: metadata?.priceBottom,
+          endTime: metadata?.endTime
         })
       };
 
@@ -528,61 +538,27 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     if (!activeBets) return;
 
     activeBets.forEach((bet: ActiveBet) => {
-      // Resolve bet if: mode is binomo, asset matches, status is active, and time has passed
+      // Resolve bet if: asset matches and status is active
       const betAsset = bet.asset || 'BNB'; // Fallback
+      if (betAsset !== currentSelectedAsset || bet.status !== 'active') return;
 
-      if (
-        bet.mode === 'binomo' &&
-        betAsset === currentSelectedAsset &&
-        bet.endTime &&
-        bet.strikePrice !== undefined &&
-        now >= bet.endTime &&
-        bet.status === 'active'
-      ) {
+      // BINOMO (Classic) Logic
+      if (bet.mode === 'binomo' && bet.endTime && bet.strikePrice !== undefined && now >= bet.endTime) {
         let won = false;
         if (bet.direction === 'UP') {
-          won = price > bet.strikePrice;
+          won = finalPrice > bet.strikePrice;
         } else {
-          won = price < bet.strikePrice;
+          won = finalPrice < bet.strikePrice;
         }
 
         const payout = won ? bet.amount * bet.multiplier : 0;
-
-        // Play sound effects
-        if (won) playWinSound();
-        else playLoseSound();
-
-        // Mark as settled and show result with asset info
-        set({
-          lastResult: {
-            won,
-            amount: bet.amount,
-            payout,
-            timestamp: now,
-            asset: betAsset
-          }
-        });
-
         resolveBet(bet.id, won, payout);
-
-        // Update real balance if necessary
-        if (accountType === 'real' && address && won) {
-          const network = (get() as any).network || 'BNB';
-          fetch('/api/balance/win', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userAddress: address,
-              winAmount: payout,
-              currency: network,
-              betId: bet.id
-            })
-          }).then(() => {
-            if (fetchBalance) fetchBalance(address);
-          }).catch(console.error);
-        } else if (accountType === 'demo' && won) {
-          updateBalance(payout, 'add');
-        }
+      }
+      // BOX MODE Logic (Instant resolution if metadata present)
+      else if (bet.mode === 'box' && bet.endTime && bet.priceTop !== undefined && bet.priceBottom !== undefined && now >= bet.endTime) {
+        const won = finalPrice <= bet.priceTop && finalPrice >= bet.priceBottom;
+        const payout = won ? bet.amount * bet.multiplier : 0;
+        resolveBet(bet.id, won, payout);
       }
     });
   },
@@ -622,18 +598,49 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    * @param payout - The payout amount if won
    */
   resolveBet: (betId: string, won: boolean, payout: number) => {
-    const { activeBets, settledBets, currentPrice, address, network } = get();
+    const { activeBets, settledBets, currentPrice, address, network, accountType, updateBalance, fetchBalance } = get();
     const resolvedBet = activeBets.find((b: ActiveBet) => b.id === betId);
 
     if (resolvedBet) {
       const settledBet = { ...resolvedBet, status: 'settled' as const };
       const now = Date.now();
 
+      // Play sound effects
+      if (won) playWinSound();
+      else playLoseSound();
+
       set({
         activeBets: activeBets.filter((b: ActiveBet) => b.id !== betId),
         settledBets: [settledBet, ...settledBets].slice(0, 50), // Keep last 50
-        lastResult: { won, amount: resolvedBet.amount, payout, timestamp: now, asset: resolvedBet.asset }
+        lastResult: {
+          won,
+          amount: resolvedBet.amount,
+          payout,
+          timestamp: now,
+          asset: resolvedBet.asset,
+          cellId: resolvedBet.cellId
+        }
       });
+
+      // Handle Balance Update
+      if (won) {
+        if (accountType === 'real' && address) {
+          fetch('/api/balance/win', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userAddress: address,
+              winAmount: payout,
+              currency: network || 'BNB',
+              betId: resolvedBet.id
+            })
+          }).then(() => {
+            if (fetchBalance) fetchBalance(address);
+          }).catch(console.error);
+        } else if (accountType === 'demo') {
+          updateBalance(payout, 'add');
+        }
+      }
 
       // Also add to persistent local history store
       const anyGet = get() as any;

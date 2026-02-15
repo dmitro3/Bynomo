@@ -59,17 +59,16 @@ export async function GET(
       );
     }
 
-    // Query user_balances table by user_address and currency
+    // Query user_balances table (exclude user_tier initially to check if it exists or just handle error)
     const { data, error } = await supabase
       .from('user_balances')
-      .select('balance, updated_at, user_tier')
+      .select('balance, updated_at')
       .eq('user_address', address)
       .eq('currency', currency)
       .single();
 
     // Handle database errors
     if (error) {
-      // If user not found (PGRST116), return 0 balance
       if (error.code === 'PGRST116') {
         return NextResponse.json({
           balance: 0,
@@ -78,7 +77,6 @@ export async function GET(
         });
       }
 
-      // Log other database errors
       console.error('Database error fetching balance:', error);
       return NextResponse.json(
         { error: 'Service temporarily unavailable. Please try again.' },
@@ -86,11 +84,29 @@ export async function GET(
       );
     }
 
+    // Try to fetch user_tier separately to avoid crashing if column doesn't exist
+    let userTier = 'free';
+    try {
+      const { data: tierData } = await supabase
+        .from('user_balances')
+        .select('user_tier')
+        .eq('user_address', address)
+        .eq('currency', currency)
+        .single();
+
+      if (tierData && tierData.user_tier) {
+        userTier = tierData.user_tier;
+      }
+    } catch (e) {
+      // Ignore error if column doesn't exist
+      console.warn('Could not fetch user_tier, defaulting to free:', e);
+    }
+
     // Return balance and updated_at timestamp
     return NextResponse.json({
       balance: parseFloat(data.balance),
       updatedAt: data.updated_at,
-      tier: data.user_tier || 'free'
+      tier: userTier
     });
   } catch (error) {
     // Handle unexpected errors
