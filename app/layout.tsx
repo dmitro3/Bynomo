@@ -22,7 +22,7 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "BYNOMO — On-Chain Binary Options",
+  title: "Bynomo — On-Chain Binary Options",
   description:
     "The first on-chain binary options trading dapp. Trade on BNB, SOL, SUI, XLM, XTZ, NEAR. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust.",
   keywords: [
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     apple: "/overflowlogo.ico",
   },
   openGraph: {
-    title: "BYNOMO — On-Chain Binary Options",
+    title: "Bynomo — On-Chain Binary Options",
     description:
       "Trade binary options with oracle-bound resolution and minimal trust. Real-time Pyth oracles, 5s–1m rounds, 300+ assets. BNB, SOL, SUI, XLM, XTZ, NEAR.",
   },

@@ -165,7 +165,7 @@ export const GameBoard: React.FC = () => {
     }
   };
 
-  const handleBinomoBet = async (direction: 'UP' | 'DOWN') => {
+  const handleBynomoBet = async (direction: 'UP' | 'DOWN') => {
     if (!address || !isConnected || gameMode !== 'binomo') return;
 
     try {
@@ -396,7 +396,7 @@ export const GameBoard: React.FC = () => {
                 {gameMode === 'binomo' ? (
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button
-                      onClick={() => handleBinomoBet('UP')}
+                      onClick={() => handleBynomoBet('UP')}
                       disabled={!isConnected || isPlacingBet}
                       className="group relative flex flex-col items-center justify-center gap-1 py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl transition-all duration-200 active:scale-95 disabled:opacity-50"
                     >
@@ -405,7 +405,7 @@ export const GameBoard: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleBinomoBet('DOWN')}
+                      onClick={() => handleBynomoBet('DOWN')}
                       disabled={!isConnected || isPlacingBet}
                       className="group relative flex flex-col items-center justify-center gap-1 py-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-2xl transition-all duration-200 active:scale-95 disabled:opacity-50"
                     >

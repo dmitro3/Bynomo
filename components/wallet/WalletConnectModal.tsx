@@ -66,7 +66,7 @@ export const WalletConnectModal: React.FC = () => {
             const { NetworkType } = await import('@airgap/beacon-sdk');
 
             const wallet = new BeaconWallet({
-                name: "BYNOMO Protocol",
+                name: "Bynomo Protocol",
                 preferredNetwork: NetworkType.MAINNET
             });
 
@@ -80,7 +80,7 @@ export const WalletConnectModal: React.FC = () => {
                 useOverflowStore.getState().setIsConnected(true);
                 // Fetch Tezos mainnet XTZ balance
                 useOverflowStore.getState().refreshWalletBalance();
-                // Fetch BYNOMO house balance for Tezos
+                // Fetch Bynomo house balance for Tezos
                 useOverflowStore.getState().fetchBalance(address);
             }
         } catch (error) {
@@ -286,7 +286,7 @@ export const WalletConnectModal: React.FC = () => {
                         <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
                             Trade binary options with oracle-bound resolution and minimal trust
                         </p>
-                        <p className="text-[9px] text-gray-600 mt-1">Powered by Pyth Hermes · BYNOMO Protocol</p>
+                        <p className="text-[9px] text-gray-600 mt-1">Powered by Pyth Hermes · Bynomo Protocol</p>
                     </div>
                 </motion.div>
             </div>

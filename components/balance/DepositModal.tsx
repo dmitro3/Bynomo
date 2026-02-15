@@ -153,7 +153,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
         const wallet = new BeaconWallet({
-          name: "BYNOMO",
+          name: "Bynomo",
           preferredNode: rpcUrl,
           network: {
             type: NetworkType.MAINNET,

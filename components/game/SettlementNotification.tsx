@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * SettlementNotification Component
- * Displays a BYNOMO-style popup when a bet is settled (win or loss)
+ * Displays a Bynomo-style popup when a bet is settled (win or loss)
  */
 export const SettlementNotification: React.FC = () => {
     const lastResult = useOverflowStore(state => state.lastResult);
