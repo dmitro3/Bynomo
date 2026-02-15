@@ -9,3 +9,4 @@ export const NEAR_CONFIG = {
 };
 
 export const BINOMO_NEAR_TREASURY = process.env.NEXT_PUBLIC_NEAR_TREASURY_ADDRESS || "binomo.near";
+export const NEAR_CONTRACT_ID = process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || process.env.NEXT_PUBLIC_NEAR_TREASURY_ADDRESS || "binomo.near";

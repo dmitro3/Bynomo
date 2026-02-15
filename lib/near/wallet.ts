@@ -4,7 +4,7 @@ import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 import { setupSender } from "@near-wallet-selector/sender";
 import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupBitgetWallet } from "@near-wallet-selector/bitget-wallet";
-import { NEAR_CONFIG } from "./config";
+import { NEAR_CONFIG, NEAR_CONTRACT_ID } from "./config";
 import "@near-wallet-selector/modal-ui/styles.css";
 
 let selector: any = null;
@@ -24,7 +24,7 @@ export const initNearSelector = async () => {
     });
 
     modal = setupModal(selector, {
-        contractId: process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || "binomo.near",
+        contractId: NEAR_CONTRACT_ID,
     });
 
     return { selector, modal };
@@ -80,8 +80,13 @@ export const depositNEAR = async (amount: string) => {
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");
 
+    const treasuryAddress = process.env.NEXT_PUBLIC_NEAR_TREASURY_ADDRESS;
+    if (!treasuryAddress) {
+        throw new Error("NEAR treasury address not configured");
+    }
+
     const result = await wallet.signAndSendTransaction({
-        receiverId: process.env.NEXT_PUBLIC_NEAR_TREASURY_ADDRESS || "binomo.near", // TODO: Replace with your actual receiver address or treasury
+        receiverId: treasuryAddress,
         actions: [
             {
                 type: "Transfer",
@@ -94,12 +99,25 @@ export const depositNEAR = async (amount: string) => {
 
     if (!result) throw new Error("Transaction failed");
 
-    // return string hash
-    if (typeof result === 'object' && 'transaction' in result) {
-        return (result as any).transaction.hash;
+    // Extract transaction hash from various possible response formats
+    // Different wallets return different structures
+    let txHash: string | undefined;
+
+    if (typeof result === 'string') {
+        // Some wallets return hash directly as string
+        txHash = result;
+    } else if (typeof result === 'object') {
+        // Try different possible paths for transaction hash
+        txHash = (result as any).transaction?.hash ||
+                 (result as any).transaction_outcome?.id ||
+                 (result as any).hash ||
+                 (result as any).transactionHashes?.[0];
     }
 
-    // For MyNearWallet, it might redirect, so we might not get here immediately
-    // If it returns, check typical response structures
-    return (result as any)?.transaction_outcome?.id || (result as any)?.hash;
+    if (!txHash) {
+        console.error("Could not extract transaction hash from result:", result);
+        throw new Error("Transaction completed but hash could not be retrieved");
+    }
+
+    return txHash;
 };

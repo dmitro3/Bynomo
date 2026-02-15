@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
         isXLM = true;
       } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
         isXTZ = true;
-      } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(userAddress) || /^[0-9a-fA-F]{64}$/.test(userAddress)) {
+      } else if (/^[0-9a-fA-F]{64}$/.test(userAddress) || /^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+$/.test(userAddress)) {
+        // NEAR: implicit account (64 hex chars) OR named account (e.g., user.near, user.testnet)
         isNEAR = true;
       } else {
         // Must be Solana if isValidAddress passed
