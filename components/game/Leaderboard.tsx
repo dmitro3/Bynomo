@@ -12,6 +12,7 @@ interface LeaderboardEntry {
     total_payout: number;
     net_profit: number;
     win_rate: number;
+    primary_network: string;
 }
 
 export const Leaderboard: React.FC = () => {
@@ -19,13 +20,37 @@ export const Leaderboard: React.FC = () => {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    const getNetworkIcon = (network: string) => {
+        switch (network) {
+            case 'SOL': return '/logos/solana-sol-logo.png';
+            case 'SUI': return '/logos/sui-logo.png';
+            case 'BNB': return '/logos/bnb-bnb-logo.png';
+            case 'XLM': return '/logos/stellar-xlm-logo.png';
+            case 'XTZ': return '/logos/tezos-xtz-logo.png';
+            case 'NEAR': return '/logos/near-logo.svg';
+            default: return '/logos/bnb-bnb-logo.png';
+        }
+    };
+
+    const getCurrencySymbol = (network: string) => {
+        switch (network) {
+            case 'SOL': return 'SOL';
+            case 'SUI': return 'USDC';
+            case 'BNB': return 'BNB';
+            case 'XLM': return 'XLM';
+            case 'XTZ': return 'XTZ';
+            case 'NEAR': return 'NEAR';
+            default: return 'BNB';
+        }
+    };
+
     const fetchLeaderboard = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetch('/api/bets/leaderboard?limit=10');
             if (res.ok) {
-                const { leaderboard: data } = await res.json();
-                setLeaderboard(data || []);
+                const data = await res.json();
+                setLeaderboard(data.leaderboard || []);
             }
         } catch (err) {
             console.error('Failed to fetch leaderboard:', err);
@@ -152,10 +177,17 @@ export const Leaderboard: React.FC = () => {
 
                                                 {/* Address & Stats */}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-white text-xs font-bold font-mono truncate">
-                                                        {shortenAddress(entry.wallet_address)}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <img
+                                                            src={getNetworkIcon(entry.primary_network)}
+                                                            alt={entry.primary_network}
+                                                            className="w-3.5 h-3.5 opacity-80"
+                                                        />
+                                                        <p className="text-white text-xs font-bold font-mono truncate">
+                                                            {shortenAddress(entry.wallet_address)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-0.5 ml-5">
                                                         <span className="text-[9px] text-gray-500 font-medium">
                                                             {entry.total_bets} bets
                                                         </span>
@@ -167,11 +199,11 @@ export const Leaderboard: React.FC = () => {
 
                                                 {/* Profit */}
                                                 <div className="text-right flex-shrink-0">
-                                                    <p className={`text-sm font-black font-mono ${entry.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    <p className={`text-xs font-black font-mono ${entry.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                         {entry.net_profit >= 0 ? '+' : ''}{entry.net_profit.toFixed(4)}
                                                     </p>
-                                                    <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
-                                                        Profit
+                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">
+                                                        {getCurrencySymbol(entry.primary_network)}
                                                     </p>
                                                 </div>
                                             </div>

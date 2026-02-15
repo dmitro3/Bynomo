@@ -1,5 +1,4 @@
-import { ConnectConfig } from "near-api-js";
-
+// NEAR configuration for mainnet
 export const NEAR_CONFIG = {
     networkId: "mainnet",
     nodeUrl: "https://rpc.mainnet.near.org",

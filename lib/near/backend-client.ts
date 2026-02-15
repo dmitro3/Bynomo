@@ -1,7 +1,7 @@
 import * as nearAPI from "near-api-js";
 import { NEAR_CONFIG } from "./config";
 
-const { connect, KeyPair, keyStores, utils } = nearAPI;
+const { connect, KeyPair, keyStores, utils } = nearAPI as any;
 
 export const transferNEARFromTreasury = async (
     receiverId: string,

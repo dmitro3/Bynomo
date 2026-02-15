@@ -174,6 +174,41 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         toast.info('Please confirm the transaction in your Tezos wallet...');
         const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: depositAmount }).send();
         txHash = op.opHash;
+      } else if (network === 'XLM') {
+        // Stellar deposit via Stellar Wallets Kit
+        const { StellarWalletsKit, WalletNetwork, allowAllModules } = await import('@creit.tech/stellar-wallets-kit');
+        const { TransactionBuilder, Networks, Operation, Asset } = await import('@stellar/stellar-sdk');
+        const { Horizon } = await import('@stellar/stellar-sdk');
+
+        const treasuryAddress = process.env.NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS;
+        if (!treasuryAddress) throw new Error('Stellar treasury not configured');
+
+        const server = new Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon.stellar.org');
+        const account = await server.loadAccount(address);
+
+        const transaction = new TransactionBuilder(account, {
+          fee: '100',
+          networkPassphrase: Networks.PUBLIC,
+        })
+          .addOperation(
+            Operation.payment({
+              destination: treasuryAddress,
+              asset: Asset.native(),
+              amount: depositAmount.toFixed(7),
+            })
+          )
+          .setTimeout(30)
+          .build();
+
+        const kit = new StellarWalletsKit({
+          network: WalletNetwork.PUBLIC,
+          modules: allowAllModules(),
+        });
+
+        toast.info('Please confirm the transaction in your Stellar wallet...');
+        const { signedTxXdr } = await kit.signTransaction(transaction.toXDR());
+        const result = await server.submitTransaction(TransactionBuilder.fromXDR(signedTxXdr, Networks.PUBLIC));
+        txHash = (result as any).hash || (result as any).id || signedTxXdr.slice(0, 16);
       } else {
         // BNB (EVM via Privy)
         if (!authenticated) throw new Error('Not authenticated with Privy');
@@ -238,6 +273,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           <p className="text-[#00f5ff] text-xl font-bold font-mono flex items-center gap-2">
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
+            {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
+            {network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />}
+            {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
+            {network === 'NEAR' && <img src="/logos/near-logo.svg" alt="NEAR" className="w-5 h-5" />}
             {walletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

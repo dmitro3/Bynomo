@@ -11,6 +11,7 @@ export interface SuiConfig {
   network: SuiNetwork;
   rpcEndpoint: string;
   treasuryAddress: string;
+  treasuryPackageId: string;
   usdcType: string;
 }
 
@@ -24,6 +25,7 @@ export function getSuiConfig(): SuiConfig {
   const network = (process.env.NEXT_PUBLIC_SUI_NETWORK || 'mainnet') as SuiNetwork;
   const rpcEndpoint = process.env.NEXT_PUBLIC_SUI_RPC_ENDPOINT || 'https://fullnode.mainnet.sui.io:443';
   const treasuryAddress = process.env.NEXT_PUBLIC_SUI_TREASURY_ADDRESS;
+  const treasuryPackageId = process.env.NEXT_PUBLIC_SUI_TREASURY_PACKAGE_ID || treasuryAddress;
   const usdcType = process.env.NEXT_PUBLIC_USDC_TYPE || '0xdba34672e30cb065b1f93e3ab55318768fd6f84cfa9cd014ca9a10129764516::usdc::USDC';
 
   // Validate required environment variables
@@ -44,6 +46,7 @@ export function getSuiConfig(): SuiConfig {
     network,
     rpcEndpoint: rpcEndpoint!,
     treasuryAddress: treasuryAddress!,
+    treasuryPackageId: treasuryPackageId!,
     usdcType: usdcType!,
   };
 }

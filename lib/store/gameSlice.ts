@@ -24,6 +24,7 @@ export interface ActiveBet {
   direction: 'UP' | 'DOWN';
   timestamp: number;
   status: 'active' | 'settled';
+  network?: string; // Track which network (currency) this bet uses
   // Classic mode specific
   strikePrice?: number;
   endTime?: number;
@@ -55,6 +56,7 @@ export interface GameState {
     timestamp: number;
     asset: AssetType; // Track which asset this result belongs to
     cellId?: string; // For box mode visual feedback
+    currency?: string; // The currency usage (e.g. XLM, NEAR, BNB)
   } | null;
   error: string | null;
   timeframeSeconds: number;
@@ -404,6 +406,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         direction: direction,
         timestamp: Date.now(),
         status: 'active',
+        network: network, // Save the network used (e.g. XLM, NEAR, BNB)
         ...(gameMode === 'binomo' ? {
           strikePrice: currentPrice,
           endTime: Date.now() + (durationSeconds * 1000)
@@ -618,7 +621,8 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
           payout,
           timestamp: now,
           asset: resolvedBet.asset,
-          cellId: resolvedBet.cellId
+          cellId: resolvedBet.cellId,
+          currency: resolvedBet.network || (network || 'BNB')
         }
       });
 
@@ -631,7 +635,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             body: JSON.stringify({
               userAddress: address,
               winAmount: payout,
-              currency: network || 'BNB',
+              currency: resolvedBet.network || (network || 'BNB'),
               betId: resolvedBet.id
             })
           }).then(() => {

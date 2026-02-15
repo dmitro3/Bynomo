@@ -45,7 +45,7 @@ export const connectNearWallet = async () => {
 };
 
 export const getNearBalance = async (accountId: string) => {
-    const { connect, providers } = await import("near-api-js");
+    const { providers } = (await import("near-api-js")) as any;
     const provider = new providers.JsonRpcProvider({ url: NEAR_CONFIG.nodeUrl });
 
     try {
@@ -75,7 +75,7 @@ export const depositNEAR = async (amount: string) => {
     }
 
     const wallet = await selector.wallet();
-    const { utils } = await import("near-api-js");
+    const { utils } = (await import("near-api-js")) as any;
     const amountInYocto = utils.format.parseNearAmount(amount);
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");

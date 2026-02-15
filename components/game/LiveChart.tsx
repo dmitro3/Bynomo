@@ -73,6 +73,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const updateBalance = useStore((state) => state.updateBalance);
   const userAddress = useStore((state) => state.address);
   const houseBalance = useStore((state) => state.houseBalance);
+  const network = useStore((state) => state.network);
+
+  // Derive currency symbol from the connected network
+  const chartCurrencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
 
   const gameMode = useStore((state) => state.gameMode);
   const timeframeSeconds = useStore((state) => state.timeframeSeconds);
@@ -943,7 +947,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 fontFamily="monospace"
                 className="font-bold opacity-80"
               >
-                {bet.direction} {bet.amount} NEAR {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
+                {bet.direction} {bet.amount} {chartCurrencySymbol} {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
               </text>
             </g>
           );

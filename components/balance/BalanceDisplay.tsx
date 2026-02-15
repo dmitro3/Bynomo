@@ -177,7 +177,7 @@ export const BalanceDisplay: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <div className="flex items-center gap-1">
                   <img
-                    src={network === 'SUI' ? '/logos/sui-logo.png' : network === 'SOL' ? '/logos/solana-sol-logo.png' : network === 'XLM' ? '/logos/stellar-xlm-logo.png' : network === 'XTZ' ? '/logos/tezos-xtz-logo.png' : '/logos/bnb-bnb-logo.png'}
+                    src={network === 'SUI' ? '/logos/sui-logo.png' : network === 'SOL' ? '/logos/solana-sol-logo.png' : network === 'XLM' ? '/logos/stellar-xlm-logo.png' : network === 'XTZ' ? '/logos/tezos-xtz-logo.png' : network === 'NEAR' ? '/logos/near-logo.svg' : '/logos/bnb-bnb-logo.png'}
                     alt={network || 'Network'}
                     className="w-4 h-4 object-contain"
                   />
@@ -186,7 +186,7 @@ export const BalanceDisplay: React.FC = () => {
                   </p>
                 </div>
                 <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'}`}>
-                  {network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : 'BNB'}
+                  {network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB'}
                 </span>
               </div>
             )}
