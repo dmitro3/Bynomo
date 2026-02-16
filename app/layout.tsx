@@ -23,9 +23,9 @@ const orbitron = Orbitron({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://bynomo.fun'),
-  title: "BYNOMO — On-Chain Binary Options",
+  title: "Bynomo - Trade over 300+ Crypto, Stocks, Metals and Forex with 5s-1m time-charts",
   description:
-    "The first on-chain binary options trading dapp. Trade on BNB, SOL, SUI, XLM, XTZ, NEAR. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust.",
+    "The first on-chain binary options trading dapp. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust.",
   keywords: [
     "binary options",
     "crypto trading",
@@ -45,16 +45,16 @@ export const metadata: Metadata = {
     apple: "/overflowlogo.ico",
   },
   openGraph: {
-    title: "BYNOMO — On-Chain Binary Options",
+    title: "Bynomo — Trade over 300+ Crypto, Stocks, Metals and Forex with 5s-1m time-charts",
     description:
-      "Trade binary options with oracle-bound resolution and minimal trust. Real-time Pyth oracles, 5s–1m rounds, 300+ assets. BNB, SOL, SUI, XLM, XTZ, NEAR.",
-    images: [{ url: '/images/marketing/image.png' }],
+      "The first on-chain binary options trading dapp. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust",
+    images: [{ url: '/overflowlogo.png', width: 512, height: 512, alt: 'Bynomo' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "BYNOMO — On-Chain Binary Options",
+    title: "Bynomo — Trade over 300+ Crypto, Stocks, Metals and Forex with 5s-1m time-charts",
     description: "Trade binary options with oracle-bound resolution and minimal trust.",
-    images: ['/images/marketing/image.png'],
+    images: ['/overflowlogo.png'],
   },
 };
 
