@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HeaderMenu } from './game/HeaderMenu';
 import { WalletConnect } from './wallet';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
@@ -73,10 +72,7 @@ export function Header() {
                         Launch DApp
                     </Link>
                 ) : (
-                    <>
-                        <HeaderMenu />
-                        <WalletConnect />
-                    </>
+                    <WalletConnect />
                 )}
             </div>
         </header>
