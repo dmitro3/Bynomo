@@ -57,7 +57,7 @@ export const TierStatusModal: React.FC<TierStatusModalProps> = ({ isOpen, onClos
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -70,58 +70,58 @@ export const TierStatusModal: React.FC<TierStatusModalProps> = ({ isOpen, onClos
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative w-full max-w-2xl bg-[#0d0d0d] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                        className="relative w-full max-w-2xl max-h-[90vh] bg-[#0d0d0d] border border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-center p-8 border-b border-white/5">
+                        <div className="flex justify-between items-center p-4 sm:p-8 border-b border-white/5 shrink-0">
                             <button
                                 onClick={onClose}
-                                className="text-amber-400 font-bold hover:text-amber-300 transition-colors"
+                                className="text-amber-400 text-sm sm:text-base font-bold hover:text-amber-300 transition-colors"
                             >
                                 Close
                             </button>
-                            <h2 className="text-white text-xl font-black uppercase tracking-widest">Your Status</h2>
+                            <h2 className="text-white text-base sm:text-xl font-black uppercase tracking-widest">Your Status</h2>
                             <div className="w-12" /> {/* Spacer */}
                         </div>
 
-                        <div className="p-8">
+                        <div className="p-4 sm:p-8 overflow-y-auto no-scrollbar">
                             {/* Progress Card */}
                             {nextTier && (
-                                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-12 flex items-center gap-6">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-3xl shadow-lg shadow-amber-500/20">
+                                <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 mb-8 sm:mb-12 flex items-center gap-4 sm:gap-6">
+                                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-xl sm:text-3xl shadow-lg shadow-amber-500/20">
                                         {nextTier.icon}
                                     </div>
                                     <div>
-                                        <h3 className="text-white text-lg font-bold">{nextTier.requirement} until</h3>
-                                        <p className="text-gray-400 text-sm">{nextTier.name} status</p>
+                                        <h3 className="text-white text-sm sm:text-lg font-bold">{nextTier.requirement} until</h3>
+                                        <p className="text-gray-400 text-xs sm:text-sm">{nextTier.name} status</p>
                                     </div>
                                 </div>
                             )}
 
                             {/* Tiers Progress Line */}
-                            <div className="relative flex justify-between px-4 mb-12">
-                                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/10 -translate-y-1/2 z-0" />
+                            <div className="relative flex justify-between px-2 sm:px-4 mb-8 sm:mb-12">
+                                <div className="absolute top-[1.25rem] left-4 right-4 h-0.5 bg-white/10 z-0" />
                                 <div
-                                    className="absolute top-1/2 left-0 h-0.5 bg-amber-400 -translate-y-1/2 z-0 transition-all duration-1000"
-                                    style={{ width: `${(currentTierIndex / (TIER_DATA.length - 1)) * 100}%` }}
+                                    className="absolute top-[1.25rem] left-4 h-0.5 bg-amber-400 z-0 transition-all duration-1000"
+                                    style={{ width: `calc(${(currentTierIndex / (TIER_DATA.length - 1)) * 100}% - 8px)` }}
                                 />
 
                                 {TIER_DATA.map((tier, idx) => (
-                                    <div key={tier.id} className="relative z-10 flex flex-col items-center gap-4">
-                                        <div className={`text-2xl mb-2 ${idx <= currentTierIndex ? 'text-amber-400' : 'text-gray-600'}`}>
+                                    <div key={tier.id} className="relative z-10 flex flex-col items-center gap-2 sm:gap-4">
+                                        <div className={`text-xl sm:text-2xl mb-1 ${idx <= currentTierIndex ? 'text-amber-400' : 'text-gray-600'}`}>
                                             {tier.icon}
                                         </div>
                                         <div className="flex flex-col items-center">
-                                            <span className={`text-sm font-black uppercase tracking-tighter ${idx === currentTierIndex ? 'text-white' : 'text-gray-500'}`}>
+                                            <span className={`text-[10px] sm:text-sm font-black uppercase tracking-tighter ${idx === currentTierIndex ? 'text-white' : 'text-gray-500'}`}>
                                                 {tier.name}
                                             </span>
                                             {idx === currentTierIndex && (
-                                                <span className="text-[10px] text-amber-400 font-bold mt-1">Your Status</span>
+                                                <span className="text-[8px] sm:text-[10px] text-amber-400 font-bold mt-0.5 sm:mt-1">Your Status</span>
                                             )}
                                         </div>
-                                        <div className={`w-4 h-4 rounded-full border-2 ${idx <= currentTierIndex ? 'bg-amber-400 border-amber-400' : 'bg-[#0d0d0d] border-white/20'}`}>
+                                        <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 ${idx <= currentTierIndex ? 'bg-amber-400 border-amber-400' : 'bg-[#0d0d0d] border-white/20'}`}>
                                             {idx <= currentTierIndex && (
-                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-black">✓</div>
+                                                <div className="w-full h-full flex items-center justify-center text-[6px] sm:text-[8px] text-black">✓</div>
                                             )}
                                         </div>
                                     </div>
@@ -130,7 +130,7 @@ export const TierStatusModal: React.FC<TierStatusModalProps> = ({ isOpen, onClos
 
                             {/* Comparison Table */}
                             <div className="space-y-4">
-                                <div className="grid grid-cols-4 px-4 text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4">
+                                <div className="grid grid-cols-4 px-2 sm:px-4 text-[8px] sm:text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2 sm:mb-4">
                                     <div>Feature</div>
                                     {TIER_DATA.map(t => (
                                         <div key={t.id} className="text-center">{t.name}</div>
@@ -142,12 +142,12 @@ export const TierStatusModal: React.FC<TierStatusModalProps> = ({ isOpen, onClos
                                     { label: 'Blitz Mode', key: 'blitz', type: 'bool' },
                                     { label: 'Max Payout', key: 'payout' },
                                     { label: 'Withdrawal', key: 'withdrawal' },
-                                    { label: 'Withdrawal Fee', key: 'fee' },
+                                    { label: 'Fee', key: 'fee' },
                                 ].map((row, i) => (
-                                    <div key={i} className="grid grid-cols-4 px-4 py-4 bg-white/[0.02] border border-white/5 rounded-2xl items-center">
-                                        <div className="text-xs text-gray-400 font-medium">{row.label}</div>
+                                    <div key={i} className="grid grid-cols-4 px-2 sm:px-4 py-3 sm:py-4 bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl items-center">
+                                        <div className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{row.label}</div>
                                         {TIER_DATA.map(t => (
-                                            <div key={t.id} className="text-center text-xs font-bold text-white">
+                                            <div key={t.id} className="text-center text-[10px] sm:text-xs font-bold text-white">
                                                 {row.type === 'bool' ? (
                                                     t[row.key as keyof typeof t] ? '✓' : '—'
                                                 ) : (

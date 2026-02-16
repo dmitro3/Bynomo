@@ -70,6 +70,8 @@ export interface GameState {
   activeTab: 'bet' | 'wallet' | 'blitz';
   activeIndicators: Record<string, boolean>;
   isIndicatorsOpen: boolean;
+  isTourOpen: boolean;
+  isStatusOpen: boolean;
 
   // Actions
   setActiveTab: (tab: 'bet' | 'wallet' | 'blitz') => void;
@@ -99,6 +101,8 @@ export interface GameState {
   // Indicators Actions
   toggleIndicator: (indicatorId: string) => void;
   setIsIndicatorsOpen: (isOpen: boolean) => void;
+  setIsTourOpen: (isOpen: boolean) => void;
+  setIsStatusOpen: (isOpen: boolean) => void;
 }
 
 
@@ -144,6 +148,8 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   activeTab: 'bet',
   activeIndicators: {},
   isIndicatorsOpen: false,
+  isTourOpen: false,
+  isStatusOpen: false,
 
   // Blitz Initial State
   isBlitzActive: false,
@@ -199,6 +205,14 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
    */
   setIsIndicatorsOpen: (isOpen: boolean) => {
     set({ isIndicatorsOpen: isOpen });
+  },
+
+  setIsTourOpen: (isOpen: boolean) => {
+    set({ isTourOpen: isOpen });
+  },
+
+  setIsStatusOpen: (isOpen: boolean) => {
+    set({ isStatusOpen: isOpen });
   },
 
 

@@ -87,6 +87,7 @@ export const MiniHistory: React.FC = () => {
                 {/* Indicators Toggle */}
                 <button
                     onClick={() => setIsIndicatorsOpen(!isIndicatorsOpen)}
+                    data-tour="indicators-trigger"
                     className={`px-3 sm:px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-1.5 sm:gap-2 group shadow-lg shrink-0 ${isIndicatorsOpen || Object.values(activeIndicators).some(v => v)
                         ? 'bg-purple-600 text-white border-purple-500 shadow-purple-500/30'
                         : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'
@@ -103,6 +104,7 @@ export const MiniHistory: React.FC = () => {
 
                 <button
                     onClick={() => setIsOpen(!isOpen)}
+                    data-tour="active-bets"
                     className={`px-3 sm:px-4 py-2 rounded-full border transition-all duration-300 flex items-center gap-1.5 sm:gap-2 group shadow-lg shrink-0 ${isOpen
                         ? 'bg-white text-black border-white'
                         : 'bg-black/60 text-white border-white/10 hover:border-white/30 hover:bg-black/80'

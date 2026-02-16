@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksDemo from './HowItWorksDemo';
+import { supabase } from '@/lib/supabase/client';
 import './waitlist.css';
 
 const steps = [
@@ -116,8 +117,21 @@ export default function WaitlistPage() {
         if (!email || isSubmitting) return;
         setIsSubmitting(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setIsSubmitted(true);
+            const { error } = await supabase
+                .from('waitlist')
+                .insert([{ email }]);
+
+            if (error) {
+                if (error.code === '23505') { // Unique violation
+                    setIsSubmitted(true); // Already on the list
+                } else {
+                    console.error('Waitlist submission error:', error);
+                    // Standard toast already exists in the app? Let's check.
+                    // For now, let's keep it simple as the original code was also simple.
+                }
+            } else {
+                setIsSubmitted(true);
+            }
         } catch (error) {
             console.error('Waitlist submission error:', error);
         } finally {

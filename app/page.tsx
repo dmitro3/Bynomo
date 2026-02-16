@@ -6,21 +6,24 @@ import { BetHistory, MiniHistory } from '@/components/history';
 import { WalletConnect, WalletInfo } from '@/components/wallet';
 import { QuickTour } from '@/components/tour/QuickTour';
 import { TierStatusModal } from '@/components/game/TierStatusModal';
+import { HeaderMenu } from '@/components/game/HeaderMenu';
 import { useStore, useUserTier } from '@/lib/store';
 
 export default function Home() {
-  const [isTourOpen, setIsTourOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
   const [demoActivated, setDemoActivated] = useState(false);
 
-  // Get store actions for demo mode
+  // Get store values and actions
   const setAddress = useStore((state) => state.setAddress);
   const setBalance = useStore((state) => state.setBalance);
   const setIsConnected = useStore((state) => state.setIsConnected);
   const toggleAccountType = useStore((state) => state.toggleAccountType);
   const accountType = useStore((state) => state.accountType);
+  const isTourOpen = useStore((state) => state.isTourOpen);
+  const setIsTourOpen = useStore((state) => state.setIsTourOpen);
+  const isStatusOpen = useStore((state) => state.isStatusOpen);
+  const setIsStatusOpen = useStore((state) => state.setIsStatusOpen);
   const userTier = useUserTier();
 
   const tierIcon = userTier === 'vip' ? '⬢' : userTier === 'standard' ? '♢' : '△';
@@ -76,21 +79,7 @@ export default function Home() {
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1 sm:gap-4">
-          <button
-            onClick={() => setIsStatusOpen(true)}
-            className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter sm:tracking-widest border border-amber-500/20 transition-all active:scale-95"
-          >
-            <span className="text-xs sm:text-sm">{tierIcon}</span>
-            <span className="hidden xs:inline">Status</span>
-          </button>
-
-          <button
-            onClick={() => setIsTourOpen(true)}
-            className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter sm:tracking-widest border border-purple-500/20 transition-all active:scale-95"
-          >
-            <span className="text-xs sm:text-sm">✨</span>
-            <span className="hidden xs:inline">Tour</span>
-          </button>
+          <HeaderMenu />
           <WalletConnect />
         </div>
       </header>

@@ -261,7 +261,7 @@ export const GameBoard: React.FC = () => {
           </button>
 
           {/* Game Mode Selector */}
-          <div className="flex gap-1 p-1 bg-black/60 border-b border-white/5">
+          <div className="flex gap-1 p-1 bg-black/60 border-b border-white/5" data-tour="game-mode-toggle">
             <button
               onClick={() => setGameMode('binomo')}
               data-tour="classic-mode"

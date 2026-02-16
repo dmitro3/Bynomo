@@ -48,3 +48,17 @@ export interface BalanceAuditLog {
   bet_id?: string;
   created_at: string;
 }
+
+export interface WaitlistEntry {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+export interface UserReferral {
+  user_address: string;
+  referral_code: string;
+  referred_by?: string;
+  referral_count: number;
+  created_at: string;
+}

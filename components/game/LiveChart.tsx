@@ -1279,7 +1279,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         </div>
 
         {/* Price Display */}
-        <div className="pointer-events-none">
+        <div className="pointer-events-none" data-tour="price-display">
           <h2 className="text-gray-500 text-[10px] sm:text-xs tracking-widest font-mono mb-0.5 sm:mb-1 uppercase font-black opacity-60">
             {currentAssetConfig.pair} Live Price
           </h2>

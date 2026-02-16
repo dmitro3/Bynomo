@@ -12,11 +12,12 @@ import { WalletState, createWalletSlice } from "./walletSlice";
 import { GameState, createGameSlice, startPriceFeed, startGlobalPriceFeed } from "./gameSlice";
 import { HistoryState, createHistorySlice, restoreBetHistory } from "./historySlice";
 import { BalanceState, createBalanceSlice } from "./balanceSlice";
+import { ReferralState, createReferralSlice } from "./referralSlice";
 
 /**
  * Combined store type
  */
-export type OverflowStore = WalletState & GameState & HistoryState & BalanceState;
+export type OverflowStore = WalletState & GameState & HistoryState & BalanceState & ReferralState;
 
 /**
  * Create the main Zustand store
@@ -26,7 +27,8 @@ export const useOverflowStore = create<OverflowStore>()((...args) => ({
   ...createWalletSlice(...args),
   ...createGameSlice(...args),
   ...createHistorySlice(...args),
-  ...createBalanceSlice(...args)
+  ...createBalanceSlice(...args),
+  ...createReferralSlice(...args)
 }));
 
 /**

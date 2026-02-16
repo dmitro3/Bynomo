@@ -22,6 +22,7 @@ import '@mysten/dapp-kit/dist/index.css';
 
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
+import { ReferralSync } from './ReferralSync';
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -205,6 +206,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
                     <WalletProvider autoConnect>
                       <WalletSync />
+                      <ReferralSync />
                       {children}
                       <WalletConnectModal />
                       <ToastProvider />
