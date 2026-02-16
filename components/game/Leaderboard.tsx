@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface LeaderboardEntry {
     wallet_address: string;
+    username: string | null;
     total_bets: number;
     wins: number;
     losses: number;
@@ -184,7 +185,7 @@ export const Leaderboard: React.FC = () => {
                                                             className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-80"
                                                         />
                                                         <p className="text-white text-[10px] sm:text-xs font-bold font-mono truncate">
-                                                            {shortenAddress(entry.wallet_address)}
+                                                            {entry.username || shortenAddress(entry.wallet_address)}
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5 ml-4 sm:ml-5">

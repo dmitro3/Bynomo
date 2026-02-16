@@ -111,7 +111,7 @@ export const BalanceDisplay: React.FC = () => {
   return (
     <>
       <div className="bg-black/30 rounded-xl border border-white/5 overflow-hidden">
-        {/* Secret Demo Header - Only visible when activated via Bynomo logo click */}
+        {/* Secret Demo Header - Only visible when activated via BYNOMO logo click */}
         {accountType === 'demo' && (
           <div className="flex bg-yellow-500/10 p-1 border-b border-yellow-500/20 items-center justify-between px-3">
             <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">

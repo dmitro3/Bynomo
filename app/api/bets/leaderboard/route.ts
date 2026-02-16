@@ -66,7 +66,6 @@ export async function GET(request: NextRequest) {
         // Calculate net profit and sort
         const leaderboard = Object.values(walletStats)
             .map(s => {
-                // Find primary network (one with most bets)
                 const primary_network = Object.entries(s.networks).sort((a, b) => b[1] - a[1])[0][0];
                 return {
                     wallet_address: s.wallet_address,
@@ -83,7 +82,24 @@ export async function GET(request: NextRequest) {
             .sort((a, b) => b.net_profit - a.net_profit)
             .slice(0, limit);
 
-        return NextResponse.json({ leaderboard });
+        // Fetch usernames for the leaderboard entries
+        const walletAddresses = leaderboard.map(l => l.wallet_address);
+        const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('user_address, username')
+            .in('user_address', walletAddresses);
+
+        const usernameMap: Record<string, string> = {};
+        profileData?.forEach(p => {
+            usernameMap[p.user_address] = p.username;
+        });
+
+        const leaderboardWithUsernames = leaderboard.map(l => ({
+            ...l,
+            username: usernameMap[l.wallet_address] || null
+        }));
+
+        return NextResponse.json({ leaderboard: leaderboardWithUsernames });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

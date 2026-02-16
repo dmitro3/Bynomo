@@ -39,6 +39,10 @@ export async function openWalletModal(): Promise<string | null> {
           try {
             kit.setWallet(option.id);
             const { address } = await kit.getAddress();
+            // Save successful wallet ID for restoration
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('stellar_wallet_id', option.id);
+            }
             resolve(address);
           } catch {
             resolve(null);
@@ -53,11 +57,33 @@ export async function openWalletModal(): Promise<string | null> {
 }
 
 /**
+ * Attempt to restore a previous session using stored wallet ID.
+ */
+export async function restoreSession(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const savedId = localStorage.getItem('stellar_wallet_id');
+  if (!savedId) return null;
+
+  try {
+    const kit = getKit();
+    kit.setWallet(savedId);
+    const { address } = await kit.getAddress();
+    return address;
+  } catch (e) {
+    console.warn('Failed to restore Stellar session:', e);
+    return null;
+  }
+}
+
+/**
  * Disconnect the current Stellar wallet (clears stored address in the kit).
  */
 export async function disconnectWallet(): Promise<void> {
   const kit = kitInstance;
   if (kit) {
     await kit.disconnect();
+  }
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('stellar_wallet_id');
   }
 }

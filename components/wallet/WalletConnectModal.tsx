@@ -66,7 +66,7 @@ export const WalletConnectModal: React.FC = () => {
             const { NetworkType } = await import('@airgap/beacon-sdk');
 
             const wallet = new BeaconWallet({
-                name: "Bynomo Protocol",
+                name: "BYNOMO Protocol",
                 preferredNetwork: NetworkType.MAINNET
             });
 
@@ -284,9 +284,9 @@ export const WalletConnectModal: React.FC = () => {
                     {/* Footer */}
                     <div className="p-4 bg-white/5 text-center shrink-0">
                         <p className="text-[8px] sm:text-[10px] text-gray-500 uppercase tracking-widest font-bold">
-                            Bynomo Protocol · Pyth Hermes
+                            BYNOMO Protocol · Pyth Hermes
                         </p>
-                        <p className="text-[9px] text-gray-600 mt-1">Powered by Pyth Hermes · Bynomo Protocol</p>
+                        <p className="text-[9px] text-gray-600 mt-1">Powered by Pyth Hermes · BYNOMO Protocol</p>
                     </div>
                 </motion.div>
             </div>

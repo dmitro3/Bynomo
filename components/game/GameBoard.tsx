@@ -42,7 +42,7 @@ export const GameBoard: React.FC = () => {
   } = useStore();
 
   const { wallets } = useWallets();
-  const { authenticated } = usePrivy();
+  const { } = usePrivy();
   const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
@@ -60,7 +60,7 @@ export const GameBoard: React.FC = () => {
   const blitzEntryFee = 0.01;
 
   const handleEnterBlitz = async () => {
-    if (!authenticated || !address) {
+    if (!isConnected || !address) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -204,7 +204,7 @@ export const GameBoard: React.FC = () => {
       </div>
 
       {/* Blitz Round Indicator - Top Right */}
-      <div className="absolute top-12 sm:top-20 right-3 sm:right-6 z-30 pointer-events-auto">
+      <div className="absolute top-4 sm:top-6 right-3 sm:right-6 z-30 pointer-events-auto">
         <div className={`rounded-xl backdrop-blur-xl border shadow-lg overflow-hidden transition-all duration-500 ${isBlitzActive ? 'bg-gradient-to-br from-orange-500/20 via-red-500/20 to-yellow-500/20 border-orange-500/50 shadow-orange-500/30 animate-pulse' : 'bg-black/80 border-gray-700/50'
           }`}>
           <div className="px-3 py-2">
@@ -244,7 +244,7 @@ export const GameBoard: React.FC = () => {
       )}
 
       {/* Modern Quick Bet Panel - Collapsible on Mobile */}
-      <div className="absolute bottom-3 sm:bottom-6 left-3 right-3 sm:left-6 sm:right-auto z-30 pointer-events-none">
+      <div className="absolute bottom-6 sm:bottom-12 left-4 right-4 sm:left-8 sm:right-auto z-30 pointer-events-none">
 
         {/* Panel - Animated slide up/down on mobile */}
         <div className={`bg-gradient-to-br from-black/95 via-purple-950/30 to-black/95 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl overflow-hidden w-full sm:w-[300px] transition-all duration-300 ease-out pointer-events-auto ${isPanelOpen

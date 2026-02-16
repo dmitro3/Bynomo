@@ -37,6 +37,7 @@ export function getSolanaConfig(): SolanaConfig {
     }
 
     const publicRpcs = [
+        'https://solana-rpc.publicnode.com',
         'https://api.mainnet-beta.solana.com',
         'https://solana-mainnet.rpc.extrnode.com',
         'https://rpc.ankr.com/solana',

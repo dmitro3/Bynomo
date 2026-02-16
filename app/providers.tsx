@@ -40,6 +40,34 @@ function WalletSync() {
     preferredNetwork
   } = useOverflowStore();
 
+  // Restoration Effect for Stellar
+  const attemptedRestore = useRef(false);
+  useEffect(() => {
+    if (preferredNetwork === 'XLM' && !attemptedRestore.current) {
+      attemptedRestore.current = true;
+      const checkStellar = async () => {
+        // Check if already connected in store to avoid redundant work
+        if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') return;
+
+        try {
+          const { restoreSession } = await import('@/lib/stellar/wallet-kit');
+          const restoredAddress = await restoreSession();
+          if (restoredAddress) {
+            setAddress(restoredAddress);
+            setIsConnected(true);
+            setNetwork('XLM');
+            refreshWalletBalance();
+          }
+        } catch (e) {
+          console.error("Stellar restore failed", e);
+        }
+      };
+      checkStellar();
+    }
+  }, [preferredNetwork, setAddress, setIsConnected, setNetwork, refreshWalletBalance]);
+
+
+  // Main Sync Effect
   useEffect(() => {
     // 1. Check Solana (Priority if preferred)
     if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
@@ -77,21 +105,21 @@ function WalletSync() {
       }
     }
 
-    // 4. Check Stellar
+    // 4. Check Stellar - Logic is now handled by restoration effect above or manual connection
     if (preferredNetwork === 'XLM') {
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') {
         return;
       }
     }
 
-    // 5. Check Tezos (manual connection, persisted in store)
+    // 5. Check Tezos
     if (preferredNetwork === 'XTZ') {
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XTZ') {
         return;
       }
     }
 
-    // 6. Check NEAR (manual connection, persisted in store)
+    // 6. Check NEAR
     if (preferredNetwork === 'NEAR') {
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'NEAR') {
         return;
@@ -145,6 +173,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Solana wallet adapter v2+ auto-discovers installed wallets via Wallet Standard
   // No need to explicitly add adapters - this avoids duplicate key errors (e.g. MetaMask)
   const solanaWallets = useMemo(() => [], []);
+
+  // Fix: Move hook to top level
+  const solanaEndpoint = useMemo(() => {
+    try {
+      const { getSolanaConfig } = require('@/lib/solana/config');
+      return getSolanaConfig().rpcEndpoint;
+    } catch (e) {
+      return "https://solana-rpc.publicnode.com";
+    }
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -200,7 +238,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               },
             }}
           >
-            <ConnectionProvider endpoint="https://api.mainnet-beta.solana.com">
+            <ConnectionProvider endpoint={solanaEndpoint}>
               <SolanaWalletProvider wallets={solanaWallets} autoConnect>
                 <WalletModalProvider>
                   <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">

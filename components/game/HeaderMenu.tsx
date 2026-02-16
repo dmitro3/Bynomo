@@ -10,9 +10,9 @@ export function HeaderMenu() {
     const menuRef = useRef<HTMLDivElement>(null);
 
     const {
-        setIsStatusOpen,
         setIsTourOpen,
-        userTier
+        userTier,
+        username
     } = useStore();
 
     // Close when clicking outside
@@ -28,19 +28,16 @@ export function HeaderMenu() {
 
     const menuItems = [
         {
+            label: 'Profile',
+            sublabel: username || 'My Neural Identity',
+            href: '/profile',
+            accent: 'bg-blue-500'
+        },
+        {
             label: 'Rewards',
             sublabel: 'Referral System & Ranking',
             href: '/referrals',
             accent: 'bg-emerald-500'
-        },
-        {
-            label: 'Tier Status',
-            sublabel: `Current: ${userTier?.toUpperCase() || 'STANDARD'}`,
-            onClick: () => {
-                setIsStatusOpen(true);
-                setIsOpen(false);
-            },
-            accent: 'bg-amber-500'
         },
         {
             label: 'Quick Tour',
@@ -123,7 +120,7 @@ export function HeaderMenu() {
 
                         <div className="px-6 py-4 bg-white/2 border-t border-white/5 flex items-center justify-between">
                             <span className="text-[7px] text-white/20 font-black uppercase tracking-[0.3em]">
-                                Bynomo v2.4
+                                BYNOMO v2.4
                             </span>
                             <div className="flex gap-1">
                                 <div className="w-1 h-1 bg-white/10 rounded-full" />

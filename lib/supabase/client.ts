@@ -62,3 +62,10 @@ export interface UserReferral {
   referral_count: number;
   created_at: string;
 }
+
+export interface UserProfile {
+  user_address: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}

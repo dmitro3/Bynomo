@@ -78,6 +78,18 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const hasBlitzAccess = useStore((state) => state.hasBlitzAccess);
   const blitzMultiplier = useStore((state) => state.blitzMultiplier);
   const lastResult = useStore((state) => state.lastResult);
+  const network = useStore((state) => state.network);
+
+  const currencySymbol = useMemo(() => {
+    switch (network) {
+      case 'SOL': return 'SOL';
+      case 'SUI': return 'USDC';
+      case 'XLM': return 'XLM';
+      case 'XTZ': return 'XTZ';
+      case 'NEAR': return 'NEAR';
+      default: return 'BNB';
+    }
+  }, [network]);
 
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,7 +133,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const isIndicatorsOpen = useStore((state) => state.isIndicatorsOpen);
   const setIsIndicatorsOpen = useStore((state) => state.setIsIndicatorsOpen);
   const toggleIndicator = useStore((state) => state.toggleIndicator);
-  const [socialBets, setSocialBets] = useState<{ id: number; x: number; y: number; direction: 'UP' | 'DOWN' }[]>([]);
 
 
   // Auto-remove bet results after 3 seconds
@@ -340,35 +351,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     currentPriceRef.current = currentPrice;
   }, [scales, currentPrice]);
 
-  // SIMULATE SOCIAL TRADING SENSORY DATA
-  useEffect(() => {
-    if (!activeIndicators['social']) return;
 
-    const interval = setInterval(() => {
-      if (Math.random() > 0.4) {
-        const currentScales = scalesRef.current;
-        if (!currentScales) return;
-
-        const timestamp = Date.now();
-        const direction: 'UP' | 'DOWN' = Math.random() > 0.5 ? 'UP' : 'DOWN';
-        const offset = (Math.random() - 0.5) * 60;
-
-        setSocialBets(prev => [...prev, {
-          id: timestamp,
-          x: currentScales.tipX,
-          y: currentScales.yScale(currentPriceRef.current) + offset,
-          direction
-        }].slice(-30));
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeIndicators['social']]);
-
-  // Clear social trading dots when asset changes
-  useEffect(() => {
-    setSocialBets([]);
-  }, [selectedAsset]);
 
   // Handle classic (binomo) mode bet results at the graph tip
   const lastProcessedResultRef = useRef<number>(0);
@@ -992,7 +975,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 fontFamily="monospace"
                 className="font-bold opacity-80"
               >
-                {bet.direction} {bet.amount} BNB {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
+                {bet.direction} {bet.amount} {currencySymbol} {bet.strikePrice && `@ $${bet.strikePrice.toFixed(2)}`}
               </text>
             </g>
           );
@@ -1190,46 +1173,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                         );
                       } catch (e) { return null; }
                     })()}
-                    {/* Social Trading Dots */}
-                    {activeIndicators['social'] && socialBets.map(bet => {
-                      const age = Date.now() - bet.id;
-                      if (age > 15000) return null; // Dot lives for 15s
 
-                      // Calculate pulse and fade
-                      const opacity = Math.max(0, 1 - age / 15000);
-
-                      // The dot should move with the chart. 
-                      // Its x-position should be its original position (tipX at creation) 
-                      // minus how much time has passed * pixelsPerSecond.
-                      const xShift = (age / 1000) * pixelsPerSecond;
-                      const currentX = bet.x - xShift;
-
-                      if (currentX < 0 || currentX > dimensions.width) return null;
-
-                      return (
-                        <g key={bet.id} opacity={opacity}>
-                          {/* Glow effect */}
-                          <circle
-                            cx={currentX}
-                            cy={bet.y}
-                            r="6"
-                            fill={bet.direction === 'UP' ? '#22c55e' : '#ef4444'}
-                            opacity={opacity * 0.3}
-                          />
-                          {/* Inner dot */}
-                          <circle
-                            cx={currentX}
-                            cy={bet.y}
-                            r="3"
-                            fill={bet.direction === 'UP' ? '#4ade80' : '#f87171'}
-                            stroke="white"
-                            strokeWidth="1"
-                          >
-                            <animate attributeName="r" values="2;4;2" dur="1.5s" repeatCount="indefinite" />
-                          </circle>
-                        </g>
-                      );
-                    })}
                   </g>
                 )}
               </>
@@ -1239,7 +1183,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       </svg>
 
       {/* Price Header with Asset Selector - Dropdown Version */}
-      <div className="absolute top-12 sm:top-20 left-3 sm:left-6 pointer-events-auto z-40">
+      <div className="absolute top-4 sm:top-6 left-3 sm:left-6 pointer-events-auto z-40">
         <div className="relative mb-4">
           {/* Trigger Button */}
           <button
@@ -1324,13 +1268,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                 </button>
               </div>
               {[
-                {
-                  id: 'social', name: 'Social Trading', icon: (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  )
-                },
+
                 {
                   id: 'ma', name: 'Moving Average', icon: (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1449,7 +1387,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                         ? `+${result.payout.toFixed(4)}`
                         : `-${result.amount.toFixed(4)}`
                       }
-                      <span className="text-xs ml-1 opacity-70">BNB</span>
+                      <span className="text-xs ml-1 opacity-70">{currencySymbol}</span>
                     </p>
                   </div>
 

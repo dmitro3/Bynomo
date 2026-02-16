@@ -29,10 +29,34 @@ export async function GET(request: NextRequest) {
             if (b.won) userActivity[b.wallet_address].wins += 1;
         });
 
+        // Fetch referral data
+        const { data: referrals, error: referralError } = await supabase
+            .from('user_referrals')
+            .select('user_address, referral_code, referral_count, referred_by');
+
+        if (referralError) throw referralError;
+
+        const referralMap: Record<string, any> = {};
+        referrals?.forEach(r => {
+            referralMap[r.user_address] = r;
+        });
+
+        // Fetch user profiles for usernames
+        const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('user_address, username');
+
+        const profileMap: Record<string, string> = {};
+        profiles?.forEach(p => {
+            profileMap[p.user_address] = p.username;
+        });
+
         // Merge balance data with aggregated activity
         const users = balances.map(b => ({
             ...b,
-            activity: userActivity[b.user_address] || { totalBets: 0, totalVolume: 0, wins: 0 }
+            username: profileMap[b.user_address] || null,
+            activity: userActivity[b.user_address] || { totalBets: 0, totalVolume: 0, wins: 0 },
+            referral: referralMap[b.user_address] || { referral_code: 'NONE', referral_count: 0 }
         }));
 
         return NextResponse.json({ users });

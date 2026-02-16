@@ -23,21 +23,21 @@ export const Toast: React.FC<ToastProps> = ({
       return () => clearTimeout(timer);
     }
   }, [duration, onClose]);
-  
+
   const typeStyles = {
     success: 'bg-green-900/90 border-green-500 text-green-100',
     error: 'bg-red-900/90 border-red-500 text-red-100',
     warning: 'bg-yellow-900/90 border-yellow-500 text-yellow-100',
     info: 'bg-blue-900/90 border-blue-500 text-blue-100'
   };
-  
+
   const icons = {
     success: '✓',
     error: '✗',
     warning: '⚠',
     info: 'ℹ'
   };
-  
+
   return (
     <div className={`
       ${typeStyles[type]}
@@ -65,7 +65,7 @@ interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <div className="fixed top-4 right-4 z-[200] space-y-2 max-w-md">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -24,6 +24,17 @@ export const BetControls: React.FC<BetControlsProps> = ({
   const activeRound = useStore((state) => state.activeRound);
   const targetCells = useStore((state) => state.targetCells);
   const isPlacingBet = useStore((state) => state.isPlacingBet);
+
+  const currencySymbol = useMemo(() => {
+    switch (network) {
+      case 'SOL': return 'SOL';
+      case 'SUI': return 'USDC';
+      case 'XLM': return 'XLM';
+      case 'XTZ': return 'XTZ';
+      case 'NEAR': return 'NEAR';
+      default: return 'BNB';
+    }
+  }, [network]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +73,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
 
     // Check house balance instead of wallet balance
     if (amount > houseBalance) {
-      setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} ${network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB'}. Please deposit more.`);
+      setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} ${currencySymbol}. Please deposit more.`);
       return false;
     }
 
@@ -87,13 +98,13 @@ export const BetControls: React.FC<BetControlsProps> = ({
         {isConnected && (
           <div className="bg-gray-900 rounded p-3">
             <p className="text-gray-400 text-xs uppercase tracking-wider">House Balance</p>
-            <p className="text-white text-lg font-bold">{houseBalance.toFixed(4)} {network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB'}</p>
+            <p className="text-white text-lg font-bold">{houseBalance.toFixed(4)} {currencySymbol}</p>
           </div>
         )}
 
         {/* Bet Amount Input */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2 font-mono uppercase tracking-wider">Bet Amount ({network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB'})</label>
+          <label className="block text-gray-400 text-sm mb-2 font-mono uppercase tracking-wider">Bet Amount ({currencySymbol})</label>
           <input
             type="number"
             value={betAmount}
@@ -135,7 +146,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
         {selectedTarget && betAmount && parseFloat(betAmount) > 0 && (
           <div className="bg-neon-blue/10 border border-neon-blue/50 rounded p-3 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
             <p className="text-neon-blue text-xs uppercase tracking-wider mb-1 font-mono">Potential Win</p>
-            <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} {network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : 'BNB'}</p>
+            <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} {currencySymbol}</p>
           </div>
         )}
 

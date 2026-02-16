@@ -24,8 +24,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { address, withdrawFunds, houseBalance, network, refreshWalletBalance } = useOverflowStore();
-  const { authenticated } = usePrivy();
+  const { address, withdrawFunds, houseBalance, network, refreshWalletBalance, isConnected } = useOverflowStore();
   const toast = useToast();
 
   const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
@@ -83,7 +82,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       return;
     }
 
-    if (!authenticated || !address) {
+    if (!isConnected || !address) {
       setError('Please connect your wallet');
       return;
     }

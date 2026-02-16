@@ -26,7 +26,7 @@ export function getSuiConfig(): SuiConfig {
   const rpcEndpoint = process.env.NEXT_PUBLIC_SUI_RPC_ENDPOINT || 'https://fullnode.mainnet.sui.io:443';
   const treasuryAddress = process.env.NEXT_PUBLIC_SUI_TREASURY_ADDRESS;
   const treasuryPackageId = process.env.NEXT_PUBLIC_SUI_TREASURY_PACKAGE_ID || treasuryAddress;
-  const usdcType = process.env.NEXT_PUBLIC_USDC_TYPE || '0xdba34672e30cb065b1f93e3ab55318768fd6f84cfa9cd014ca9a10129764516::usdc::USDC';
+  const usdcType = process.env.NEXT_PUBLIC_USDC_TYPE || '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
 
   // Validate required environment variables
   const missingVars: string[] = [];

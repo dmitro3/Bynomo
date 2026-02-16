@@ -33,7 +33,7 @@ export default function ReferralPage() {
 
     useEffect(() => {
         if (referralCode && typeof window !== 'undefined') {
-            setReferralLink(`${window.location.origin}/?ref=${referralCode}`);
+            setReferralLink(`https://bynomo.fun/?ref=${referralCode}`);
         }
     }, [referralCode]);
 
@@ -45,6 +45,11 @@ export default function ReferralPage() {
     const formatAddress = (addr: string) => {
         if (!addr) return '---';
         return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    };
+
+    const shareOnX = () => {
+        const text = encodeURIComponent(`Trade with millisecond precision on @BYNOMOProtocol! 🚀\n\nJoin using my referral link and earn rewards:`);
+        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(referralLink)}`, '_blank');
     };
 
     return (
@@ -88,7 +93,7 @@ export default function ReferralPage() {
                         transition={{ delay: 0.2 }}
                         className="text-gray-500 max-w-md mx-auto"
                     >
-                        Invite your friends to Bynomo and climb the leaderboard. Each new trader using your code gets you closer to the top.
+                        Invite your friends to BYNOMO and climb the leaderboard. Each new trader using your code gets you closer to the top.
                     </motion.p>
                 </header>
 
@@ -136,6 +141,16 @@ export default function ReferralPage() {
                                             </button>
                                         </div>
                                     </div>
+
+                                    <button
+                                        onClick={shareOnX}
+                                        className="w-full bg-[#1da1f2]/10 hover:bg-[#1da1f2]/20 border border-[#1da1f2]/20 text-[#1da1f2] rounded-2xl py-4 flex items-center justify-center gap-3 font-black uppercase tracking-[0.2em] text-xs transition-all active:scale-[0.98]"
+                                    >
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                        </svg>
+                                        Share on X
+                                    </button>
 
                                     <div className="grid grid-cols-2 gap-4 pt-4">
                                         <div className="bg-purple-500/5 border border-purple-500/10 rounded-3xl p-6">

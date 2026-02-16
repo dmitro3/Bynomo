@@ -42,7 +42,30 @@ export async function buildDepositTransaction(
         })
     );
 
-    const { blockhash } = await connection.getLatestBlockhash();
+    // Retry logic for blockhash fetching
+    let blockhash: string = '';
+    const publicRpcs = [
+        config.rpcEndpoint,
+        'https://solana-rpc.publicnode.com',
+        'https://api.mainnet-beta.solana.com',
+        'https://rpc.ankr.com/solana'
+    ].filter((v, i, a) => v && a.indexOf(v) === i);
+
+    for (const rpc of publicRpcs) {
+        try {
+            const conn = new Connection(rpc, 'confirmed');
+            const result = await conn.getLatestBlockhash();
+            blockhash = result.blockhash;
+            if (blockhash) break;
+        } catch (err) {
+            console.warn(`Failed to get blockhash from ${rpc}, trying next...`);
+        }
+    }
+
+    if (!blockhash) {
+        throw new Error('All Solana RPC regions failed to provide a blockhash. Please try again in a moment.');
+    }
+
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = userPublicKey;
 

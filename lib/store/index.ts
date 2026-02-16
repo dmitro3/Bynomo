@@ -1,5 +1,5 @@
 /**
- * Main Zustand store for Bynomo dApp
+ * Main Zustand store for BYNOMO dApp
  * Combines wallet, game, and history slices
  * 
  * Note: After BNB migration, blockchain events are handled
@@ -13,11 +13,12 @@ import { GameState, createGameSlice, startPriceFeed, startGlobalPriceFeed } from
 import { HistoryState, createHistorySlice, restoreBetHistory } from "./historySlice";
 import { BalanceState, createBalanceSlice } from "./balanceSlice";
 import { ReferralState, createReferralSlice } from "./referralSlice";
+import { ProfileState, createProfileSlice } from "./profileSlice";
 
 /**
  * Combined store type
  */
-export type OverflowStore = WalletState & GameState & HistoryState & BalanceState & ReferralState;
+export type OverflowStore = WalletState & GameState & HistoryState & BalanceState & ReferralState & ProfileState;
 
 /**
  * Create the main Zustand store
@@ -28,7 +29,8 @@ export const useOverflowStore = create<OverflowStore>()((...args) => ({
   ...createGameSlice(...args),
   ...createHistorySlice(...args),
   ...createBalanceSlice(...args),
-  ...createReferralSlice(...args)
+  ...createReferralSlice(...args),
+  ...createProfileSlice(...args)
 }));
 
 /**
@@ -62,7 +64,7 @@ export const initializeStore = async (): Promise<void> => {
     };
 
 
-    console.log("Bynomo store initialized successfully");
+    console.log("BYNOMO store initialized successfully");
   } catch (error) {
     console.error("Error initializing store:", error);
   }

@@ -19,6 +19,7 @@ interface Stats {
 
 interface User {
     user_address: string;
+    username: string | null;
     currency: string;
     balance: number;
     updated_at: string;
@@ -26,6 +27,11 @@ interface User {
         totalBets: number;
         totalVolume: number;
         wins: number;
+    };
+    referral?: {
+        referral_code: string;
+        referral_count: number;
+        referred_by: string | null;
     };
 }
 
@@ -66,7 +72,7 @@ export default function AdminDashboard() {
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals'>('users');
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
 
@@ -215,10 +221,11 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <StatBox title="Platform Yield" value={`$${stats?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
                     <StatBox title="Market Volume" value={`$${stats?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.totalBets || 0} Total Bets`} />
                     <StatBox title="Registered Nodes" value={stats?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
+                    <StatBox title="Total Referrals" value={users.reduce((acc, u) => acc + (u.referral?.referral_count || 0), 0).toString()} label="Network Growth" />
                     <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                 </div>
 
@@ -230,6 +237,7 @@ export default function AdminDashboard() {
                             <TabBtn active={activeTab === 'gameplay'} onClick={() => setActiveTab('gameplay')} label="Gameplay" />
                             <TabBtn active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Financials" />
                             <TabBtn active={activeTab === 'markets'} onClick={() => setActiveTab('markets')} label="Inventory" />
+                            <TabBtn active={activeTab === 'referrals'} onClick={() => setActiveTab('referrals')} label="Referrals" />
                             <TabBtn active={activeTab === 'danger'} onClick={() => setActiveTab('danger')} label="Danger Zone" />
                         </div>
                         <div className="w-full md:w-96 relative">
@@ -249,13 +257,24 @@ export default function AdminDashboard() {
                             <AnimatePresence mode="wait">
                                 {activeTab === 'users' && (
                                     <Table key="users">
-                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Engagement', 'Value']} />
+                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Referral', 'Engagement', 'Value']} />
                                         <tbody>
                                             {loading ? <LoadingRow /> : users.map(u => (
                                                 <tr key={u.user_address + u.currency} className="hover:bg-white/[0.02] transition-colors group border-b border-white/5">
-                                                    <td className="px-8 py-6 font-mono text-white text-sm">{shortenAddress(u.user_address)}</td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-white text-sm font-bold">{u.username || 'Anonymous'}</span>
+                                                            <span className="font-mono text-white/20 text-[10px]">{shortenAddress(u.user_address)}</span>
+                                                        </div>
+                                                    </td>
                                                     <td className="px-8 py-6"><span className="text-[10px] font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
                                                     <td className="px-8 py-6 text-white font-mono font-bold">{u.balance.toFixed(4)}</td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-white/60">{u.referral?.referral_code || '---'}</span>
+                                                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{u.referral?.referral_count || 0} REFS</span>
+                                                        </div>
+                                                    </td>
                                                     <td className="px-8 py-6 text-white/40">{u.activity.totalBets} plays</td>
                                                     <td className="px-8 py-6 text-right text-white font-mono font-black">${u.activity.totalVolume.toLocaleString()}</td>
                                                 </tr>
@@ -328,6 +347,32 @@ export default function AdminDashboard() {
                                             <p className="text-4xl font-black text-white text-center tracking-tighter">{marketTokens.length}</p>
                                         </div>
                                     </div>
+                                )}
+
+                                {activeTab === 'referrals' && (
+                                    <Table key="referrals">
+                                        <THead labels={['Identity', 'Personal Code', 'Referred By', 'Network Size', 'Status']} />
+                                        <tbody>
+                                            {loading ? <LoadingRow /> : users
+                                                .filter(u => u.referral?.referral_code && u.referral.referral_code !== 'NONE')
+                                                .sort((a, b) => (b.referral?.referral_count || 0) - (a.referral?.referral_count || 0))
+                                                .map(u => (
+                                                    <tr key={u.user_address} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                        <td className="px-8 py-6 font-mono text-white text-sm">{shortenAddress(u.user_address)}</td>
+                                                        <td className="px-8 py-6 font-black text-white uppercase tracking-widest">{u.referral?.referral_code}</td>
+                                                        <td className="px-8 py-6 text-white/40 font-mono text-xs">{u.referral?.referred_by ? shortenAddress(u.referral.referred_by) : 'DIRECT'}</td>
+                                                        <td className="px-8 py-6">
+                                                            <span className="text-xl font-black text-white">{u.referral?.referral_count || 0}</span>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${(u.referral?.referral_count || 0) > 10 ? 'text-purple-400 bg-purple-400/10' : (u.referral?.referral_count || 0) > 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-white/20 bg-white/5'}`}>
+                                                                {(u.referral?.referral_count || 0) > 10 ? 'Ambassador' : (u.referral?.referral_count || 0) > 0 ? 'Pro' : 'Starter'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </Table>
                                 )}
 
                                 {activeTab === 'danger' && (

@@ -6,6 +6,7 @@ import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupBitgetWallet } from "@near-wallet-selector/bitget-wallet";
 import { NEAR_CONFIG, NEAR_CONTRACT_ID } from "./config";
 import "@near-wallet-selector/modal-ui/styles.css";
+import { providers, utils } from "near-api-js";
 
 let selector: any = null;
 let modal: any = null;
@@ -35,9 +36,19 @@ export const connectNearWallet = async () => {
     modal.show();
 
     return new Promise((resolve) => {
-        const subscription = selector.store.observable.subscribe((state: any) => {
+        // Check current state first to avoid sync subscription issues
+        const currentState = selector.store.getState();
+        if (currentState.accounts.length > 0) {
+            resolve(currentState.accounts[0].accountId);
+            return;
+        }
+
+        let subscription: any;
+        subscription = selector.store.observable.subscribe((state: any) => {
             if (state.accounts.length > 0) {
-                subscription.unsubscribe();
+                if (subscription) {
+                    subscription.unsubscribe();
+                }
                 resolve(state.accounts[0].accountId);
             }
         });
@@ -45,7 +56,6 @@ export const connectNearWallet = async () => {
 };
 
 export const getNearBalance = async (accountId: string) => {
-    const { providers } = (await import("near-api-js")) as any;
     const provider = new providers.JsonRpcProvider({ url: NEAR_CONFIG.nodeUrl });
 
     try {
@@ -75,7 +85,6 @@ export const depositNEAR = async (amount: string) => {
     }
 
     const wallet = await selector.wallet();
-    const { utils } = (await import("near-api-js")) as any;
     const amountInYocto = utils.format.parseNearAmount(amount);
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");
@@ -109,9 +118,9 @@ export const depositNEAR = async (amount: string) => {
     } else if (typeof result === 'object') {
         // Try different possible paths for transaction hash
         txHash = (result as any).transaction?.hash ||
-                 (result as any).transaction_outcome?.id ||
-                 (result as any).hash ||
-                 (result as any).transactionHashes?.[0];
+            (result as any).transaction_outcome?.id ||
+            (result as any).hash ||
+            (result as any).transactionHashes?.[0];
     }
 
     if (!txHash) {
