@@ -85,7 +85,7 @@ export const depositNEAR = async (amount: string) => {
     }
 
     const wallet = await selector.wallet();
-    const amountInYocto = parseNearAmount(amount);
+    const amountInYocto = parseNearAmount(amount as `${number}`);
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");
 
