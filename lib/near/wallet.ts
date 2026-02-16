@@ -6,7 +6,7 @@ import { setupHereWallet } from "@near-wallet-selector/here-wallet";
 import { setupBitgetWallet } from "@near-wallet-selector/bitget-wallet";
 import { NEAR_CONFIG, NEAR_CONTRACT_ID } from "./config";
 import "@near-wallet-selector/modal-ui/styles.css";
-import { providers, utils } from "near-api-js";
+import { JsonRpcProvider, parseNearAmount } from "near-api-js";
 
 let selector: any = null;
 let modal: any = null;
@@ -56,7 +56,7 @@ export const connectNearWallet = async () => {
 };
 
 export const getNearBalance = async (accountId: string) => {
-    const provider = new providers.JsonRpcProvider({ url: NEAR_CONFIG.nodeUrl });
+    const provider = new JsonRpcProvider({ url: NEAR_CONFIG.nodeUrl });
 
     try {
         const account: any = await provider.query({
@@ -85,7 +85,7 @@ export const depositNEAR = async (amount: string) => {
     }
 
     const wallet = await selector.wallet();
-    const amountInYocto = utils.format.parseNearAmount(amount);
+    const amountInYocto = parseNearAmount(amount);
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");
 
