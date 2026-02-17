@@ -11,7 +11,8 @@ import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
 import { ethers } from 'ethers';
 import { useToast } from '@/lib/hooks/useToast';
-import { Key, ShieldCheck, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
 
 
 export const GameBoard: React.FC = () => {
@@ -20,6 +21,8 @@ export const GameBoard: React.FC = () => {
     isConnected,
     network,
     walletBalance,
+    houseBalance,
+    bets,
     gameMode,
     setGameMode,
     setTimeframeSeconds,
@@ -268,13 +271,36 @@ export const GameBoard: React.FC = () => {
 
       {/* Floating Toggle Button - Fixed to bottom (Mobile only) */}
       {!isPanelOpen && (
-        <button
-          onClick={() => setIsPanelOpen(true)}
-          className="sm:hidden fixed bottom-4 left-4 w-10 h-10 bg-purple-600 rounded-full shadow-lg shadow-purple-500/40 flex items-center justify-center text-white text-lg font-bold z-40"
-        >
-          ▲
-        </button>
+        <div className="sm:hidden fixed bottom-24 left-4 z-40 animate-in slide-in-from-left duration-300">
+          <div className="flex flex-col items-start gap-1">
+            {/* Small win indicator if available */}
+            {bets.length > 0 && bets[0].won && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="ml-8 text-[11px] font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] flex items-center gap-1"
+              >
+                <span>+{parseFloat(bets[0].payout).toFixed(2)} {currencySymbol}</span>
+              </motion.div>
+            )}
+            <button
+              onClick={() => setIsPanelOpen(true)}
+              className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-2 px-4 flex items-center gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all active:scale-95 border-emerald-500/20"
+            >
+              <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shadow-inner">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mb-1">House Balance</span>
+                <span className="text-base font-black text-white leading-none font-mono">
+                  {houseBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
       )}
+
 
       {/* Modern Quick Bet Panel - Collapsible on Mobile */}
       <div className="absolute bottom-6 sm:bottom-12 left-4 right-4 sm:left-8 sm:right-auto z-30 pointer-events-none">
