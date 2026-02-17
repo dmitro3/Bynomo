@@ -3,11 +3,10 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { HeaderMenu } from './game/HeaderMenu';
 import { WalletConnect } from './wallet';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
-
-import { HeaderMenu } from './game/HeaderMenu';
 
 export function Header() {
     const [clickCount, setClickCount] = useState(0);
@@ -79,21 +78,16 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-                {pathname !== '/' && (
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        {accessCode !== null && (
-                            <button
-                                onClick={activateDemoMode}
-                                className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-full transition-all group"
-                            >
-                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 group-hover:text-emerald-400">
-                                    Demo Mode
-                                </span>
-                            </button>
-                        )}
-                        <HeaderMenu />
-                    </div>
+                {pathname !== '/' && accessCode !== null && (
+                    <button
+                        onClick={activateDemoMode}
+                        className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-full transition-all group"
+                    >
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 group-hover:text-emerald-400">
+                            Demo Mode
+                        </span>
+                    </button>
                 )}
 
                 {pathname === '/' ? (
@@ -104,7 +98,10 @@ export function Header() {
                         Launch DApp
                     </Link>
                 ) : (
-                    <WalletConnect />
+                    <>
+                        <HeaderMenu />
+                        <WalletConnect />
+                    </>
                 )}
             </div>
         </header>
