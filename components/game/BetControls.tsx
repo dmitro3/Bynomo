@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Key, ShieldCheck, Loader2, ArrowRight } from 'lucide-react';
 
 interface BetControlsProps {
   selectedTarget: string | null;
@@ -18,12 +19,19 @@ export const BetControls: React.FC<BetControlsProps> = ({
   onBetAmountChange,
   onPlaceBet
 }) => {
-  const houseBalance = useStore((state) => state.houseBalance);
-  const isConnected = useStore((state) => state.isConnected);
-  const network = useStore((state) => state.network);
-  const activeRound = useStore((state) => state.activeRound);
-  const targetCells = useStore((state) => state.targetCells);
-  const isPlacingBet = useStore((state) => state.isPlacingBet);
+  const {
+    houseBalance,
+    network,
+    activeRound,
+    targetCells,
+    isPlacingBet,
+    accessCode,
+    fetchProfile,
+    address
+  } = useStore();
+
+  const isWalletConnected = !!address;
+  const isUnauthorized = isWalletConnected && accessCode === null;
 
   const currencySymbol = useMemo(() => {
     switch (network) {
@@ -37,6 +45,8 @@ export const BetControls: React.FC<BetControlsProps> = ({
   }, [network]);
 
   const [error, setError] = useState<string | null>(null);
+  const [accessInput, setAccessInput] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
 
   // Get selected target details
   const selectedTargetCell = targetCells.find(cell => cell.id === selectedTarget);
@@ -50,8 +60,13 @@ export const BetControls: React.FC<BetControlsProps> = ({
   const validateBet = (): boolean => {
     setError(null);
 
-    if (!isConnected) {
+    if (!isWalletConnected) {
       setError('Please connect your wallet');
+      return false;
+    }
+
+    if (isUnauthorized) {
+      setError('Initialization required');
       return false;
     }
 
@@ -71,7 +86,6 @@ export const BetControls: React.FC<BetControlsProps> = ({
       return false;
     }
 
-    // Check house balance instead of wallet balance
     if (amount > houseBalance) {
       setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} ${currencySymbol}. Please deposit more.`);
       return false;
@@ -86,91 +100,173 @@ export const BetControls: React.FC<BetControlsProps> = ({
     }
   };
 
+  const handleValidateAccess = async () => {
+    if (!accessInput || isValidating || !address) return;
+    setIsValidating(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/validate-access-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: accessInput.trim().toUpperCase(),
+          walletAddress: address
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        await fetchProfile(address);
+      } else {
+        setError(data.error || 'Invalid access code');
+      }
+    } catch (err) {
+      setError('Neural connection failed');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   // Quick bet amount buttons
   const quickAmounts = ['0.1', '0.5', '1', '5'];
 
   return (
     <Card>
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-white">Place Bet</h3>
+      <div className="relative overflow-hidden group/panel min-h-[400px] flex flex-col p-4">
+        {/* Main Controls with conditional blur */}
+        <div className={`space-y-4 transition-all duration-700 flex-1 ${isUnauthorized ? 'blur-xl pointer-events-none scale-[0.98] opacity-30 select-none grayscale' : ''}`}>
+          <h3 className="text-xl font-bold text-white mb-6">Place Bet</h3>
 
-        {/* House Balance */}
-        {isConnected && (
-          <div className="bg-gray-900 rounded p-3">
-            <p className="text-gray-400 text-xs uppercase tracking-wider">House Balance</p>
-            <p className="text-white text-lg font-bold">{houseBalance.toFixed(4)} {currencySymbol}</p>
+          {/* House Balance */}
+          {isWalletConnected && (
+            <div className="bg-gray-900/50 border border-white/5 rounded-2xl p-4">
+              <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">House Balance</p>
+              <p className="text-white text-xl font-black mt-1">{houseBalance.toFixed(4)} {currencySymbol}</p>
+            </div>
+          )}
+
+          {/* Bet Amount Input */}
+          <div className="space-y-3">
+            <label className="block text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Bet Amount ({currencySymbol})</label>
+            <input
+              type="number"
+              value={betAmount}
+              onChange={(e) => onBetAmountChange(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              disabled={!isWalletConnected || !!activeRound || isUnauthorized}
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-mono text-lg focus:outline-none focus:border-neon-blue focus:bg-white/[0.08] transition-all"
+            />
           </div>
-        )}
 
-        {/* Bet Amount Input */}
-        <div>
-          <label className="block text-gray-400 text-sm mb-2 font-mono uppercase tracking-wider">Bet Amount ({currencySymbol})</label>
-          <input
-            type="number"
-            value={betAmount}
-            onChange={(e) => onBetAmountChange(e.target.value)}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-            disabled={!isConnected || !!activeRound}
-            className="w-full bg-black/50 border border-white/10 rounded px-4 py-2 text-white font-mono focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.3)] disabled:opacity-50 transition-all"
-          />
-        </div>
+          {/* Quick Amount Buttons */}
+          <div className="grid grid-cols-4 gap-2">
+            {quickAmounts.map(amount => (
+              <button
+                key={amount}
+                onClick={() => onBetAmountChange(amount)}
+                disabled={!isWalletConnected || !!activeRound || isUnauthorized}
+                className="bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 text-white py-3 rounded-xl text-xs transition-all font-black"
+              >
+                {amount}
+              </button>
+            ))}
+          </div>
 
-        {/* Quick Amount Buttons */}
-        <div className="grid grid-cols-4 gap-2">
-          {quickAmounts.map(amount => (
-            <button
-              key={amount}
-              onClick={() => onBetAmountChange(amount)}
-              disabled={!isConnected || !!activeRound}
-              className="bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 text-white py-2 rounded text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono"
-            >
-              {amount}
-            </button>
-          ))}
-        </div>
+          {/* Selected Target Info */}
+          {selectedTargetCell && (
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+              <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Target Strategy</p>
+              <p className="text-white font-black flex items-center gap-2 text-sm">
+                {selectedTargetCell.label}
+                <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-400 font-black">x{selectedTargetCell.multiplier}</span>
+              </p>
+            </div>
+          )}
 
-        {/* Selected Target Info */}
-        {selectedTargetCell && (
-          <div className="bg-white/5 border border-white/10 rounded p-3">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-1 font-mono">Selected Target</p>
-            <p className="text-white font-semibold flex items-center gap-2">
-              {selectedTargetCell.label}
-              <span className="text-xs bg-white/10 px-1.5 rounded text-gray-300 font-normal">x{selectedTargetCell.multiplier}</span>
+          {/* Potential Payout */}
+          {selectedTarget && betAmount && parseFloat(betAmount) > 0 && (
+            <div className="bg-neon-blue/5 border border-neon-blue/20 rounded-2xl p-4">
+              <p className="text-neon-blue/60 text-[10px] font-black uppercase tracking-widest mb-1">Potential Win</p>
+              <p className="text-neon-blue text-2xl font-black tracking-tighter">{potentialPayout} {currencySymbol}</p>
+            </div>
+          )}
+
+          {/* Place Bet Button */}
+          <Button
+            onClick={handlePlaceBet}
+            disabled={!isWalletConnected || !!activeRound || isPlacingBet || isUnauthorized}
+            className="w-full py-7 rounded-2xl font-black text-sm uppercase tracking-widest mt-4"
+            size="lg"
+          >
+            {isPlacingBet ? 'Transmitting...' : 'Initiate Trade'}
+          </Button>
+
+          {!isWalletConnected && (
+            <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest text-center mt-4">
+              Network Connection Required
             </p>
+          )}
+        </div>
+
+        {/* Access Code Input Overlay (only if connected but no access code) */}
+        {isUnauthorized && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20">
+            <div className="w-full space-y-8 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-purple-500/10 border border-purple-500/20 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(168,85,247,0.15)]">
+                  <Key className="w-8 h-8 text-purple-400" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-white font-black uppercase tracking-[0.3em] text-sm">Access Restricted</h4>
+                  <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest leading-relaxed">
+                    Beta stage protocol initialization.<br />Enter unique node code.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4 w-full">
+                <div className="relative group/input">
+                  <div className="absolute inset-0 bg-purple-500/20 rounded-2xl blur-2xl opacity-0 group-hover/input:opacity-100 transition-opacity duration-500" />
+                  <input
+                    type="text"
+                    value={accessInput}
+                    onChange={(e) => setAccessInput(e.target.value.toUpperCase())}
+                    placeholder="PROTOCOL CODE"
+                    disabled={isValidating}
+                    className="relative w-full bg-black/80 border border-white/10 rounded-2xl px-4 py-5 text-center text-white font-mono text-xl tracking-[0.4em] placeholder:tracking-normal placeholder:text-white/10 focus:outline-none focus:border-purple-500/50 transition-all shadow-2xl"
+                  />
+                </div>
+
+                {error && (
+                  <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest text-center animate-shake">{error}</p>
+                )}
+
+                <Button
+                  onClick={handleValidateAccess}
+                  disabled={!accessInput || isValidating}
+                  className="w-full bg-white text-black hover:bg-white/90 font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(255,255,255,0.1)] transition-transform active:scale-95"
+                  size="lg"
+                >
+                  {isValidating ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-3" />
+                  ) : (
+                    <ShieldCheck className="w-5 h-5 mr-3" />
+                  )}
+                  {isValidating ? 'VALIDATING...' : 'INITIALIZE NODE'}
+                </Button>
+              </div>
+
+              <div className="pt-4 border-t border-white/5">
+                <p className="text-[9px] text-white/10 text-center uppercase tracking-[0.4em] font-black">
+                  BYNOMO v2.0 Beta · Neural Node
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-
-        {/* Potential Payout */}
-        {selectedTarget && betAmount && parseFloat(betAmount) > 0 && (
-          <div className="bg-neon-blue/10 border border-neon-blue/50 rounded p-3 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
-            <p className="text-neon-blue text-xs uppercase tracking-wider mb-1 font-mono">Potential Win</p>
-            <p className="text-neon-blue text-2xl font-bold font-mono text-shadow-neon">{potentialPayout} {currencySymbol}</p>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-900/20 border border-red-500 rounded p-3">
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Place Bet Button */}
-        <Button
-          onClick={handlePlaceBet}
-          disabled={!isConnected || !!activeRound || isPlacingBet}
-          className="w-full"
-          size="lg"
-        >
-          {isPlacingBet ? 'Placing Bet...' : 'Place Bet'}
-        </Button>
-
-        {!isConnected && (
-          <p className="text-gray-500 text-sm text-center">
-            Connect your wallet to place bets
-          </p>
         )}
       </div>
     </Card>

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useStore, useHouseBalance, useWalletAddress, useIsConnected, useUserTier } from '@/lib/store';
-import { Wallet, Trophy, User as UserIcon, History, Link as LinkIcon, Share2, Check, Edit2, Zap, Shield, Crown, LayoutGrid, Activity, ExternalLink } from 'lucide-react';
+import { Wallet, Trophy, User as UserIcon, History, Link as LinkIcon, Share2, Check, Edit2, Zap, Shield, Crown, LayoutGrid, Activity, ExternalLink, Key, ShieldCheck } from 'lucide-react';
 
 const TIER_DATA = [
     {
@@ -57,6 +57,7 @@ export default function ProfilePage() {
         isLoadingTrades,
         referralCode,
         referralCount,
+        accessCode,
         network
     } = useStore();
 
@@ -301,6 +302,21 @@ export default function ProfilePage() {
                                 <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join the BYNOMO protocol and start trading with decentralized precision! Code: ${referralCode}`, '_blank')} className="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3">
                                     <Share2 className="w-3 h-3" /> Share Access
                                 </button>
+                            </div>
+                        </section>
+
+                        {/* Access Identity */}
+                        <section className="space-y-6">
+                            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
+                                <Key className="w-4 h-4" /> Access Identity
+                            </h2>
+                            <div className="bg-[#050505] border border-white/5 rounded-3xl p-8 space-y-3">
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Validated Access Token</p>
+                                <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl group/access">
+                                    <span className="font-mono font-black text-xl text-emerald-400 tracking-[0.3em] uppercase truncate">{accessCode || 'INITIALIZING'}</span>
+                                    <ShieldCheck className="w-5 h-5 text-emerald-400/40" />
+                                </div>
+                                <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest">This identity token is uniquely matched to your neural node.</p>
                             </div>
                         </section>
 

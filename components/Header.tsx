@@ -7,6 +7,8 @@ import { WalletConnect } from './wallet';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
+import { HeaderMenu } from './game/HeaderMenu';
+
 export function Header() {
     const [clickCount, setClickCount] = useState(0);
     const clickTimer = useRef<NodeJS.Timeout | null>(null);
@@ -18,21 +20,34 @@ export function Header() {
         setBalance,
         setIsConnected,
         toggleAccountType,
-        accountType
+        accountType,
+        accessCode
     } = useStore();
+
+    const activateDemoMode = () => {
+        if (accountType === 'demo') {
+            // Exit demo mode
+            toggleAccountType();
+            setAddress(null);
+            setIsConnected(false);
+            return;
+        }
+
+        setAddress('0xDEMO_1234567890');
+        setBalance(5000); // Increased demo balance for better testing
+        setIsConnected(true);
+        if (accountType === 'real') toggleAccountType();
+        setDemoActivated(true);
+        setTimeout(() => setDemoActivated(false), 2000);
+    };
 
     const handleOverflowClick = () => {
         if (clickTimer.current) clearTimeout(clickTimer.current);
         const newCount = clickCount + 1;
         setClickCount(newCount);
         if (newCount >= 3) {
-            setAddress('0xDEMO_1234567890');
-            setBalance(50);
-            setIsConnected(true);
-            if (accountType === 'real') toggleAccountType();
-            setDemoActivated(true);
+            activateDemoMode();
             setClickCount(0);
-            setTimeout(() => setDemoActivated(false), 2000);
         } else {
             clickTimer.current = setTimeout(() => setClickCount(0), 1000);
         }
@@ -58,12 +73,29 @@ export function Header() {
                 </Link>
                 {demoActivated && (
                     <span className="text-[8px] font-mono text-emerald-400 border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-400/5 animate-pulse uppercase tracking-widest">
-                        Demo
+                        Demo Activated
                     </span>
                 )}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
+                {pathname !== '/' && (
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        {accessCode !== null && (
+                            <button
+                                onClick={activateDemoMode}
+                                className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-full transition-all group"
+                            >
+                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 group-hover:text-emerald-400">
+                                    Demo Mode
+                                </span>
+                            </button>
+                        )}
+                        <HeaderMenu />
+                    </div>
+                )}
+
                 {pathname === '/' ? (
                     <Link
                         href="/trade"

@@ -72,7 +72,10 @@ export default function AdminDashboard() {
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'>('users');
+    const [waitlist, setWaitlist] = useState<any[]>([]);
+    const [accessCodes, setAccessCodes] = useState<any[]>([]);
+
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
 
@@ -104,13 +107,15 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, waitlistRes, accessCodesRes] = await Promise.all([
                 fetch('/api/admin/stats'),
                 fetch('/api/admin/users'),
                 fetch('/api/admin/transactions'),
                 fetch('/api/admin/currencies'),
                 fetch('/api/admin/game-history'),
-                fetch('/api/admin/danger-zone')
+                fetch('/api/admin/danger-zone'),
+                fetch('/api/admin/waitlist'),
+                fetch('/api/admin/access-codes')
             ]);
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) {
@@ -133,10 +138,33 @@ export default function AdminDashboard() {
                 const data = await dangerRes.json();
                 setSuspiciousUsers(data.suspiciousUsers || []);
             }
+            if (waitlistRes.ok) {
+                const data = await waitlistRes.json();
+                setWaitlist(data.waitlist || []);
+            }
+            if (accessCodesRes.ok) {
+                const data = await accessCodesRes.json();
+                setAccessCodes(data.codes || []);
+            }
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const generateAccessCodes = async (count: number = 5) => {
+        try {
+            const res = await fetch('/api/admin/access-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count })
+            });
+            if (res.ok) {
+                fetchData();
+            }
+        } catch (error) {
+            console.error('Failed to generate codes:', error);
         }
     };
 
@@ -238,6 +266,8 @@ export default function AdminDashboard() {
                             <TabBtn active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Financials" />
                             <TabBtn active={activeTab === 'markets'} onClick={() => setActiveTab('markets')} label="Inventory" />
                             <TabBtn active={activeTab === 'referrals'} onClick={() => setActiveTab('referrals')} label="Referrals" />
+                            <TabBtn active={activeTab === 'waitlist'} onClick={() => setActiveTab('waitlist')} label="Waitlist" />
+                            <TabBtn active={activeTab === 'access_codes'} onClick={() => setActiveTab('access_codes')} label="Access Codes" />
                             <TabBtn active={activeTab === 'danger'} onClick={() => setActiveTab('danger')} label="Danger Zone" />
                         </div>
                         <div className="w-full md:w-96 relative">
@@ -443,6 +473,60 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </Table>
                                 )}
+
+                                {activeTab === 'waitlist' && (
+                                    <Table key="waitlist">
+                                        <THead labels={['Position', 'Email Instance', 'Timestamp', 'Status']} />
+                                        <tbody>
+                                            {loading ? <LoadingRow /> : waitlist.map((w, i) => (
+                                                <tr key={w.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                    <td className="px-8 py-6 font-mono text-white/20 text-[10px]">#{waitlist.length - i}</td>
+                                                    <td className="px-8 py-6 font-bold text-white tracking-tight">{w.email}</td>
+                                                    <td className="px-8 py-6 text-white/40 text-[10px] uppercase font-mono">{new Date(w.created_at).toLocaleString()}</td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-white/40">Registered</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                )}
+
+                                {activeTab === 'access_codes' && (
+                                    <div key="access_codes">
+                                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Code Generator</p>
+                                            <button
+                                                onClick={() => generateAccessCodes(5)}
+                                                className="px-4 py-2 bg-white text-black font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-gray-200 transition-all"
+                                            >
+                                                Generate 5 Codes
+                                            </button>
+                                        </div>
+                                        <Table>
+                                            <THead labels={['Access Code', 'Status', 'Wallet Link', 'Authorized At']} />
+                                            <tbody>
+                                                {loading ? <LoadingRow /> : accessCodes.map(c => (
+                                                    <tr key={c.code} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                        <td className="px-8 py-6 font-mono font-black text-white text-lg tracking-widest uppercase">{c.code}</td>
+                                                        <td className="px-8 py-6">
+                                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${c.is_used ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                                                                {c.is_used ? 'Consumed' : 'Ready'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-6 font-mono text-[10px] text-white/40">
+                                                            {c.wallet_address ? shortenAddress(c.wallet_address) : 'UNLINKED'}
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right text-white/20 text-[10px] font-mono">
+                                                            {c.used_at ? new Date(c.used_at).toLocaleString() : '---'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                )}
+
                             </AnimatePresence>
                         </div>
                     </div>

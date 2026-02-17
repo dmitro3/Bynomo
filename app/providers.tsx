@@ -33,10 +33,13 @@ function WalletSync() {
   const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
 
   const {
+    address,
+    accountType,
     setAddress,
     setIsConnected,
     setNetwork,
     refreshWalletBalance,
+    fetchProfile,
     preferredNetwork
   } = useOverflowStore();
 
@@ -57,6 +60,7 @@ function WalletSync() {
             setIsConnected(true);
             setNetwork('XLM');
             refreshWalletBalance();
+            fetchProfile(restoredAddress);
           }
         } catch (e) {
           console.error("Stellar restore failed", e);
@@ -64,43 +68,67 @@ function WalletSync() {
       };
       checkStellar();
     }
-  }, [preferredNetwork, setAddress, setIsConnected, setNetwork, refreshWalletBalance]);
+  }, [preferredNetwork, address, setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile]);
 
 
   // Main Sync Effect
   useEffect(() => {
+    // 0. Check Demo Mode (Priority)
+    if (accountType === 'demo') {
+      if (address !== '0xDEMO_1234567890') {
+        setAddress('0xDEMO_1234567890');
+        setIsConnected(true);
+        setNetwork('BNB');
+      }
+      return;
+    }
+
     // 1. Check Solana (Priority if preferred)
     if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
-      setAddress(solanaPublicKey.toBase58());
-      setIsConnected(true);
-      setNetwork('SOL');
-      refreshWalletBalance();
+      const addr = solanaPublicKey.toBase58();
+      if (address !== addr) {
+        setAddress(addr);
+        setIsConnected(true);
+        setNetwork('SOL');
+        refreshWalletBalance();
+        fetchProfile(addr);
+      }
       return;
     }
 
     // 2. Check Sui
     if (suiAccount?.address && preferredNetwork === 'SUI') {
-      setAddress(suiAccount.address);
-      setIsConnected(true);
-      setNetwork('SUI');
-      refreshWalletBalance();
+      if (address !== suiAccount.address) {
+        setAddress(suiAccount.address);
+        setIsConnected(true);
+        setNetwork('SUI');
+        refreshWalletBalance();
+        fetchProfile(suiAccount.address);
+      }
       return;
     }
 
     // 3. Check BNB (Wagmi or Privy)
     if (preferredNetwork === 'BNB') {
       if (wagmiConnected && wagmiAddress) {
-        setAddress(wagmiAddress);
-        setIsConnected(true);
-        setNetwork('BNB');
-        refreshWalletBalance();
+        if (address !== wagmiAddress) {
+          setAddress(wagmiAddress);
+          setIsConnected(true);
+          setNetwork('BNB');
+          refreshWalletBalance();
+          fetchProfile(wagmiAddress);
+        }
         return;
       }
       if (privyReady && authenticated && privyWallets[0]) {
-        setAddress(privyWallets[0].address);
-        setIsConnected(true);
-        setNetwork('BNB');
-        refreshWalletBalance();
+        const addr = privyWallets[0].address;
+        if (address !== addr) {
+          setAddress(addr);
+          setIsConnected(true);
+          setNetwork('BNB');
+          refreshWalletBalance();
+          fetchProfile(addr);
+        }
         return;
       }
     }
@@ -127,24 +155,32 @@ function WalletSync() {
     }
 
     // 7. Cleanup/Sync Decision
+    const state = useOverflowStore.getState();
+    const isDemoMode = state.accountType === 'demo';
     const hasSolana = solanaConnected && solanaPublicKey;
     const hasSui = !!suiAccount?.address;
     const hasBNB = (wagmiConnected && !!wagmiAddress) || (privyReady && authenticated && !!privyWallets[0]);
-    const hasStellar = useOverflowStore.getState().network === 'XLM' && !!useOverflowStore.getState().address;
-    const hasTezos = useOverflowStore.getState().network === 'XTZ' && !!useOverflowStore.getState().address;
-    const hasNEAR = useOverflowStore.getState().network === 'NEAR' && !!useOverflowStore.getState().address;
+    const hasStellar = state.network === 'XLM' && !!state.address;
+    const hasTezos = state.network === 'XTZ' && !!state.address;
+    const hasNEAR = state.network === 'NEAR' && !!state.address;
 
     // Determine if we should clear
     let shouldClear = false;
-    if (preferredNetwork === 'SOL' && !hasSolana) shouldClear = true;
-    else if (preferredNetwork === 'SUI' && !hasSui) shouldClear = true;
-    else if (preferredNetwork === 'BNB' && !hasBNB) shouldClear = true;
-    else if (preferredNetwork === 'XLM' && !hasStellar) shouldClear = true;
-    else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
-    else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
-    else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR) shouldClear = true;
 
-    if (shouldClear) {
+    // If we are in demo mode, NEVER clear the address (wait for manual exit)
+    if (isDemoMode) {
+      shouldClear = false;
+    } else {
+      if (preferredNetwork === 'SOL' && !hasSolana) shouldClear = true;
+      else if (preferredNetwork === 'SUI' && !hasSui) shouldClear = true;
+      else if (preferredNetwork === 'BNB' && !hasBNB) shouldClear = true;
+      else if (preferredNetwork === 'XLM' && !hasStellar) shouldClear = true;
+      else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
+      else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR) shouldClear = true;
+    }
+
+    if (shouldClear && address !== null) {
       setAddress(null);
       setIsConnected(false);
       setNetwork(null);
@@ -154,8 +190,8 @@ function WalletSync() {
     solanaConnected, solanaPublicKey,
     suiAccount,
     wagmiAddress, wagmiConnected,
-    preferredNetwork,
-    setAddress, setIsConnected, setNetwork, refreshWalletBalance
+    preferredNetwork, address, accountType,
+    setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile
   ]);
 
   return null;

@@ -3,6 +3,7 @@ import { supabase } from '../supabase/client';
 
 export interface ProfileState {
     username: string | null;
+    accessCode: string | null;
     isUpdatingUsername: boolean;
     recentTrades: any[];
     isLoadingTrades: boolean;
@@ -13,21 +14,30 @@ export interface ProfileState {
 }
 
 export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
-    username: null,
+    username: (typeof window !== 'undefined' && localStorage.getItem('bynomo_username')) || null,
+    accessCode: (typeof window !== 'undefined' && localStorage.getItem('bynomo_access_code')) || null,
     isUpdatingUsername: false,
     recentTrades: [],
     isLoadingTrades: false,
 
     fetchProfile: async (address: string) => {
+        if (!address || address.startsWith('0xDEMO')) return;
         try {
             const { data, error } = await supabase
                 .from('user_profiles')
-                .select('username')
+                .select('username, access_code')
                 .eq('user_address', address)
                 .single();
 
             if (data) {
-                set({ username: data.username });
+                set({
+                    username: data.username,
+                    accessCode: data.access_code
+                });
+                if (typeof window !== 'undefined') {
+                    if (data.username) localStorage.setItem('bynomo_username', data.username);
+                    if (data.access_code) localStorage.setItem('bynomo_access_code', data.access_code);
+                }
             }
         } catch (error) {
             console.error('Error fetching profile:', error);

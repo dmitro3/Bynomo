@@ -5,7 +5,6 @@ import { GameBoard } from '@/components/game';
 import { BetHistory, MiniHistory } from '@/components/history';
 import { WalletConnect, WalletInfo } from '@/components/wallet';
 import { QuickTour } from '@/components/tour/QuickTour';
-import { HeaderMenu } from '@/components/game/HeaderMenu';
 import { useStore, useUserTier } from '@/lib/store';
 
 export default function Home() {
