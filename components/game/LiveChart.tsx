@@ -37,17 +37,18 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
     return <span className="font-black text-sm">{asset[0]}</span>;
   }
 
-  // Special handling for GOLD and SILVER to make them circular and hide white backgrounds
+  // Special handling for different asset types to make them circular and hide white backgrounds
   const isMetal = asset === 'GOLD' || asset === 'SILVER';
   const isNear = asset === 'NEAR';
+  const isForex = ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(asset);
 
   // Clean className to avoid conflicts when we want object-cover
-  const finalImageClass = isMetal
+  const finalImageClass = (isMetal || isForex)
     ? className.replace('object-contain', '').trim() + ' scale-[1.5] object-cover'
     : `${className} object-contain`;
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''} ${isNear ? 'bg-white rounded-full scale-90' : ''}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''} ${isForex ? 'rounded-full border border-white/20 bg-black/40' : ''} ${isNear ? 'bg-white rounded-full scale-90' : ''}`}>
       <img
         src={src}
         alt={asset}
@@ -82,11 +83,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   const currencySymbol = useMemo(() => {
     switch (network) {
-      case 'SOL': return 'SOL';
-      case 'SUI': return 'USDC';
-      case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
+      case 'SOL': {
+        const state = useStore.getState() as any;
+        return state.selectedCurrency || 'SOL';
+      }
       default: return 'BNB';
     }
   }, [network]);
@@ -173,6 +175,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   // Asset display configuration
   const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' }> = {
+    BYNOMO: { name: 'Bynomo Token', symbol: 'BYNOMO', pair: 'BYNOMO/USD', decimals: 6, logo: '/overflowlogo.png', category: 'Crypto' },
     BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto' },
     ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png', category: 'Crypto' },
     SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png', category: 'Crypto' },
@@ -190,11 +193,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
     SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
     // FX
-    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/eur.png', category: 'Forex' },
-    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/gbp.png', category: 'Forex' },
-    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/jpy.png', category: 'Forex' },
-    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/aud.png', category: 'Forex' },
-    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/cad.png', category: 'Forex' },
+    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/euro.png', category: 'Forex' },
+    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/uk.png', category: 'Forex' },
+    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/japan.jpg', category: 'Forex' },
+    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/australia.png', category: 'Forex' },
+    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/canada.png', category: 'Forex' },
     // Stocks
     AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png', category: 'Stocks' },
     GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png', category: 'Stocks' },

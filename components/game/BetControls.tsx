@@ -35,11 +35,12 @@ export const BetControls: React.FC<BetControlsProps> = ({
 
   const currencySymbol = useMemo(() => {
     switch (network) {
-      case 'SOL': return 'SOL';
-      case 'SUI': return 'USDC';
-      case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
+      case 'SOL': {
+        const state = useStore.getState() as any;
+        return state.selectedCurrency || 'SOL';
+      }
       default: return 'BNB';
     }
   }, [network]);

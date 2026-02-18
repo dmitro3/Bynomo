@@ -16,6 +16,7 @@ export interface WalletState {
   isConnecting: boolean;
   network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null;
   preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null;
+  selectedCurrency: string | null;
   error: string | null;
   isConnectModalOpen: boolean;
 
@@ -31,6 +32,7 @@ export interface WalletState {
   setIsConnected: (connected: boolean) => void;
   setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => void;
   setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null) => void;
+  setSelectedCurrency: (currency: string | null) => void;
 }
 
 /**
@@ -45,6 +47,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnecting: false,
   network: null,
   preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | null : null,
+  selectedCurrency: null,
   error: null,
   isConnectModalOpen: false,
 
@@ -72,6 +75,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
       isConnected: false,
       isConnecting: false,
       network: null,
+      selectedCurrency: null,
       error: null
     } as any);
 
@@ -105,8 +109,16 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         const bal = await getBNBBalance(address);
         set({ walletBalance: bal });
       } else if (network === 'SOL') {
-        const { getSOLBalance } = await import('@/lib/solana/client');
-        const bal = await getSOLBalance(address);
+        const { getSOLBalance, getTokenBalance } = await import('@/lib/solana/client');
+        const currency = get().selectedCurrency || 'SOL';
+        let bal = 0;
+        if (currency === 'SOL') {
+          bal = await getSOLBalance(address);
+        } else if (currency === 'BYNOMO') {
+          // BYNOMO Token on Solana
+          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          bal = await getTokenBalance(address, BYNOMO_MINT);
+        }
         set({ walletBalance: bal });
       } else if (network === 'SUI') {
         const { getUSDCBalance } = await import('@/lib/sui/client');
@@ -176,6 +188,18 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
       } else {
         localStorage.removeItem('solnomo_preferred_network');
       }
+    }
+  },
+
+  /**
+   * Set selected currency for the current network
+   */
+  setSelectedCurrency: (currency: string | null) => {
+    set({ selectedCurrency: currency });
+    // Trigger balance refresh when currency changes
+    const { isConnected, address } = get();
+    if (isConnected && address) {
+      get().refreshWalletBalance();
     }
   }
 });

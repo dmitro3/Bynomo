@@ -148,6 +148,37 @@ export async function getSOLBalance(address: string): Promise<number> {
 }
 
 /**
+ * Get SPL token balance for a given address and mint
+ */
+export async function getTokenBalance(address: string, mintAddress: string): Promise<number> {
+    if (!address || !mintAddress) return 0;
+
+    try {
+        const connection = getSolanaConnection();
+        const owner = new PublicKey(address);
+        const mint = new PublicKey(mintAddress);
+
+        const response = await connection.getParsedTokenAccountsByOwner(owner, {
+            mint: mint,
+        });
+
+        if (response.value.length === 0) return 0;
+
+        // Sum up balances if multiple accounts exist (unlikely for most users)
+        let totalBalance = 0;
+        for (const account of response.value) {
+            const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+            totalBalance += amount || 0;
+        }
+
+        return totalBalance;
+    } catch (error) {
+        console.error(`Error fetching token balance for ${mintAddress}:`, error);
+        return 0;
+    }
+}
+
+/**
  * Get treasury balance
  */
 export async function getTreasuryBalance(): Promise<number> {

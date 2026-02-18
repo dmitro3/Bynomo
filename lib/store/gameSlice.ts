@@ -370,8 +370,10 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
 
       set({ isPlacingBet: true, error: null });
 
-      // Get current network from store (e.g., BNB, SOL, SUI, XLM, XTZ)
+      // Get current network and selected currency from store
       const network = (get() as any).network || 'BNB';
+      const selectedCurrency = (get() as any).selectedCurrency;
+      const currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network;
 
       // Call API endpoint to place bet from house balance
       const response = await fetch('/api/balance/bet', {
@@ -382,7 +384,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         body: JSON.stringify({
           userAddress: userAddress, // Use the provided address directly
           betAmount,
-          currency: network,
+          currency: currency,
           roundId: Date.now(),
           targetPrice: currentPrice,
           isOver: direction === 'UP',
@@ -692,7 +694,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             payout: payout,
             won: won,
             mode: resolvedBet.mode,
-            network: network || 'BNB',
+            network: resolvedBet.network || network || 'BNB',
           })
         }).catch(err => console.error('Failed to save bet to Supabase:', err));
       }

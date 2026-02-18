@@ -47,13 +47,15 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    */
   fetchBalance: async (address: string) => {
     const { accountType } = get();
-    // Access network from combined store if available, or default to BNB
+    // Access network and currency from combined store if available
     let network = (get() as any).network || 'BNB';
+    const selectedCurrency = (get() as any).selectedCurrency;
+    let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network;
 
     if (address && (address.endsWith('.near') || address.endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address))) {
-      network = 'NEAR';
+      currency = 'NEAR';
     } else if (address && /^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
-      network = 'XTZ';
+      currency = 'XTZ';
     }
 
     // Skip API fetch for demo mode as it uses local state only
@@ -64,7 +66,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const response = await fetch(`/api/balance/${address}?currency=${network}`);
+      const response = await fetch(`/api/balance/${address}?currency=${currency}`);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -142,10 +144,12 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    */
   depositFunds: async (address: string, amount: number, txHash: string) => {
     let network = (get() as any).network || 'BNB';
+    const selectedCurrency = (get() as any).selectedCurrency;
+    let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network;
 
-    // Override network for NEAR addresses if not already set correctly
+    // Override network for NEAR addresses
     if (address.endsWith('.near') || address.endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address)) {
-      network = 'NEAR';
+      currency = 'NEAR';
     }
 
     try {
@@ -160,7 +164,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           userAddress: address,
           amount,
           txHash,
-          currency: network
+          currency: currency
         }),
       });
 
@@ -199,6 +203,8 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    */
   withdrawFunds: async (address: string, amount: number) => {
     const network = (get() as any).network || 'BNB';
+    const selectedCurrency = (get() as any).selectedCurrency;
+    const currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network;
 
     try {
       set({ isLoading: true, error: null });
@@ -211,7 +217,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         body: JSON.stringify({
           userAddress: address,
           amount,
-          currency: network
+          currency: currency
         }),
       });
 

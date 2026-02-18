@@ -44,7 +44,9 @@ export const GameBoard: React.FC = () => {
     userTier,
     refreshWalletBalance,
     accessCode,
-    fetchProfile
+    fetchProfile,
+    selectedCurrency,
+    setSelectedCurrency
   } = useStore();
 
   const { wallets } = useWallets();
@@ -65,7 +67,7 @@ export const GameBoard: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
   const blitzEntryFee = 0.01;
 
   // Connection and Authorization status
@@ -569,7 +571,25 @@ export const GameBoard: React.FC = () => {
 
                       {/* Wallet Balance Display */}
                       <div className="bg-gradient-to-br from-purple-500/10 to-transparent rounded-xl p-4 border border-purple-500/20">
-                        <p className="text-gray-400 text-[10px] uppercase tracking-widest mb-1">Wallet Balance</p>
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-widest">Wallet Balance</p>
+                          {network === 'SOL' && (
+                            <div className="flex gap-1 bg-black/40 p-0.5 rounded-lg border border-white/5">
+                              {['SOL', 'BYNOMO'].map(c => (
+                                <button
+                                  key={c}
+                                  onClick={() => setSelectedCurrency(c)}
+                                  className={`px-2 py-0.5 rounded-md text-[8px] font-black transition-all ${(selectedCurrency || 'SOL') === c
+                                    ? 'bg-purple-500 text-white shadow-lg'
+                                    : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                >
+                                  {c}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-baseline gap-2">
                           <span className="text-2xl font-bold text-white">
                             {isLoadingBalance ? 'Loading...' : formatBalance(activeWalletBalance)}
