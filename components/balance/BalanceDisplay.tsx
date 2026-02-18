@@ -28,6 +28,8 @@ export const BalanceDisplay: React.FC = () => {
   const demoBalance = useOverflowStore(state => state.demoBalance);
   const accountType = useOverflowStore(state => state.accountType);
   const network = useOverflowStore(state => state.network);
+  const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
+  const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
   const toggleAccountType = useOverflowStore(state => state.toggleAccountType);
   const isLoading = useOverflowStore(state => state.isLoading);
   const address = useOverflowStore(state => state.address);
@@ -108,6 +110,11 @@ export const BalanceDisplay: React.FC = () => {
   const activeBalance = accountType === 'real' ? houseBalance : demoBalance;
   const formattedBalance = activeBalance.toFixed(4);
 
+  // Current symbol for display
+  const currentSymbol = network === 'SUI' ? 'USDC'
+    : (network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM'
+      ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB');
+
   return (
     <>
       <div className="bg-black/30 rounded-xl border border-white/5 overflow-hidden">
@@ -134,29 +141,61 @@ export const BalanceDisplay: React.FC = () => {
               {accountType === 'demo' ? 'Practice Balance' : 'House Balance'}
             </h3>
 
-            {/* Refresh Button */}
-            {accountType === 'real' && (
-              <button
-                onClick={handleRefresh}
-                disabled={!address || isLoading || isRefreshing}
-                className="text-purple-400 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Refresh balance"
-              >
-                <svg
-                  className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="flex items-center gap-2">
+              {/* Solana Currency Toggle */}
+              {network === 'SOL' && accountType === 'real' && (
+                <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
+                  <button
+                    onClick={() => {
+                      setSelectedCurrency('SOL');
+                      setTimeout(() => fetchBalance(address!), 100);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${(!selectedCurrency || selectedCurrency === 'SOL')
+                        ? 'bg-purple-500 text-white shadow-lg'
+                        : 'text-white/40 hover:text-white/60'
+                      }`}
+                  >
+                    SOL
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedCurrency('BYNOMO');
+                      setTimeout(() => fetchBalance(address!), 100);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${selectedCurrency === 'BYNOMO'
+                        ? 'bg-purple-500 text-white shadow-lg'
+                        : 'text-white/40 hover:text-white/60'
+                      }`}
+                  >
+                    BYNOMO
+                  </button>
+                </div>
+              )}
+
+              {/* Refresh Button */}
+              {accountType === 'real' && (
+                <button
+                  onClick={handleRefresh}
+                  disabled={!address || isLoading || isRefreshing}
+                  className="text-purple-400 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Refresh balance"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              </button>
-            )}
+                  <svg
+                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Balance Display */}
@@ -177,8 +216,16 @@ export const BalanceDisplay: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <div className="flex items-center gap-1">
                   <img
-                    src={network === 'SUI' ? '/logos/sui-logo.png' : network === 'SOL' ? '/logos/solana-sol-logo.png' : network === 'XLM' ? '/logos/stellar-xlm-logo.png' : network === 'XTZ' ? '/logos/tezos-xtz-logo.png' : network === 'NEAR' ? '/logos/near-logo.svg' : '/logos/bnb-bnb-logo.png'}
-                    alt={network || 'Network'}
+                    src={
+                      currentSymbol === 'BYNOMO' ? '/logos/bynomo-logo.png' :
+                        network === 'SUI' ? '/logos/sui-logo.png' :
+                          network === 'SOL' ? '/logos/solana-sol-logo.png' :
+                            network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
+                              network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
+                                network === 'NEAR' ? '/logos/near-logo.svg' :
+                                  '/logos/bnb-bnb-logo.png'
+                    }
+                    alt={currentSymbol}
                     className="w-4 h-4 object-contain"
                   />
                   <p className={`text-xl font-bold font-mono ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'}`}>
@@ -186,7 +233,7 @@ export const BalanceDisplay: React.FC = () => {
                   </p>
                 </div>
                 <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'}`}>
-                  {network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB'}
+                  {currentSymbol}
                 </span>
               </div>
             )}

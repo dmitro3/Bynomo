@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useStore, useHouseBalance, useWalletAddress, useIsConnected, useUserTier } from '@/lib/store';
-import { Wallet, Trophy, User as UserIcon, History, Link as LinkIcon, Share2, Check, Edit2, Zap, Shield, Crown, LayoutGrid, Activity, ExternalLink, Key, ShieldCheck } from 'lucide-react';
+import { Wallet, Trophy, User as UserIcon, History, Link as LinkIcon, Share2, Check, Edit2, Zap, Shield, Crown, LayoutGrid, Activity, ExternalLink, Key, ShieldCheck, ChevronRight } from 'lucide-react';
 
 const TIER_DATA = [
     {
@@ -15,7 +15,9 @@ const TIER_DATA = [
         bgColor: 'bg-gray-400/5',
         iconComp: Shield,
         assets: 'All',
-        payout: '80%',
+        blitz: 'Enabled',
+        payout: '100.0%',
+        withdrawal: 'Instant',
         fee: '2.0%',
         requirement: '$0',
     },
@@ -27,7 +29,9 @@ const TIER_DATA = [
         bgColor: 'bg-amber-400/5',
         iconComp: Zap,
         assets: 'All',
-        payout: '85%',
+        blitz: 'Enabled',
+        payout: '100.0%',
+        withdrawal: 'Instant',
         fee: '1.75%',
         requirement: '$50',
     },
@@ -39,7 +43,9 @@ const TIER_DATA = [
         bgColor: 'bg-purple-400/5',
         iconComp: Crown,
         assets: 'All',
-        payout: '90%',
+        blitz: 'Enabled',
+        payout: '100.0%',
+        withdrawal: 'Instant',
         fee: '1.5%',
         requirement: '$500',
     }
@@ -66,6 +72,7 @@ export default function ProfilePage() {
     const currentTierData = TIER_DATA[safeTierIndex];
     const nextTier = TIER_DATA[safeTierIndex + 1];
 
+    const [isTierModalOpen, setIsTierModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [newUsername, setNewUsername] = useState('');
     const [copySuccess, setCopySuccess] = useState<string | null>(null);
@@ -75,8 +82,6 @@ export default function ProfilePage() {
             setNewUsername(username.replace('.bynomo', ''));
         }
     }, [username]);
-
-
 
     const handleUpdateUsername = async () => {
         if (!address || !newUsername) return;
@@ -97,30 +102,47 @@ export default function ProfilePage() {
 
     if (!isConnected) {
         return (
-            <div className="min-h-screen bg-[#02040a] flex flex-col items-center justify-center p-6 text-center">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="min-h-screen bg-[#02040a] flex flex-col items-center justify-center p-6 text-center text-white"
+            >
                 <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-8">
                     <Wallet className="w-8 h-8 text-white/40" />
                 </div>
-                <h1 className="text-2xl font-black text-white uppercase tracking-widest mb-4 font-orbitron">BYNOMO Registry</h1>
+                <h1 className="text-2xl font-black text-white uppercase tracking-widest mb-4">BYNOMO Registry</h1>
                 <p className="text-gray-500 max-w-xs mx-auto text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed mb-8">
                     Synchronization required. Please authorize your wallet to access neural trading identity.
                 </p>
-                <div className="w-full max-w-xs h-[1px] bg-white/10" />
-            </div>
+                <div className="w-80 h-[1px] bg-white/10" />
+            </motion.div>
         );
     }
 
     const shortenAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
     return (
-        <main className="min-h-screen bg-[#02040a] text-white selection:bg-white selection:text-black">
+        <motion.main
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="min-h-screen bg-[#02040a] text-white selection:bg-white selection:text-black pb-20"
+        >
             {/* Header / Identity Bar */}
-            <div className="border-b border-white/5 bg-[#050505] sticky top-0 z-40 px-6 py-6 md:px-12">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <motion.div
+                initial={{ y: -50 }}
+                animate={{ y: 0 }}
+                transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                className="border-b border-white/5 bg-[#050505] sticky top-0 z-40 px-6 py-5"
+            >
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-white/60">
+                        <motion.div
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-white/60"
+                        >
                             {username ? username[0].toUpperCase() : '?'}
-                        </div>
+                        </motion.div>
                         <div className="space-y-1">
                             {isEditing ? (
                                 <div className="flex items-center gap-2">
@@ -164,178 +186,238 @@ export default function ProfilePage() {
                         </Link>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
-            <div className="max-w-7xl mx-auto px-6 md:px-12 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="max-w-6xl mx-auto px-6 py-8 space-y-12">
+                {/* Highlights Grid - Enhanced with Tier Info */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <StatCard label="Total Refs" value={referralCount} icon={UserIcon} />
+                    <StatCard label="Protocol Status" value="Online" status="emerald" icon={Activity} />
+                    <StatCard label="Region" value="Global" icon={LayoutGrid} />
+                    <StatCard label="Uptime" value="100%" icon={Zap} />
+                    <StatCard
+                        label="Governance"
+                        value={userTier.toUpperCase()}
+                        icon={Shield}
+                        status="emerald"
+                        clickable
+                        purple
+                        onClick={() => setIsTierModalOpen(true)}
+                    />
+                </div>
 
-                    {/* Left Column: Data Stream & Social */}
-                    <div className="lg:col-span-8 space-y-16">
-
-                        {/* Highlights Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatCard label="Total Refs" value={referralCount} icon={UserIcon} />
-                            <StatCard label="Protocol Status" value="Online" status="emerald" icon={Activity} />
-                            <StatCard label="Region" value="Global" icon={LayoutGrid} />
-                            <StatCard label="Uptime" value="100%" icon={Zap} />
+                {/* Bottom Bento Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Trading Ledger */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="lg:col-span-7 bg-[#050505] border border-white/5 rounded-[2rem] overflow-hidden"
+                    >
+                        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
+                                <History className="w-3 h-3" /> Trading Ledger
+                            </h2>
                         </div>
 
-                        {/* Recent History */}
-                        <section className="space-y-6">
-                            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
-                                <History className="w-4 h-4" /> Trading Ledger
-                            </h2>
-                            <div className="bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="border-b border-white/5 bg-white/[0.01] text-[9px] uppercase font-black tracking-widest text-white/40">
-                                                <th className="px-8 py-5">Asset Class</th>
-                                                <th className="px-8 py-5">Position</th>
-                                                <th className="px-8 py-5">Stake</th>
-                                                <th className="px-8 py-5 text-right">Result</th>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="border-b border-white/5 bg-white/[0.01] text-[9px] uppercase font-black tracking-widest text-white/20">
+                                        <th className="px-6 py-4">Asset</th>
+                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4">Amount</th>
+                                        <th className="px-6 py-4 text-right">Result</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {isLoadingTrades ? (
+                                        <tr><td colSpan={4} className="px-6 py-12 text-center text-[9px] uppercase font-black text-white/10 animate-pulse">Neural Link Active...</td></tr>
+                                    ) : recentTrades.length === 0 ? (
+                                        <tr><td colSpan={4} className="px-6 py-12 text-center text-[10px] uppercase font-black text-white/10">No recent activity</td></tr>
+                                    ) : (
+                                        recentTrades.map((trade, idx) => (
+                                            <tr key={idx} className="hover:bg-white/[0.01] transition-all group">
+                                                <td className="px-6 py-4 text-xs font-bold uppercase">{trade.asset}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded border ${trade.direction === 'UP' ? 'text-emerald-400 border-emerald-400/20' : 'text-rose-400 border-rose-400/20'}`}>
+                                                        {trade.direction}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 font-mono text-[10px] text-white/30">{trade.amount.toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-right font-black text-xs">
+                                                    <span className={trade.won ? 'text-emerald-400' : 'text-white/10'}>
+                                                        {trade.won ? `+${trade.payout.toFixed(2)}` : `-${trade.amount.toFixed(2)}`}
+                                                    </span>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {isLoadingTrades ? (
-                                                <tr><td colSpan={4} className="px-8 py-20 text-center text-[10px] uppercase font-black text-white/10 animate-pulse">Syncing...</td></tr>
-                                            ) : recentTrades.length === 0 ? (
-                                                <tr><td colSpan={4} className="px-8 py-20 text-center text-[10px] uppercase font-black text-white/10 italic">No trading activity data</td></tr>
-                                            ) : (
-                                                recentTrades.map((trade, idx) => (
-                                                    <tr key={idx} className="hover:bg-white/[0.01] transition-all">
-                                                        <td className="px-8 py-5">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-bold">{trade.asset}</span>
-                                                                <span className="text-[9px] text-white/20 uppercase mt-0.5">{new Date(trade.created_at).toLocaleTimeString()}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-5">
-                                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border ${trade.direction === 'UP' ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/5' : 'text-rose-400 border-rose-400/20 bg-rose-400/5'}`}>
-                                                                {trade.direction}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-5 font-mono text-sm text-white/60">${trade.amount.toFixed(2)}</td>
-                                                        <td className="px-8 py-5 text-right font-black">
-                                                            <span className={trade.won ? 'text-emerald-400' : 'text-white/10'}>
-                                                                {trade.won ? `+$${trade.payout.toFixed(2)}` : `-$${trade.amount.toFixed(2)}`}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </section>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
 
-
-                    </div>
-
-                    {/* Right Column: Tiers & Referral */}
-                    <div className="lg:col-span-4 space-y-12">
-
-                        {/* Tier Selector / Display */}
-                        <section className="space-y-6">
-                            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
-                                <Shield className="w-4 h-4" /> Governance Tiers
-                            </h2>
-                            <div className="bg-[#050505] border border-white/5 rounded-3xl p-8 space-y-8">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center ${currentTierData.color}`}>
-                                        <currentTierData.iconComp className="w-7 h-7" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-black uppercase tracking-tight">{userTier} Tier</p>
-                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active License</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {TIER_DATA.map((t) => (
-                                        <div key={t.id} className={`p-4 rounded-xl border transition-all ${t.id === userTier ? 'bg-white/5 border-white/20' : 'bg-transparent border-white/5 opacity-30 hover:opacity-100'}`}>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <t.iconComp className={`w-4 h-4 ${t.id === userTier ? t.color : ''}`} />
-                                                    <span className="text-[11px] font-black uppercase tracking-widest">{t.name}</span>
-                                                </div>
-                                                {t.id === userTier ? (
-                                                    <span className="text-[8px] font-black text-emerald-400 uppercase">Selected</span>
-                                                ) : (
-                                                    <span className="text-[8px] font-bold text-white/20 uppercase">{t.requirement}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {nextTier && (
-                                    <div className="pt-4 border-t border-white/5">
-                                        <div className="flex justify-between text-[9px] font-black text-white/30 uppercase tracking-widest mb-3">
-                                            <span>Progress to {nextTier.name} Status</span>
-                                            <span>{nextTier.requirement}</span>
-                                        </div>
-                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-white/40" style={{ width: `${(safeTierIndex / (TIER_DATA.length - 1)) * 100}%` }} />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-
-                        {/* Protocol Code */}
-                        <section className="space-y-6">
-                            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
-                                <Trophy className="w-4 h-4" /> Node Protocol
-                            </h2>
-                            <div className="bg-[#050505] border border-white/5 rounded-3xl p-8 space-y-8">
-                                <div className="space-y-3">
-                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Your Private Node Code</p>
-                                    <div className="flex items-center justify-between gap-4 p-4 bg-white/5 border border-white/10 rounded-xl group/code">
-                                        <span className="font-mono font-black text-xl text-white tracking-widest uppercase truncate">{referralCode || '---'}</span>
-                                        <button onClick={() => copyToClipboard(referralCode || '', 'Code')} className="text-white/20 hover:text-white transition-all active:scale-90">
+                    {/* Sidebar Area */}
+                    <div className="lg:col-span-5 flex flex-col gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+                            <motion.section
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                className="bg-[#050505] border border-white/5 rounded-[2rem] p-6 flex flex-col justify-between"
+                            >
+                                <div className="space-y-5">
+                                    <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Node Protocol</h2>
+                                    <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl flex items-center justify-between">
+                                        <span className="font-mono font-black text-lg tracking-widest text-white/80">{referralCode || '---'}</span>
+                                        <button onClick={() => copyToClipboard(referralCode || '', 'Code')} className="text-white/20 hover:text-white transition-all">
                                             {copySuccess === 'Code' ? <Check className="w-4 h-4 text-emerald-400" /> : <LinkIcon className="w-4 h-4" />}
                                         </button>
                                     </div>
+                                    <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join BYNOMO: ${referralCode}`, '_blank')} className="w-full py-4 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all">
+                                        Share Access
+                                    </button>
                                 </div>
-                                <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join the BYNOMO protocol and start trading with decentralized precision! Code: ${referralCode}`, '_blank')} className="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3">
-                                    <Share2 className="w-3 h-3" /> Share Access
-                                </button>
-                            </div>
-                        </section>
+                            </motion.section>
 
-                        {/* Access Identity */}
-                        <section className="space-y-6">
-                            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/20 flex items-center gap-3">
-                                <Key className="w-4 h-4" /> Access Identity
-                            </h2>
-                            <div className="bg-[#050505] border border-white/5 rounded-3xl p-8 space-y-3">
-                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Validated Access Token</p>
-                                <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl group/access">
-                                    <span className="font-mono font-black text-xl text-emerald-400 tracking-[0.3em] uppercase truncate">{accessCode || 'INITIALIZING'}</span>
-                                    <ShieldCheck className="w-5 h-5 text-emerald-400/40" />
+                            <motion.section
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.1 }}
+                                className="bg-emerald-500/[0.02] border border-emerald-500/10 rounded-[2rem] p-6 space-y-4"
+                            >
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/40">Security Key</h2>
+                                <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center justify-between">
+                                    <span className="font-mono font-black text-sm text-emerald-400 tracking-[0.2em] truncate mr-4">{accessCode || 'INITIALIZING'}</span>
+                                    <ShieldCheck className="w-5 h-5 text-emerald-400/20" />
                                 </div>
-                                <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest">This identity token is uniquely matched to your neural node.</p>
-                            </div>
-                        </section>
-
+                                <p className="text-[9px] text-white/20 font-bold leading-relaxed uppercase">Neural verify active. Keep this node key private to prevent breach.</p>
+                            </motion.section>
+                        </div>
                     </div>
                 </div>
             </div>
-        </main>
+
+            {/* Governance Tiers Modal */}
+            <AnimatePresence>
+                {isTierModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsTierModalOpen(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl bg-[#0a0a0b] border border-white/10 rounded-[3rem] p-8 md:p-12 shadow-[0_32px_120px_rgba(0,0,0,1)] overflow-hidden"
+                        >
+                            <div className="flex justify-between items-start mb-12">
+                                <div>
+                                    <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mb-2">Governance Protocol</h2>
+                                    <h2 className="text-3xl font-black tracking-tighter">Tier Access Rights</h2>
+                                </div>
+                                <button onClick={() => setIsTierModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
+                                    <Check className="w-6 h-6 rotate-45" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {TIER_DATA.map((t, index) => (
+                                    <div
+                                        key={t.id}
+                                        className={`p-8 rounded-[2rem] border transition-all ${t.id === userTier
+                                            ? 'bg-white/[0.04] border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.03)]'
+                                            : 'bg-white/[0.01] border-white/5'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-center mb-8">
+                                            <t.iconComp className={`w-8 h-8 ${t.id === userTier ? t.color : 'text-white/20'}`} />
+                                            {t.id === userTier && (
+                                                <span className="text-[8px] font-black text-[#00ff88] bg-[#00ff88]/10 px-3 py-1 rounded-full border border-[#00ff88]/20 flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 bg-[#00ff88] rounded-full animate-pulse" />
+                                                    Active
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h3 className="text-2xl font-black mb-1">{t.name}</h3>
+                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-10">Neural Access LVL 0{index + 1}</p>
+
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Payout</span>
+                                                <span className="text-xs font-black text-[#00ff88]">{t.payout}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Blitz</span>
+                                                <span className="text-xs font-black text-[#00ff88]">{t.blitz}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Protocol Fee</span>
+                                                <span className="text-xs font-black text-[#00ff88]">{t.fee}</span>
+                                            </div>
+                                            <div className="pt-6 border-t border-white/5">
+                                                <p className="text-[8px] font-black text-white/10 uppercase mb-1">Requirement</p>
+                                                <p className="font-mono text-lg font-black text-white/40">{t.requirement}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </motion.main>
     );
 }
 
-const StatCard = ({ label, value, icon: Icon, status }: any) => (
-    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-3 hover:bg-white/[0.03] transition-all">
+const StatCard = ({ label, value, icon: Icon, status, clickable, onClick, purple }: any) => (
+    <motion.div
+        whileHover={clickable ? { scale: 1.02, y: -4 } : {}}
+        whileTap={clickable ? { scale: 0.98 } : {}}
+        onClick={onClick}
+        className={`relative overflow-hidden bg-[#050505] border rounded-[2rem] p-8 space-y-4 transition-all group ${purple
+            ? 'border-purple-500/30 shadow-[0_0_30px_rgba(168,85,247,0.1)] bg-gradient-to-br from-[#0a0510] to-[#050505]'
+            : 'border-white/5 shadow-xl hover:bg-white/[0.02]'
+            } ${clickable ? 'cursor-pointer hover:border-white/20' : ''}`}
+    >
+        {purple && (
+            <motion.div
+                animate={{
+                    opacity: [0.1, 0.2, 0.1],
+                    scale: [1, 1.1, 1],
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 bg-purple-500/10 blur-3xl -z-10"
+            />
+        )}
+
         <div className="flex items-center justify-between">
-            <Icon className="w-4 h-4 text-white/20" />
-            {status && <div className={`w-1.5 h-1.5 rounded-full ${status === 'emerald' ? 'bg-emerald-500' : 'bg-white/20'}`} />}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${purple ? 'bg-purple-500/20' : 'bg-white/5'
+                }`}>
+                <Icon className={`w-5 h-5 ${purple ? 'text-purple-400' : 'text-white/30'}`} />
+            </div>
+            {status && (
+                <div className={`w-2 h-2 rounded-full ${status === 'emerald' ? 'bg-[#00ff88] shadow-[0_0_10px_#00ff88]' : 'bg-white/20'
+                    }`} />
+            )}
         </div>
         <div>
-            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-xl font-black tracking-tight">{value}</p>
+            <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1.5 ${purple ? 'text-purple-400/40' : 'text-white/20'
+                }`}>{label}</p>
+            <p className="text-2xl font-black tracking-tight">{value}</p>
         </div>
+    </motion.div>
+);
+
+const BenefitItem = ({ label, value, colored }: { label: string; value: string; colored?: boolean }) => (
+    <div className="flex flex-col">
+        <span className="text-[9px] font-black text-white/10 uppercase tracking-widest leading-none mb-2">{label}</span>
+        <span className={`text-[11px] font-black uppercase tracking-widest truncate ${colored ? 'text-[#00ff88]' : 'text-white/60'}`}>{value}</span>
     </div>
 );

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksDemo from './waitlist/HowItWorksDemo';
+import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
 import { supabase } from '@/lib/supabase/client';
 import './waitlist/waitlist.css';
 
@@ -271,28 +272,28 @@ export default function WaitlistPage() {
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen opacity-50 block lg:hidden" />
             </section>
 
-            {/* HOW IT WORKS SECTION - Interactive Demo */}
             <section className="relative py-32 bg-[#02040a] overflow-hidden">
-                <div className="section-content relative z-10 max-w-[1200px] mx-auto px-6">
+                <div className="section-content relative z-10 max-w-[1400px] mx-auto px-6">
                     <div className="text-center mb-16">
-                        <div className="text-[#ff4444] font-mono text-xs mb-4 uppercase tracking-[0.3em] opacity-80 flex items-center justify-center gap-2">
-                            <span className="w-2 h-2 bg-[#ff4444] rounded-full animate-pulse" />
-                            Protocol Interface
+                        <div className="text-white/20 font-mono text-[10px] mb-4 uppercase tracking-[0.4em] flex items-center justify-center gap-3">
+                            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_purple]" />
+                            Execution Protocol
                         </div>
-                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-6" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                            See It In Action
+                        <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white mb-6 uppercase" style={{ fontFamily: 'var(--font-orbitron)' }}>
+                            Scale your <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/20">trading</span>
                         </h2>
-                        <p className="text-white/40 max-w-2xl mx-auto text-lg leading-relaxed">
-                            Connect any wallet. Select your network. Execute trades with millisecond precision.
+                        <p className="text-white/30 max-w-2xl mx-auto text-sm font-bold uppercase tracking-widest leading-relaxed">
+                            A triple-layered protocol designed for speed, precision, and trustless settlement.
                         </p>
                     </div>
 
                     <div className="relative z-10">
-                        <HowItWorksDemo />
+                        <HowItWorksSteps />
                     </div>
 
-                    {/* Background glow for the demo */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[#ff4444]/15 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
+                    {/* Background glows */}
+                    <div className="absolute top-1/2 left-0 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
+                    <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
                 </div>
             </section>
 

@@ -78,6 +78,42 @@ export default function AdminDashboard() {
 
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
+    const [gameplayFilter, setGameplayFilter] = useState<'all' | 'real' | 'demo'>('all');
+    const [chainFilter, setChainFilter] = useState<string>('ALL');
+
+    const getExplorerUrl = (currency: string, hash: string) => {
+        if (!hash || hash === 'INTERNAL') return null;
+        switch (currency.toUpperCase()) {
+            case 'BNB': return `https://bscscan.com/tx/${hash}`;
+            case 'NEAR': return `https://nearblocks.io/txns/${hash}`;
+            case 'SOL': return `https://solscan.io/tx/${hash}`;
+            case 'SUI': return `https://suiscan.xyz/tx/${hash}`;
+            case 'XTZ': return `https://tzkt.io/${hash}`;
+            case 'XLM': return `https://stellar.expert/explorer/public/tx/${hash}`;
+            default: return null;
+        }
+    };
+
+    const exportAccessCodes = () => {
+        const headers = ["Access Code", "Status", "Wallet Link", "Authorized At"];
+        const rows = accessCodes.map(c => [
+            c.code,
+            c.is_used ? "Consumed" : "Ready",
+            c.wallet_address || "UNLINKED",
+            c.used_at ? new Date(c.used_at).toLocaleString() : "---"
+        ]);
+
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `bynomo_access_codes_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     useEffect(() => {
         const auth = localStorage.getItem('admin_authorized');
@@ -287,73 +323,149 @@ export default function AdminDashboard() {
                             <AnimatePresence mode="wait">
                                 {activeTab === 'users' && (
                                     <Table key="users">
-                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Referral', 'Engagement', 'Value']} />
+                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Referral', 'Engagement', 'Value', 'Tier']} />
                                         <tbody>
-                                            {loading ? <LoadingRow /> : users.map(u => (
-                                                <tr key={u.user_address + u.currency} className="hover:bg-white/[0.02] transition-colors group border-b border-white/5">
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-white text-sm font-bold">{u.username || 'Anonymous'}</span>
-                                                            <span className="font-mono text-white/20 text-[10px]">{shortenAddress(u.user_address)}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6"><span className="text-[10px] font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
-                                                    <td className="px-8 py-6 text-white font-mono font-bold">{u.balance.toFixed(4)}</td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-black text-white/60">{u.referral?.referral_code || '---'}</span>
-                                                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{u.referral?.referral_count || 0} REFS</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-white/40">{u.activity.totalBets} plays</td>
-                                                    <td className="px-8 py-6 text-right text-white font-mono font-black">${u.activity.totalVolume.toLocaleString()}</td>
-                                                </tr>
-                                            ))}
+                                            {loading ? <LoadingRow /> : users
+                                                .filter(u => !searchTerm || u.user_address.toLowerCase().includes(searchTerm.toLowerCase()) || (u.username && u.username.toLowerCase().includes(searchTerm.toLowerCase())))
+                                                .map(u => (
+                                                    <tr key={u.user_address + u.currency} className="hover:bg-white/[0.02] transition-colors group border-b border-white/5">
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-white text-sm font-bold">{u.username || 'Anonymous'}</span>
+                                                                <span className="font-mono text-white/20 text-[10px]">{shortenAddress(u.user_address)}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6"><span className="text-[10px] font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
+                                                        <td className="px-8 py-6 text-white font-mono font-bold">{u.balance.toFixed(4)}</td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] font-black text-white/60">{u.referral?.referral_code || '---'}</span>
+                                                                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{u.referral?.referral_count || 0} REFS</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-white/40">{u.activity.totalBets} plays</td>
+                                                        <td className="px-8 py-6 text-white font-mono font-black">${u.activity.totalVolume.toLocaleString()}</td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${u.activity.totalVolume > 500 ? 'bg-purple-500/10 text-purple-400' : u.activity.totalVolume > 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-white/5 text-white/20'}`}>
+                                                                {u.activity.totalVolume > 500 ? 'VIP' : u.activity.totalVolume > 50 ? 'Standard' : 'Free'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </Table>
                                 )}
 
                                 {activeTab === 'gameplay' && (
-                                    <Table key="gameplay">
-                                        <THead labels={['Time', 'Asset', 'Direction', 'Wager', 'Outcome', 'Node']} />
-                                        <tbody>
-                                            {loading ? <LoadingRow /> : gameHistory.map(b => (
-                                                <tr key={b.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
-                                                    <td className="px-8 py-6 text-[10px] font-mono">{new Date(b.created_at).toLocaleString()}</td>
-                                                    <td className="px-8 py-6 font-black text-white">{b.asset}</td>
-                                                    <td className="px-8 py-6">
-                                                        <span className={b.direction === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>{b.direction}</span>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-white font-mono">${b.amount.toFixed(2)}</td>
-                                                    <td className="px-8 py-6">
-                                                        <span className={b.won ? 'text-emerald-400 font-bold' : 'text-white/20'}>
-                                                            {b.won ? `+$${b.payout.toFixed(2)}` : '-$' + b.amount.toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right font-mono text-[10px]">{shortenAddress(b.wallet_address)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </Table>
+                                    <div key="gameplay" className="space-y-6">
+                                        <div className="p-6 border-b border-white/5 flex flex-wrap gap-6 items-center bg-white/[0.01]">
+                                            <div className="flex gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
+                                                <button
+                                                    onClick={() => setGameplayFilter('all')}
+                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'all' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                                                >
+                                                    All Modes
+                                                </button>
+                                                <button
+                                                    onClick={() => setGameplayFilter('real')}
+                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'real' ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-white/40 hover:text-white'}`}
+                                                >
+                                                    Real Wallet
+                                                </button>
+                                                <button
+                                                    onClick={() => setGameplayFilter('demo')}
+                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'demo' ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'text-white/40 hover:text-white'}`}
+                                                >
+                                                    Demo Mode
+                                                </button>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                {['BNB', 'NEAR', 'SOL', 'SUI', 'XTZ', 'XLM'].map(chain => (
+                                                    <button
+                                                        key={chain}
+                                                        onClick={() => setChainFilter(prev => prev === chain ? 'ALL' : chain)}
+                                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border transition-all ${chainFilter === chain ? 'bg-white/10 border-white/30 text-white' : 'bg-transparent border-white/5 text-white/30 hover:border-white/20'}`}
+                                                    >
+                                                        {chain}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <Table>
+                                            <THead labels={['Time', 'Asset', 'Direction', 'Wager', 'Outcome', 'Node', 'Account']} />
+                                            <tbody>
+                                                {loading ? <LoadingRow /> : gameHistory
+                                                    .filter(b => {
+                                                        const isDemo = b.id.toString().startsWith('demo-');
+                                                        if (gameplayFilter === 'real' && isDemo) return false;
+                                                        if (gameplayFilter === 'demo' && !isDemo) return false;
+                                                        return true;
+                                                    })
+                                                    .filter(b => chainFilter === 'ALL' || b.id.toString().toUpperCase().includes(chainFilter) || (b as any).network === chainFilter)
+                                                    .map(b => {
+                                                        const isDemo = b.id.toString().startsWith('demo-');
+                                                        return (
+                                                            <tr key={b.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                                <td className="px-8 py-6 text-[10px] font-mono">{new Date(b.created_at).toLocaleString()}</td>
+                                                                <td className="px-8 py-6 font-black text-white">{b.asset}</td>
+                                                                <td className="px-8 py-6">
+                                                                    <span className={b.direction === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>{b.direction}</span>
+                                                                </td>
+                                                                <td className="px-8 py-6 text-white font-mono">${b.amount.toFixed(2)}</td>
+                                                                <td className="px-8 py-6">
+                                                                    <span className={b.won ? 'text-emerald-400 font-bold' : 'text-white/20'}>
+                                                                        {b.won ? `+$${b.payout.toFixed(2)}` : '-$' + b.amount.toFixed(2)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-8 py-6 font-mono text-[10px]">{shortenAddress(b.wallet_address)}</td>
+                                                                <td className="px-8 py-6 text-right">
+                                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${isDemo ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                        {isDemo ? 'Demo' : 'Real'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                            </tbody>
+                                        </Table>
+                                    </div>
                                 )}
 
                                 {activeTab === 'financial' && (
                                     <Table key="financial">
                                         <THead labels={['Time', 'Identity', 'Operation', 'Amount', 'Ref']} />
                                         <tbody>
-                                            {loading ? <LoadingRow /> : transactions.map(t => (
-                                                <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                                    <td className="px-8 py-6 text-[10px] font-mono">{new Date(t.created_at).toLocaleString()}</td>
-                                                    <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
-                                                    <td className="px-8 py-6">
-                                                        <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black'}>
-                                                            {t.operation_type}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
-                                                    <td className="px-8 py-6 text-right font-mono text-[10px] text-white/20">{t.transaction_hash || 'INTERNAL'}</td>
-                                                </tr>
-                                            ))}
+                                            {loading ? <LoadingRow /> : transactions.map(t => {
+                                                const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
+                                                return (
+                                                    <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                                                        <td className="px-8 py-6 text-[10px] font-mono">{new Date(t.created_at).toLocaleString()}</td>
+                                                        <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
+                                                        <td className="px-8 py-6">
+                                                            <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black'}>
+                                                                {t.operation_type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            {explorerUrl ? (
+                                                                <a
+                                                                    href={explorerUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="font-mono text-[10px] text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
+                                                                >
+                                                                    {t.transaction_hash.slice(0, 10)}...
+                                                                </a>
+                                                            ) : (
+                                                                <span className="font-mono text-[10px] text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </Table>
                                 )}
@@ -496,12 +608,20 @@ export default function AdminDashboard() {
                                     <div key="access_codes">
                                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
                                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Code Generator</p>
-                                            <button
-                                                onClick={() => generateAccessCodes(5)}
-                                                className="px-4 py-2 bg-white text-black font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-gray-200 transition-all"
-                                            >
-                                                Generate 5 Codes
-                                            </button>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={exportAccessCodes}
+                                                    className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-blue-500/20 transition-all"
+                                                >
+                                                    Export to Google Sheets (CSV)
+                                                </button>
+                                                <button
+                                                    onClick={() => generateAccessCodes(5)}
+                                                    className="px-4 py-2 bg-white text-black font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-gray-200 transition-all"
+                                                >
+                                                    Generate 5 Codes
+                                                </button>
+                                            </div>
                                         </div>
                                         <Table>
                                             <THead labels={['Access Code', 'Status', 'Wallet Link', 'Authorized At']} />

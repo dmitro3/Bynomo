@@ -13,6 +13,7 @@ import { ethers } from 'ethers';
 import { useToast } from '@/lib/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
+import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 
 
 export const GameBoard: React.FC = () => {
@@ -60,6 +61,8 @@ export const GameBoard: React.FC = () => {
   const [blitzCountdown, setBlitzCountdown] = useState<string>('');
   const [blitzTimeRemaining, setBlitzTimeRemaining] = useState<string>('');
   const [isActivatingBlitz, setIsActivatingBlitz] = useState(false);
+  const { mutateAsync: signAndExecuteSui } = useSignAndExecuteTransaction();
+  const suiAccount = useCurrentAccount();
 
   const toast = useToast();
   const [accessInput, setAccessInput] = useState('');
@@ -85,12 +88,6 @@ export const GameBoard: React.FC = () => {
       return;
     }
 
-    const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
-    if (!wallet) {
-      toast.error("Active wallet not found in session");
-      return;
-    }
-
     try {
       setIsActivatingBlitz(true);
 
@@ -103,6 +100,11 @@ export const GameBoard: React.FC = () => {
         const signature = await sendSolanaTransaction(transaction, connection);
         console.log("Solana Blitz payment sig:", signature);
       } else if (network === 'BNB') {
+        const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+        if (!wallet) {
+          throw new Error("Active wallet not found in session. Please reconnect.");
+        }
+
         const ethereumProvider = await wallet.getEthereumProvider();
         const provider = new ethers.BrowserProvider(ethereumProvider);
         const signer = await provider.getSigner();
@@ -119,7 +121,65 @@ export const GameBoard: React.FC = () => {
         });
         console.log("BNB Blitz payment tx:", txResponse.hash);
       } else if (network === 'SUI') {
-        toast.info("Entering Blitz on Sui...");
+        if (!suiAccount) throw new Error('Sui wallet not connected');
+        const { buildDepositTransaction } = await import('@/lib/sui/client');
+        const tx = await buildDepositTransaction(blitzEntryFee, address);
+        toast.info(`Confirming ${blitzEntryFee} USDC Blitz Entry on Sui...`);
+        const result = await signAndExecuteSui({ transaction: tx as any });
+        console.log("Sui Blitz payment digest:", result.digest);
+      } else if (network === 'XTZ') {
+        const { BeaconWallet } = await import('@taquito/beacon-wallet');
+        const { NetworkType } = await import('@airgap/beacon-types');
+        const { getTezosClient } = await import('@/lib/tezos/client');
+
+        const rpcUrl = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
+        const wallet = new BeaconWallet({
+          name: "BYNOMO",
+          preferredNode: rpcUrl,
+          network: { type: NetworkType.MAINNET, rpcUrl }
+        } as any);
+
+        await wallet.requestPermissions();
+        const tezos = await getTezosClient();
+        tezos.setWalletProvider(wallet);
+
+        const treasuryAddress = process.env.NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS;
+        if (!treasuryAddress) throw new Error('Tezos treasury not configured');
+
+        toast.info(`Confirming ${blitzEntryFee} XTZ Blitz Entry...`);
+        const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: blitzEntryFee }).send();
+        console.log("Tezos Blitz payment hash:", op.opHash);
+      } else if (network === 'XLM') {
+        const { StellarWalletsKit, WalletNetwork, allowAllModules } = await import('@creit.tech/stellar-wallets-kit');
+        const { TransactionBuilder, Networks, Operation, Asset, Horizon } = await import('@stellar/stellar-sdk');
+
+        const treasuryAddress = process.env.NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS;
+        if (!treasuryAddress) throw new Error('Stellar treasury not configured');
+
+        const server = new Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon.stellar.org');
+        const account = await server.loadAccount(address);
+
+        const transaction = new TransactionBuilder(account, {
+          fee: '100',
+          networkPassphrase: Networks.PUBLIC,
+        })
+          .addOperation(Operation.payment({
+            destination: treasuryAddress,
+            asset: Asset.native(),
+            amount: blitzEntryFee.toFixed(7),
+          }))
+          .setTimeout(30)
+          .build();
+
+        const kit = new StellarWalletsKit({
+          network: WalletNetwork.PUBLIC,
+          modules: allowAllModules(),
+        });
+
+        toast.info(`Confirming ${blitzEntryFee} XLM Blitz Entry...`);
+        const { signedTxXdr } = await kit.signTransaction(transaction.toXDR());
+        const result = await server.submitTransaction(TransactionBuilder.fromXDR(signedTxXdr, Networks.PUBLIC));
+        console.log("Stellar Blitz payment hash:", (result as any).hash);
       } else if (network === 'NEAR') {
         const { depositNEAR } = await import('@/lib/near/wallet');
         toast.info(`Confirming ${blitzEntryFee} NEAR Blitz Entry...`);
@@ -445,23 +505,23 @@ export const GameBoard: React.FC = () => {
                     <label className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2 block">
                       Expiration Time
                     </label>
-                    <div className="grid grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                       {[5, 10, 15, 30, 60].map(duration => (
                         <button
                           key={duration}
                           onClick={() => setSelectedDuration(duration)}
                           className={`
-                            py-2 rounded-lg font-bold text-xs transition-all duration-200 border
+                            py-3 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-xs transition-all duration-300 border
                             ${selectedDuration === duration
-                              ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                              ? 'bg-purple-600/20 border-purple-500/50 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] scale-105 z-10'
                               : 'bg-black/40 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/10'
                             }
                           `}
                         >
-                          <div className="flex flex-col items-center">
-                            <span>{duration < 60 ? `${duration}s` : '1m'}</span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="tracking-tighter">{duration < 60 ? `${duration}s` : '1m'}</span>
                             {gameMode === 'binomo' && (
-                              <span className="text-[8px] opacity-70">x{getMultiplier(duration)}</span>
+                              <span className="text-[7px] sm:text-[8px] opacity-70 font-mono tracking-tighter">x{getMultiplier(duration)}</span>
                             )}
                           </div>
                         </button>

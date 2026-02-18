@@ -37,11 +37,24 @@ export const BetControls: React.FC<BetControlsProps> = ({
     switch (network) {
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
+      case 'SUI': return 'USDC';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';
       }
       default: return 'BNB';
+    }
+  }, [network]);
+
+  const currencyLogo = useMemo(() => {
+    switch (network) {
+      case 'SUI': return '/logos/usdc.png';
+      case 'SOL': return '/logos/solana-sol-logo.png';
+      case 'BNB': return '/logos/bnb-bnb-logo.png';
+      case 'NEAR': return '/logos/near-logo.svg';
+      case 'XTZ': return '/logos/tezos-xtz-logo.png';
+      case 'XLM': return '/logos/stellar-xlm-logo.png';
+      default: return '/logos/bnb-bnb-logo.png';
     }
   }, [network]);
 
@@ -142,9 +155,12 @@ export const BetControls: React.FC<BetControlsProps> = ({
 
           {/* House Balance */}
           {isWalletConnected && (
-            <div className="bg-gray-900/50 border border-white/5 rounded-2xl p-4">
-              <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">House Balance</p>
-              <p className="text-white text-xl font-black mt-1">{houseBalance.toFixed(4)} {currencySymbol}</p>
+            <div className="bg-gray-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">House Balance</p>
+                <p className="text-white text-xl font-black mt-1">{houseBalance.toFixed(4)} {currencySymbol}</p>
+              </div>
+              <img src={currencyLogo} alt={currencySymbol} className="w-8 h-8 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
             </div>
           )}
 

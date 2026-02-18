@@ -895,14 +895,34 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   opacity
                 }}
               >
-                <div className="flex flex-col items-center">
-                  <span className={`text-[10px] font-mono font-bold transition-colors ${cell.isBlitzBoosted ? 'text-orange-100 drop-shadow-[0_0_5px_rgba(255,165,0,0.8)]' : 'text-white/80'}`}>
-                    x{cell.multiplier}
-                  </span>
-                  {cell.isBlitzBoosted && (
-                    <span className="text-[7px] font-bold text-orange-400 -mt-1 uppercase tracking-tighter animate-pulse">
-                      Blitz
-                    </span>
+                <div className="flex flex-col items-center justify-center h-full w-full pointer-events-none">
+                  {hasBet ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[14px] font-black text-white tracking-tighter leading-none drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
+                          {(parseFloat(cellBets.get(cell.id)?.amount as any || '0') * parseFloat(cellBets.get(cell.id)?.multiplier as any || '1')).toFixed(2)}
+                        </span>
+                        <span className="text-[7px] font-black uppercase text-cyan-400/80 tracking-[0.2em] mt-0.5">
+                          {currencySymbol}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
+                        <span className="text-[9px] font-bold text-white/50 tracking-tighter">
+                          {cellBets.get(cell.id)?.multiplier}x
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span className={`text-[10px] font-black transition-colors ${cell.isBlitzBoosted ? 'text-orange-100 drop-shadow-[0_0_5px_rgba(255,165,0,0.8)]' : 'text-white/40'}`}>
+                        {cell.multiplier}x
+                      </span>
+                      {cell.isBlitzBoosted && (
+                        <span className="text-[6px] font-black text-orange-400 uppercase tracking-widest mt-0.5">
+                          BLITZ
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1018,26 +1038,51 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
             {/* X-Axis Time Ticks */}
             <g className="x-axis">
-              {[-30, -20, -10, 0, 10, 20, 30].map((sec) => {
-                const ts = now + sec * 1000;
-                const x = scales.xScale(ts);
-                if (x < 0 || x > dimensions.width) return null;
-                return (
-                  <g key={`x-tick-${sec}`}>
-                    <line x1={x} y1={0} x2={x} y2={dimensions.height} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
-                    <text
-                      x={x + 5}
-                      y={dimensions.height - 10}
-                      fill="#94a3b8"
-                      fontSize="10"
-                      fontFamily="monospace"
-                      className="opacity-50"
-                    >
-                      {new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </text>
-                  </g>
-                );
-              })}
+              {(() => {
+                // Dynamic tick interval based on pixelsPerSecond
+                // We want at least 120px between time labels to prevent overlap
+                const minSpacing = 120;
+                let tickInterval = 10;
+
+                if (pixelsPerSecond < minSpacing / 10) tickInterval = 30;
+                if (pixelsPerSecond < minSpacing / 30) tickInterval = 60;
+                if (pixelsPerSecond < minSpacing / 60) tickInterval = 120;
+                if (pixelsPerSecond < minSpacing / 120) tickInterval = 300;
+                if (pixelsPerSecond < minSpacing / 300) tickInterval = 600;
+
+                // Calculate range of seconds to show based on visible dimensions
+                const secondsPast = scales.tipX / pixelsPerSecond;
+                const secondsFuture = (dimensions.width - scales.tipX) / pixelsPerSecond;
+
+                const startSec = Math.floor(-secondsPast / tickInterval) * tickInterval;
+                const endSec = Math.ceil(secondsFuture / tickInterval) * tickInterval;
+
+                const ticks = [];
+                for (let s = startSec; s <= endSec; s += tickInterval) {
+                  ticks.push(s);
+                }
+
+                return ticks.map((sec) => {
+                  const ts = now + sec * 1000;
+                  const x = scales.xScale(ts);
+                  if (x < 0 || x > dimensions.width) return null;
+                  return (
+                    <g key={`x-tick-${sec}`}>
+                      <line x1={x} y1={0} x2={x} y2={dimensions.height} stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
+                      <text
+                        x={x + 5}
+                        y={dimensions.height - 10}
+                        fill="#94a3b8"
+                        fontSize="9"
+                        fontFamily="monospace"
+                        className="opacity-40"
+                      >
+                        {new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </text>
+                    </g>
+                  );
+                });
+              })()}
             </g>
 
             {chartPath && currentPrice > 0 && (

@@ -15,8 +15,11 @@ export function HeaderMenu() {
         username
     } = useStore();
 
-    // Close when clicking outside
+    const [isTradePage, setIsTradePage] = useState(false);
+
     useEffect(() => {
+        setIsTradePage(window.location.pathname === '/trade');
+
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
@@ -40,6 +43,12 @@ export function HeaderMenu() {
             accent: 'bg-emerald-500'
         },
         {
+            label: 'Leaderboard',
+            sublabel: 'Global Hall of Fame',
+            href: '/leaderboard',
+            accent: 'bg-yellow-500'
+        },
+        ...(isTradePage ? [{
             label: 'Quick Tour',
             sublabel: 'Interactive onboarding',
             onClick: () => {
@@ -47,7 +56,7 @@ export function HeaderMenu() {
                 setIsOpen(false);
             },
             accent: 'bg-purple-500'
-        }
+        }] : [])
     ];
 
     return (
