@@ -1,7 +1,5 @@
-import * as nearAPI from "near-api-js";
+import { Account, KeyPair, JsonRpcProvider, KeyPairSigner } from "near-api-js";
 import { NEAR_CONFIG } from "./config";
-
-const { connect, KeyPair, keyStores, utils } = nearAPI as any;
 
 export const transferNEARFromTreasury = async (
     receiverId: string,
@@ -14,25 +12,25 @@ export const transferNEARFromTreasury = async (
         throw new Error("Missing NEAR treasury credentials in environment");
     }
 
-    const keyStore = new keyStores.InMemoryKeyStore();
-    const keyPair = KeyPair.fromString(privateKey);
-    await keyStore.setKey("mainnet", accountId, keyPair);
+    // Create provider
+    const provider = new JsonRpcProvider({ url: NEAR_CONFIG.nodeUrl });
 
-    const near = await connect({
-        ...NEAR_CONFIG,
-        keyStore,
+    // Create signer from private key
+    const keyPair = KeyPair.fromString(privateKey as any);
+    const signer = new KeyPairSigner(keyPair);
+
+    // Create account instance
+    const account = new Account(accountId, provider, signer);
+
+    // Convert amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+    // Use toFixed to avoid scientific notation
+    const amountInYocto = (amount * 1e24).toFixed(0);
+
+    // Transfer NEAR tokens
+    const result = await account.transfer({
+        receiverId,
+        amount: amountInYocto
     });
-
-    const account = await near.account(accountId);
-
-    // Convert amount to yoctoNEAR
-    const amountInYocto = utils.format.parseNearAmount(amount.toString());
-
-    if (!amountInYocto) {
-        throw new Error("Invalid amount for NEAR transfer");
-    }
-
-    const result = await account.sendMoney(receiverId, amountInYocto);
 
     return result.transaction.hash;
 };

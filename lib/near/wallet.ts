@@ -7,6 +7,8 @@ import { setupBitgetWallet } from "@near-wallet-selector/bitget-wallet";
 import { NEAR_CONFIG, NEAR_CONTRACT_ID } from "./config";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { JsonRpcProvider, parseNearAmount } from "near-api-js";
+import { actionCreators } from "@near-js/transactions";
+import BN from "bn.js";
 
 let selector: any = null;
 let modal: any = null;
@@ -18,15 +20,16 @@ export const initNearSelector = async () => {
         network: "mainnet",
         modules: [
             setupMyNearWallet(),
-            setupSender(),
+            setupSender(), // Note: Sender wallet doesn't support Transfer actions, only FunctionCall
             setupHereWallet(),
             setupBitgetWallet()
         ],
     });
 
-    modal = setupModal(selector, {
-        contractId: NEAR_CONTRACT_ID,
-    });
+    // Don't pass any options to setupModal - this ensures no contractId restrictions
+    // If contractId is set, wallets like Sender create function-call access keys
+    // which can ONLY call functions on that contract, not make Transfer actions
+    modal = setupModal(selector);
 
     return { selector, modal };
 };
@@ -85,6 +88,13 @@ export const depositNEAR = async (amount: string) => {
     }
 
     const wallet = await selector.wallet();
+    
+    // Check if using Sender wallet and warn user upfront
+    const walletId = wallet.id;
+    if (walletId === 'sender') {
+        throw new Error("Sender wallet is not supported for deposits. Please use MyNearWallet, HereWallet, or Bitget Wallet instead.");
+    }
+
     const amountInYocto = parseNearAmount(amount as `${number}`);
 
     if (!amountInYocto) throw new Error("Invalid NEAR amount");
@@ -94,16 +104,10 @@ export const depositNEAR = async (amount: string) => {
         throw new Error("NEAR treasury address not configured");
     }
 
+    // Send transfer action to treasury account using actionCreators
     const result = await wallet.signAndSendTransaction({
         receiverId: treasuryAddress,
-        actions: [
-            {
-                type: "Transfer",
-                params: {
-                    deposit: amountInYocto,
-                },
-            },
-        ],
+        actions: [actionCreators.transfer(new BN(amountInYocto))],
     });
 
     if (!result) throw new Error("Transaction failed");

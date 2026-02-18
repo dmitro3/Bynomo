@@ -75,7 +75,9 @@ export class PythPriceFeed {
   async fetchPrice(): Promise<PriceData> {
     try {
       if (this.asset === 'BYNOMO') {
-        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${CUSTOM_TOKENS.BYNOMO}`);
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${CUSTOM_TOKENS.BYNOMO}`, {
+          signal: AbortSignal.timeout(5000)
+        });
         if (!response.ok) throw new Error('DexScreener API error');
         const data = await response.json();
         if (data.pairs && data.pairs.length > 0) {
@@ -184,12 +186,18 @@ export class PythPriceFeed {
       }
 
       // 2. BYNOMO (DexScreener)
-      const bynomoRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${CUSTOM_TOKENS.BYNOMO}`);
-      if (bynomoRes.ok) {
-        const data = await bynomoRes.json();
-        if (data.pairs && data.pairs.length > 0) {
-          results.BYNOMO = parseFloat(data.pairs[0].priceUsd);
+      try {
+        const bynomoRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${CUSTOM_TOKENS.BYNOMO}`, {
+          signal: AbortSignal.timeout(5000) // 5s timeout
+        });
+        if (bynomoRes.ok) {
+          const data = await bynomoRes.json();
+          if (data.pairs && data.pairs.length > 0) {
+            results.BYNOMO = parseFloat(data.pairs[0].priceUsd);
+          }
         }
+      } catch (tokenErr) {
+        // Quietly fail for custom tokens to avoid console spam
       }
     } catch (err) {
       console.error('Error in fetchAllPrices:', err);

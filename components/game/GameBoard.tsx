@@ -120,6 +120,11 @@ export const GameBoard: React.FC = () => {
         console.log("BNB Blitz payment tx:", txResponse.hash);
       } else if (network === 'SUI') {
         toast.info("Entering Blitz on Sui...");
+      } else if (network === 'NEAR') {
+        const { depositNEAR } = await import('@/lib/near/wallet');
+        toast.info(`Confirming ${blitzEntryFee} NEAR Blitz Entry...`);
+        const txHash = await depositNEAR(blitzEntryFee.toString());
+        console.log("NEAR Blitz payment hash:", txHash);
       }
 
       toast.success("Payment successful! Blitz Mode enabled.");
