@@ -8,7 +8,6 @@ import { NEAR_CONFIG, NEAR_CONTRACT_ID } from "./config";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { JsonRpcProvider, parseNearAmount } from "near-api-js";
 import { actionCreators } from "@near-js/transactions";
-import BN from "bn.js";
 
 let selector: any = null;
 let modal: any = null;
@@ -26,10 +25,10 @@ export const initNearSelector = async () => {
         ],
     });
 
-    // Don't pass any options to setupModal - this ensures no contractId restrictions
+    // Don't pass contractId to setupModal - this ensures no contractId restrictions
     // If contractId is set, wallets like Sender create function-call access keys
     // which can ONLY call functions on that contract, not make Transfer actions
-    modal = setupModal(selector);
+    modal = setupModal(selector, {});
 
     return { selector, modal };
 };
@@ -107,7 +106,7 @@ export const depositNEAR = async (amount: string) => {
     // Send transfer action to treasury account using actionCreators
     const result = await wallet.signAndSendTransaction({
         receiverId: treasuryAddress,
-        actions: [actionCreators.transfer(new BN(amountInYocto))],
+        actions: [actionCreators.transfer(BigInt(amountInYocto))],
     });
 
     if (!result) throw new Error("Transaction failed");
