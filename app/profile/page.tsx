@@ -64,8 +64,16 @@ export default function ProfilePage() {
         referralCode,
         referralCount,
         accessCode,
-        network
+        network,
+        fetchRecentTrades
     } = useStore();
+
+    // Fetch recent trades on mount
+    useEffect(() => {
+        if (isConnected && address) {
+            fetchRecentTrades(address);
+        }
+    }, [isConnected, address, fetchRecentTrades]);
 
     const currentTierIndex = TIER_DATA.findIndex(t => t.id === userTier);
     const safeTierIndex = currentTierIndex === -1 ? 0 : currentTierIndex;

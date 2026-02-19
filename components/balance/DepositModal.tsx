@@ -46,7 +46,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
 
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? 'SOL' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
+  const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
   const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : 'BNB Chain';
 
   // Quick select amounts
@@ -135,9 +136,17 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       } else if (network === 'SOL') {
         if (!solanaPublicKey) throw new Error('Solana wallet not connected');
 
-        const { buildDepositTransaction, getSolanaConnection } = await import('@/lib/solana/client');
-        const transaction = await buildDepositTransaction(depositAmount, address);
+        const { buildDepositTransaction, buildTokenDepositTransaction, getSolanaConnection } = await import('@/lib/solana/client');
         const connection = getSolanaConnection();
+        const selectedCurrency = useOverflowStore.getState().selectedCurrency;
+
+        let transaction;
+        if (selectedCurrency === 'BYNOMO') {
+          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          transaction = await buildTokenDepositTransaction(depositAmount, address, BYNOMO_MINT);
+        } else {
+          transaction = await buildDepositTransaction(depositAmount, address);
+        }
 
         toast.info('Please confirm the transaction in your Solana wallet...');
 
@@ -274,7 +283,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
-            {network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />}
+            {currencySymbol === 'BYNOMO' ? <img src="/overflowlogo.png" alt="BYNOMO" className="w-5 h-5" /> : (network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />)}
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
             {network === 'NEAR' && <img src="/logos/near-logo.svg" alt="NEAR" className="w-5 h-5" />}
             {walletBalance.toFixed(4)} {currencySymbol}

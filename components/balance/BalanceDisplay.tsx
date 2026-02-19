@@ -151,8 +151,8 @@ export const BalanceDisplay: React.FC = () => {
                       setTimeout(() => fetchBalance(address!), 100);
                     }}
                     className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${(!selectedCurrency || selectedCurrency === 'SOL')
-                        ? 'bg-purple-500 text-white shadow-lg'
-                        : 'text-white/40 hover:text-white/60'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-white/40 hover:text-white/60'
                       }`}
                   >
                     SOL
@@ -163,8 +163,8 @@ export const BalanceDisplay: React.FC = () => {
                       setTimeout(() => fetchBalance(address!), 100);
                     }}
                     className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${selectedCurrency === 'BYNOMO'
-                        ? 'bg-purple-500 text-white shadow-lg'
-                        : 'text-white/40 hover:text-white/60'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-white/40 hover:text-white/60'
                       }`}
                   >
                     BYNOMO
@@ -217,7 +217,7 @@ export const BalanceDisplay: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <img
                     src={
-                      currentSymbol === 'BYNOMO' ? '/logos/bynomo-logo.png' :
+                      currentSymbol === 'BYNOMO' ? '/overflowlogo.png' :
                         network === 'SUI' ? '/logos/sui-logo.png' :
                           network === 'SOL' ? '/logos/solana-sol-logo.png' :
                             network === 'XLM' ? '/logos/stellar-xlm-logo.png' :

@@ -79,13 +79,14 @@ export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
     },
 
     fetchRecentTrades: async (address: string) => {
+        if (!address) return;
         set({ isLoadingTrades: true });
         try {
             const { data, error } = await supabase
                 .from('bet_history')
                 .select('*')
-                .eq('wallet_address', address)
-                .order('created_at', { ascending: false })
+                .eq('wallet_address', address.toLowerCase())
+                .order('resolved_at', { ascending: false })
                 .limit(10);
 
             if (data) {

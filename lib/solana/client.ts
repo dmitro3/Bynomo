@@ -73,6 +73,52 @@ export async function buildDepositTransaction(
 }
 
 /**
+ * Build a token deposit transaction
+ */
+export async function buildTokenDepositTransaction(
+    amount: number,
+    userAddress: string,
+    mintAddress: string
+): Promise<Transaction> {
+    const {
+        getAssociatedTokenAddress,
+        createTransferInstruction,
+        getMint
+    } = await import('@solana/spl-token');
+
+    const config = getSolanaConfig();
+    const connection = getSolanaConnection();
+
+    const userPublicKey = new PublicKey(userAddress);
+    const treasuryPublicKey = new PublicKey(config.treasuryAddress);
+    const mintPublicKey = new PublicKey(mintAddress);
+
+    // Get mint info for decimals
+    const mintInfo = await getMint(connection, mintPublicKey);
+    const decimals = mintInfo.decimals;
+
+    // Get ATAs
+    const userTokenAccount = await getAssociatedTokenAddress(mintPublicKey, userPublicKey);
+    const treasuryTokenAccount = await getAssociatedTokenAddress(mintPublicKey, treasuryPublicKey);
+
+    const transaction = new Transaction().add(
+        createTransferInstruction(
+            userTokenAccount,
+            treasuryTokenAccount,
+            userPublicKey,
+            Math.floor(amount * Math.pow(10, decimals))
+        )
+    );
+
+    // Add blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = userPublicKey;
+
+    return transaction;
+}
+
+/**
  * Get SOL balance for a given address with robust RPC fallback
  */
 export async function getSOLBalance(address: string): Promise<number> {

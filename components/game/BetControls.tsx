@@ -47,6 +47,9 @@ export const BetControls: React.FC<BetControlsProps> = ({
   }, [network]);
 
   const currencyLogo = useMemo(() => {
+    if (network === 'SOL' && currencySymbol === 'BYNOMO') {
+      return '/overflowlogo.png';
+    }
     switch (network) {
       case 'SUI': return '/logos/usdc.png';
       case 'SOL': return '/logos/solana-sol-logo.png';
@@ -56,7 +59,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
-  }, [network]);
+  }, [network, currencySymbol]);
 
   const [error, setError] = useState<string | null>(null);
   const [accessInput, setAccessInput] = useState('');

@@ -99,8 +99,14 @@ export async function POST(request: NextRequest) {
       if (isBNB) {
         signature = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
       } else if (isSOL) {
-        const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
-        signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
+        if (currency === 'BYNOMO') {
+          const { transferTokenFromTreasury } = await import('@/lib/solana/backend-client');
+          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          signature = await transferTokenFromTreasury(userAddress, netWithdrawAmount, BYNOMO_MINT);
+        } else {
+          const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
+          signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
+        }
       } else if (isSUI) {
         const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
         signature = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);

@@ -23,8 +23,11 @@ export const transferNEARFromTreasury = async (
     const account = new Account(accountId, provider, signer);
 
     // Convert amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
-    // Use toFixed to avoid scientific notation
-    const amountInYocto = (amount * 1e24).toFixed(0);
+    // Use BigInt math to avoid precision and scientific notation issues
+    const NEAR_NOMINATION = BigInt("1000000000000000000000000"); // 10^24
+
+    // Convert float amount to a large integer first to maintain precision
+    const amountInYocto = (BigInt(Math.floor(amount * 1e8)) * NEAR_NOMINATION / BigInt(1e8)).toString();
 
     // Transfer NEAR tokens
     const result = await account.transfer({

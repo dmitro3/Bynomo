@@ -71,3 +71,68 @@ export async function transferSOLFromTreasury(
         throw error;
     }
 }
+/**
+ * Transfer SPL Token from treasury to a user
+ */
+export async function transferTokenFromTreasury(
+    toAddress: string,
+    amount: number,
+    mintAddress: string
+): Promise<string> {
+    try {
+        const {
+            getOrCreateAssociatedTokenAccount,
+            createTransferInstruction,
+            getMint
+        } = await import('@solana/spl-token');
+
+        const config = getSolanaConfig();
+        const connection = new Connection(config.rpcEndpoint, 'confirmed');
+        const treasuryKeypair = getTreasuryKeypair();
+        const toPublicKey = new PublicKey(toAddress);
+        const mintPublicKey = new PublicKey(mintAddress);
+
+        // Get mint info to handle decimals
+        const mintInfo = await getMint(connection, mintPublicKey);
+        const decimals = mintInfo.decimals;
+
+        // Get or create ATA for treasury (source)
+        const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            treasuryKeypair,
+            mintPublicKey,
+            treasuryKeypair.publicKey
+        );
+
+        // Get or create ATA for receiver (destination)
+        // Note: receiver might need to pay for account creation if it doesn't exist,
+        // but typically the sender (treasury) pays for it here.
+        const toTokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            treasuryKeypair,
+            mintPublicKey,
+            toPublicKey
+        );
+
+        const transaction = new Transaction().add(
+            createTransferInstruction(
+                fromTokenAccount.address,
+                toTokenAccount.address,
+                treasuryKeypair.publicKey,
+                Math.floor(amount * Math.pow(10, decimals))
+            )
+        );
+
+        const signature = await sendAndConfirmTransaction(
+            connection,
+            transaction,
+            [treasuryKeypair]
+        );
+
+        console.log(`Token Withdrawal transaction confirmed: ${signature}`);
+        return signature;
+    } catch (error) {
+        console.error('Failed to transfer token from treasury:', error);
+        throw error;
+    }
+}
