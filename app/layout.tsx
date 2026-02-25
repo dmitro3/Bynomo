@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
+import { PostHogProvider } from "@/lib/posthog/PostHogProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,12 +86,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-[#02040a] text-white h-screen overflow-hidden flex flex-col`}
       >
-        <Providers>
-          <Header />
-          <main className="flex-1 relative overflow-y-auto overflow-x-hidden">
-            {children}
-          </main>
-        </Providers>
+        <PostHogProvider>
+          <Providers>
+            <Header />
+            <main className="flex-1 relative overflow-y-auto overflow-x-hidden">
+              {children}
+            </main>
+          </Providers>
+        </PostHogProvider>
         <Analytics />
         <SpeedInsights />
       </body>

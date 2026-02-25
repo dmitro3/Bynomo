@@ -14,6 +14,7 @@ import { useToast } from '@/lib/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
+import posthog from 'posthog-js';
 
 
 export const GameBoard: React.FC = () => {
@@ -90,6 +91,13 @@ export const GameBoard: React.FC = () => {
 
     try {
       setIsActivatingBlitz(true);
+      
+      // Track Blitz entry attempt
+      posthog.capture('blitz_entry_started', {
+        network,
+        entryFee: blitzEntryFee,
+        address
+      })
 
       if (network === 'SOL') {
         const { getSolanaConnection, buildDepositTransaction } = await import('@/lib/solana/client');
@@ -190,9 +198,24 @@ export const GameBoard: React.FC = () => {
       toast.success("Payment successful! Blitz Mode enabled.");
       enableBlitzAccess();
       refreshWalletBalance();
+      
+      // Track successful Blitz entry
+      posthog.capture('blitz_entry_success', {
+        network,
+        entryFee: blitzEntryFee,
+        address
+      })
     } catch (err: any) {
       console.error("Blitz entry failed:", err);
       const errorMessage = err.message || "";
+      
+      // Track Blitz entry failure
+      posthog.capture('blitz_entry_failed', {
+        network,
+        error: errorMessage,
+        address
+      })
+      
       if (errorMessage.includes('rejected') || errorMessage.includes('denied') || errorMessage.includes('User rejected')) {
         toast.error("User rejected");
       } else {
@@ -253,6 +276,17 @@ export const GameBoard: React.FC = () => {
     return () => clearInterval(interval);
   }, [isBlitzActive, blitzEndTime, nextBlitzTime, updateBlitzTimer]);
 
+  // Identify user when wallet connects
+  useEffect(() => {
+    if (address) {
+      posthog.identify(address, {
+        network,
+        hasBlitzAccess,
+        userTier,
+        hasAccessCode: !!accessCode
+      })
+    }
+  }, [address, network, hasBlitzAccess, userTier, accessCode])
 
 
   // Sync selectedDuration with store's timeframeSeconds
@@ -277,6 +311,18 @@ export const GameBoard: React.FC = () => {
 
     try {
       const multiplier = getMultiplier(selectedDuration);
+      
+      // Track bet placement
+      posthog.capture('bet_placed', {
+        direction,
+        amount: betAmount,
+        multiplier,
+        duration: selectedDuration,
+        asset: selectedAsset,
+        network,
+        currency: currencySymbol
+      })
+      
       await placeBetFromHouseBalance(
         betAmount,
         `${direction}-${multiplier}-${selectedDuration}`,
@@ -284,6 +330,14 @@ export const GameBoard: React.FC = () => {
       );
     } catch (err) {
       console.error("Failed to place bet:", err);
+      
+      // Track bet failure
+      posthog.capture('bet_failed', {
+        direction,
+        amount: betAmount,
+        error: err instanceof Error ? err.message : 'Unknown error',
+        network
+      })
     }
   };
 
