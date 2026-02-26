@@ -4,7 +4,6 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Key, ShieldCheck, Loader2, ArrowRight } from 'lucide-react';
 
 interface BetControlsProps {
   selectedTarget: string | null;
@@ -25,13 +24,11 @@ export const BetControls: React.FC<BetControlsProps> = ({
     activeRound,
     targetCells,
     isPlacingBet,
-    accessCode,
-    fetchProfile,
     address
   } = useStore();
 
   const isWalletConnected = !!address;
-  const isUnauthorized = isWalletConnected && accessCode === null;
+  const isUnauthorized = false; // Access codes disabled
 
   const currencySymbol = useMemo(() => {
     switch (network) {
@@ -62,8 +59,6 @@ export const BetControls: React.FC<BetControlsProps> = ({
   }, [network, currencySymbol]);
 
   const [error, setError] = useState<string | null>(null);
-  const [accessInput, setAccessInput] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
 
   // Get selected target details
   const selectedTargetCell = targetCells.find(cell => cell.id === selectedTarget);
@@ -79,11 +74,6 @@ export const BetControls: React.FC<BetControlsProps> = ({
 
     if (!isWalletConnected) {
       setError('Please connect your wallet');
-      return false;
-    }
-
-    if (isUnauthorized) {
-      setError('Initialization required');
       return false;
     }
 
@@ -117,43 +107,14 @@ export const BetControls: React.FC<BetControlsProps> = ({
     }
   };
 
-  const handleValidateAccess = async () => {
-    if (!accessInput || isValidating || !address) return;
-    setIsValidating(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/validate-access-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: accessInput.trim().toUpperCase(),
-          walletAddress: address
-        })
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        await fetchProfile(address);
-      } else {
-        setError(data.error || 'Invalid access code');
-      }
-    } catch (err) {
-      setError('Neural connection failed');
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
   // Quick bet amount buttons
   const quickAmounts = ['0.1', '0.5', '1', '5'];
 
   return (
     <Card>
       <div className="relative overflow-hidden group/panel min-h-[400px] flex flex-col p-4">
-        {/* Main Controls with conditional blur */}
-        <div className={`space-y-4 transition-all duration-700 flex-1 ${isUnauthorized ? 'blur-xl pointer-events-none scale-[0.98] opacity-30 select-none grayscale' : ''}`}>
+        {/* Main Controls */}
+        <div className="space-y-4 transition-all duration-700 flex-1">
           <h3 className="text-xl font-bold text-white mb-6">Place Bet</h3>
 
           {/* House Balance */}
@@ -231,63 +192,6 @@ export const BetControls: React.FC<BetControlsProps> = ({
             </p>
           )}
         </div>
-
-        {/* Access Code Input Overlay (only if connected but no access code) */}
-        {isUnauthorized && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20">
-            <div className="w-full space-y-8 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-purple-500/10 border border-purple-500/20 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(168,85,247,0.15)]">
-                  <Key className="w-8 h-8 text-purple-400" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-white font-black uppercase tracking-[0.3em] text-sm">Access Restricted</h4>
-                  <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest leading-relaxed">
-                    Beta stage protocol initialization.<br />Enter unique node code.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4 w-full">
-                <div className="relative group/input">
-                  <div className="absolute inset-0 bg-purple-500/20 rounded-2xl blur-2xl opacity-0 group-hover/input:opacity-100 transition-opacity duration-500" />
-                  <input
-                    type="text"
-                    value={accessInput}
-                    onChange={(e) => setAccessInput(e.target.value.toUpperCase())}
-                    placeholder="PROTOCOL CODE"
-                    disabled={isValidating}
-                    className="relative w-full bg-black/80 border border-white/10 rounded-2xl px-4 py-5 text-center text-white font-mono text-xl tracking-[0.4em] placeholder:tracking-normal placeholder:text-white/10 focus:outline-none focus:border-purple-500/50 transition-all shadow-2xl"
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest text-center animate-shake">{error}</p>
-                )}
-
-                <Button
-                  onClick={handleValidateAccess}
-                  disabled={!accessInput || isValidating}
-                  className="w-full bg-white text-black hover:bg-white/90 font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(255,255,255,0.1)] transition-transform active:scale-95"
-                  size="lg"
-                >
-                  {isValidating ? (
-                    <Loader2 className="w-5 h-5 animate-spin mr-3" />
-                  ) : (
-                    <ShieldCheck className="w-5 h-5 mr-3" />
-                  )}
-                  {isValidating ? 'VALIDATING...' : 'INITIALIZE NODE'}
-                </Button>
-              </div>
-
-              <div className="pt-4 border-t border-white/5">
-                <p className="text-[9px] text-white/10 text-center uppercase tracking-[0.4em] font-black">
-                  BYNOMO v2.0 Beta · Neural Node
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   );

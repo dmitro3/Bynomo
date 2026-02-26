@@ -72,11 +72,11 @@ export const GameBoard: React.FC = () => {
 
   // Unified balance and currency
   const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
-  const blitzEntryFee = 0.01;
+  const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
-  // Connection and Authorization status
+  // Connection status
   const isWalletConnected = !!address;
-  const isUnauthorized = isWalletConnected && accessCode === null;
+  const isUnauthorized = false; // Access codes disabled
 
   const handleEnterBlitz = async () => {
     if (!isWalletConnected || !address) {
