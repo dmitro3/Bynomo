@@ -29,7 +29,6 @@ export async function getSTRKBalance(address: string): Promise<number> {
   const fallbackRpcEndpoints = [
     'https://rpc.starknet.lava.build',
     'https://starknet-mainnet.public.blastapi.io/rpc/v0_8',
-    'https://starknet-mainnet.public.blastapi.io/rpc/v0_7',
   ];
 
   try {
