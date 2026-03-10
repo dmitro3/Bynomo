@@ -110,6 +110,25 @@ export const WalletConnectModal: React.FC = () => {
         }
     };
 
+    const handleStarknetConnect = async () => {
+        setOpen(false);
+        try {
+            const { connectStarknetWallet } = await import('@/lib/starknet/wallet');
+            const address = await connectStarknetWallet();
+
+            if (address) {
+                setPreferredNetwork('STRK');
+                useOverflowStore.getState().setNetwork('STRK');
+                useOverflowStore.getState().setAddress(address);
+                useOverflowStore.getState().setIsConnected(true);
+                useOverflowStore.getState().fetchBalance(address);
+                useOverflowStore.getState().refreshWalletBalance();
+            }
+        } catch (error) {
+            console.error("Starknet connection error:", error);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -259,6 +278,25 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MyNearWallet, Meteor, Here, etc.</p>
                             </div>
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-white transition-colors" />
+                        </button>
+
+                        {/* Starknet Option */}
+                        <button
+                            onClick={handleStarknetConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/0 via-indigo-400/5 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-indigo-400/10 flex items-center justify-center border border-indigo-400/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">
+                                <img src="/logos/starknet-strk-logo.svg" alt="Starknet" className="w-full h-full" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Starknet</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-indigo-400/20 text-indigo-300 font-bold uppercase tracking-wider">STRK</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Argent X, Braavos</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-indigo-300 transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}

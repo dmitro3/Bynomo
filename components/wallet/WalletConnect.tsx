@@ -21,6 +21,8 @@ export const WalletConnect: React.FC = () => {
     else if (network === 'SUI') disconnectSui();
     else if (network === 'XLM') {
       import('@/lib/stellar/wallet-kit').then(m => m.disconnectWallet());
+    } else if (network === 'STRK') {
+      import('@/lib/starknet/wallet').then(m => m.disconnectStarknetWallet());
     }
     // XTZ and NEAR don't need special SDK disconnect
 
@@ -37,6 +39,7 @@ export const WalletConnect: React.FC = () => {
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'NEAR': return '/logos/near-logo.svg';
+      case 'STRK': return '/logos/starknet-strk-logo.svg';
       default: return '/logos/bnb-bnb-logo.png';
     }
   };
@@ -49,6 +52,7 @@ export const WalletConnect: React.FC = () => {
       case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
+      case 'STRK': return 'STRK';
       default: return 'Connected';
     }
   };

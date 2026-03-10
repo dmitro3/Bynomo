@@ -71,7 +71,7 @@ export const GameBoard: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : 'BNB';
   const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
   // Connection status
@@ -193,6 +193,11 @@ export const GameBoard: React.FC = () => {
         toast.info(`Confirming ${blitzEntryFee} NEAR Blitz Entry...`);
         const txHash = await depositNEAR(blitzEntryFee.toString());
         console.log("NEAR Blitz payment hash:", txHash);
+      } else if (network === 'STRK') {
+        const { depositSTRK } = await import('@/lib/starknet/wallet');
+        toast.info(`Confirming ${blitzEntryFee} STRK Blitz Entry...`);
+        const txHash = await depositSTRK(blitzEntryFee);
+        console.log("Starknet Blitz payment hash:", txHash);
       }
 
       toast.success("Payment successful! Blitz Mode enabled.");

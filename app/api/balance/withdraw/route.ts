@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { ethers } from 'ethers';
 import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 
 interface WithdrawRequest {
@@ -13,6 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const body: WithdrawRequest = await request.json();
     const { userAddress, amount, currency = 'BNB' } = body;
+    const normalizedCurrency = currency.toUpperCase();
 
     // Validate required fields
     if (!userAddress || amount === undefined || amount === null) {
@@ -29,30 +29,6 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid wallet address format' },
         { status: 400 }
       );
-    }
-
-    // Detect network flags for backend transfer
-    let isBNB = ethers.isAddress(userAddress);
-    let isSOL = false;
-    let isSUI = false;
-    let isXLM = false;
-    let isXTZ = false;
-    let isNEAR = false;
-
-    if (!isBNB) {
-      if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
-        isSUI = true;
-      } else if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
-        isXLM = true;
-      } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
-        isXTZ = true;
-      } else if (/^[0-9a-fA-F]{64}$/.test(userAddress) || /^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+$/.test(userAddress)) {
-        // NEAR: implicit account (64 hex chars) OR named account (e.g., user.near, user.testnet)
-        isNEAR = true;
-      } else {
-        // Must be Solana if isValidAddress passed
-        isSOL = true;
-      }
     }
 
     if (amount <= 0) {
@@ -96,10 +72,10 @@ export async function POST(request: NextRequest) {
     // 3. Perform transfer from treasury based on network
     let signature: string;
     try {
-      if (isBNB) {
+      if (normalizedCurrency === 'BNB') {
         signature = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
-      } else if (isSOL) {
-        if (currency === 'BYNOMO') {
+      } else if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
+        if (normalizedCurrency === 'BYNOMO') {
           const { transferTokenFromTreasury } = await import('@/lib/solana/backend-client');
           const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
           signature = await transferTokenFromTreasury(userAddress, netWithdrawAmount, BYNOMO_MINT);
@@ -107,24 +83,28 @@ export async function POST(request: NextRequest) {
           const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
           signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
         }
-      } else if (isSUI) {
+      } else if (normalizedCurrency === 'SUI') {
         const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
         signature = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
-      } else if (isXLM) {
+      } else if (normalizedCurrency === 'XLM') {
         const { transferXLMFromTreasury } = await import('@/lib/stellar/backend-client');
         signature = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
-      } else if (isXTZ) {
+      } else if (normalizedCurrency === 'XTZ') {
         const { transferXTZFromTreasury } = await import('@/lib/tezos/backend-client');
         signature = await transferXTZFromTreasury(userAddress, netWithdrawAmount);
-      } else if (isNEAR) {
+      } else if (normalizedCurrency === 'NEAR') {
         const { transferNEARFromTreasury } = await import('@/lib/near/backend-client');
         signature = await transferNEARFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === 'STRK') {
+        const { transferSTRKFromTreasury } = await import('@/lib/starknet/backend-client');
+        signature = await transferSTRKFromTreasury(userAddress, netWithdrawAmount);
       } else {
-        throw new Error('Unsupported network for withdrawal');
+        throw new Error(`Unsupported currency for withdrawal: ${currency}`);
       }
-    } catch (e: any) {
-      console.error('Transfer failed:', e);
-      return NextResponse.json({ error: `Withdrawal failed: ${e.message}` }, { status: 500 });
+    } catch (error: unknown) {
+      console.error('Transfer failed:', error);
+      const message = error instanceof Error ? error.message : 'Unknown transfer error';
+      return NextResponse.json({ error: `Withdrawal failed: ${message}` }, { status: 500 });
     }
 
     // 3. Update Supabase balance using RPC

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate address (support BNB, Solana, Sui, Stellar and Tezos)
+    // Validate address (support BNB, Solana, Sui, Starknet, Stellar and Tezos)
     let isValid = false;
 
     // Check if it's a valid EVM address
@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
       isValid = true;
     } else if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
       // Check if it's a valid Sui address
+      isValid = true;
+    } else if (/^0x[0-9a-fA-F]{1,64}$/.test(userAddress)) {
+      // Check if it's a valid Starknet address
       isValid = true;
     } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
       // Check if it's a valid Tezos address
@@ -56,8 +59,8 @@ export async function POST(request: NextRequest) {
         // Check if it's a valid Stellar address (starts with G, 56 characters)
         if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
           isValid = true;
-        } else if (/^[0-9a-fA-F]{64}$/.test(userAddress) || /^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+$/.test(userAddress)) {
-          // Check if it's a valid NEAR address (implicit 64-char hex OR named account ending in .near/.testnet)
+        } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+\.(near|testnet)$/.test(userAddress)) {
+          // Check if it's a valid NEAR address (named account ending in .near/.testnet)
           isValid = true;
         } else {
           isValid = false;
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana, Sui, Stellar, Tezos or NEAR required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui, Starknet, Stellar, Tezos or NEAR required)' },
         { status: 400 }
       );
     }

@@ -154,7 +154,26 @@ function WalletSync() {
       }
     }
 
-    // 7. Cleanup/Sync Decision
+    // 7. Check Starknet
+    if (preferredNetwork === 'STRK') {
+      const injectedStarknetAddress = typeof window !== 'undefined'
+        ? (window as unknown as { starknet?: { selectedAddress?: string } }).starknet?.selectedAddress
+        : null;
+      if (injectedStarknetAddress && address !== injectedStarknetAddress) {
+        setAddress(injectedStarknetAddress);
+        setIsConnected(true);
+        setNetwork('STRK');
+        refreshWalletBalance();
+        fetchProfile(injectedStarknetAddress);
+        return;
+      }
+
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'STRK') {
+        return;
+      }
+    }
+
+    // 8. Cleanup/Sync Decision
     const state = useOverflowStore.getState();
     const isDemoMode = state.accountType === 'demo';
     const hasSolana = solanaConnected && solanaPublicKey;
@@ -163,6 +182,7 @@ function WalletSync() {
     const hasStellar = state.network === 'XLM' && !!state.address;
     const hasTezos = state.network === 'XTZ' && !!state.address;
     const hasNEAR = state.network === 'NEAR' && !!state.address;
+    const hasSTRK = state.network === 'STRK' && !!state.address;
 
     // Determine if we should clear
     let shouldClear = false;
@@ -177,7 +197,8 @@ function WalletSync() {
       else if (preferredNetwork === 'XLM' && !hasStellar) shouldClear = true;
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR) shouldClear = true;
+      else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {

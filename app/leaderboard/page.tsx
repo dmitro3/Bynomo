@@ -53,6 +53,7 @@ export default function LeaderboardPage() {
             case 'XLM': return '/logos/stellar-xlm-logo.png';
             case 'XTZ': return '/logos/tezos-xtz-logo.png';
             case 'NEAR': return '/logos/near-logo.svg';
+            case 'STRK': return '/logos/starknet-strk-logo.svg';
             default: return '/logos/bnb-bnb-logo.png';
         }
     };
@@ -65,6 +66,7 @@ export default function LeaderboardPage() {
             case 'XLM': return 'XLM';
             case 'XTZ': return 'XTZ';
             case 'NEAR': return 'NEAR';
+            case 'STRK': return 'STRK';
             default: return 'BNB';
         }
     };

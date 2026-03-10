@@ -90,6 +90,7 @@ export default function AdminDashboard() {
             case 'SUI': return `https://suiscan.xyz/tx/${hash}`;
             case 'XTZ': return `https://tzkt.io/${hash}`;
             case 'XLM': return `https://stellar.expert/explorer/public/tx/${hash}`;
+            case 'STRK': return `https://starkscan.co/tx/${hash}`;
             default: return null;
         }
     };
@@ -381,7 +382,7 @@ export default function AdminDashboard() {
                                             </div>
 
                                             <div className="flex flex-wrap gap-2">
-                                                {['BNB', 'NEAR', 'SOL', 'SUI', 'XTZ', 'XLM'].map(chain => (
+                                                {['BNB', 'NEAR', 'SOL', 'SUI', 'XTZ', 'XLM', 'STRK'].map(chain => (
                                                     <button
                                                         key={chain}
                                                         onClick={() => setChainFilter(prev => prev === chain ? 'ALL' : chain)}

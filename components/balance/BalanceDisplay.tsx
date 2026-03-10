@@ -113,7 +113,7 @@ export const BalanceDisplay: React.FC = () => {
   // Current symbol for display
   const currentSymbol = network === 'SUI' ? 'USDC'
     : (network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM'
-      ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : 'BNB');
+      ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : 'BNB');
 
   return (
     <>
@@ -220,11 +220,12 @@ export const BalanceDisplay: React.FC = () => {
                       currentSymbol === 'BYNOMO' ? '/overflowlogo.png' :
                         network === 'SUI' ? '/logos/sui-logo.png' :
                           network === 'SOL' ? '/logos/solana-sol-logo.png' :
-                            network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
-                              network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
-                                network === 'NEAR' ? '/logos/near-logo.svg' :
+                             network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
+                               network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
+                                 network === 'NEAR' ? '/logos/near-logo.svg' :
+                                  network === 'STRK' ? '/logos/starknet-strk-logo.svg' :
                                   '/logos/bnb-bnb-logo.png'
-                    }
+                     }
                     alt={currentSymbol}
                     className="w-4 h-4 object-contain"
                   />

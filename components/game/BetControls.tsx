@@ -34,6 +34,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
     switch (network) {
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
+      case 'STRK': return 'STRK';
       case 'SUI': return 'USDC';
       case 'SOL': {
         const state = useStore.getState() as any;
@@ -52,6 +53,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'SOL': return '/logos/solana-sol-logo.png';
       case 'BNB': return '/logos/bnb-bnb-logo.png';
       case 'NEAR': return '/logos/near-logo.svg';
+      case 'STRK': return '/logos/starknet-strk-logo.svg';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       default: return '/logos/bnb-bnb-logo.png';

@@ -17,14 +17,16 @@ export const isValidAddress = async (address: string): Promise<boolean> => {
     // 3. Stellar (XLM)
     if (/^G[A-Z2-7]{55}$/.test(address)) return true;
 
-    // 4. Sui (SUI) - 0x followed by 64 hex characters
+    // 4. Starknet (STRK) - 0x followed by up to 64 hex characters
+    if (/^0x[0-9a-fA-F]{1,64}$/.test(address)) return true;
+
+    // 5. Sui (SUI) - 0x followed by 64 hex characters
     if (/^0x[0-9a-fA-F]{64}$/.test(address)) return true;
 
-    // 5. NEAR - Account ID (e.g. *.near) or 64-char hex
-    if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(address)) return true;
-    if (/^[0-9a-fA-F]{64}$/.test(address)) return true;
+    // 6. NEAR - Named account IDs
+    if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+\.(near|testnet)$/.test(address)) return true;
 
-    // 6. Solana (SOL) - Base58 string
+    // 7. Solana (SOL) - Base58 string
     try {
         const { PublicKey } = await import('@solana/web3.js');
         const pk = new PublicKey(address);

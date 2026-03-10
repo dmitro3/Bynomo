@@ -24,7 +24,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const currency = searchParams.get('currency') || 'BNB';
 
-    // Validate address (support BNB, Solana, Sui, Stellar and Tezos)
+    // Validate address (support BNB, Solana, Sui, Starknet, Stellar and Tezos)
     let isValid = false;
 
     // Check if it's a valid EVM address (BNB)
@@ -32,6 +32,9 @@ export async function GET(
       isValid = true;
     } else if (/^0x[0-9a-fA-F]{64}$/.test(address)) {
       // Check if it's a valid Sui address
+      isValid = true;
+    } else if (/^0x[0-9a-fA-F]{1,64}$/.test(address)) {
+      // Check if it's a valid Starknet address
       isValid = true;
     } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
       // Check if it's a valid Tezos address
@@ -46,7 +49,7 @@ export async function GET(
         // Check if it's a valid Stellar address (starts with G, 56 characters)
         if (/^G[A-Z2-7]{55}$/.test(address)) {
           isValid = true;
-        } else if ((address as string).endsWith('.near') || (address as string).endsWith('.testnet') || /^[0-9a-fA-F]{64}$/.test(address as string)) {
+        } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+\.(near|testnet)$/.test(address as string)) {
           // Check if it's a valid NEAR address
           isValid = true;
         } else {
@@ -57,7 +60,7 @@ export async function GET(
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana, Sui, Stellar, Tezos or NEAR required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui, Starknet, Stellar, Tezos or NEAR required)' },
         { status: 400 }
       );
     }
