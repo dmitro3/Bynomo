@@ -13,9 +13,11 @@ import { setPushChainClientGlobal } from '@/lib/push/push-chain-client-store';
 
 export const PUSH_CONNECT_EVENT = 'push_wallet_connect';
 
+const PUSH_WALLET_UID = 'bynomo-push-wallet';
+
 function PushWalletSyncInner() {
-    const { universalAccount, connectionStatus, handleConnectToPushWallet } = usePushWalletContext();
-    const { pushChainClient } = usePushChainClient();
+    const { universalAccount, connectionStatus, handleConnectToPushWallet } = usePushWalletContext(PUSH_WALLET_UID);
+    const { pushChainClient } = usePushChainClient(PUSH_WALLET_UID);
 
     const preferredNetwork = useOverflowStore(state => state.preferredNetwork);
     const address = useOverflowStore(state => state.address);
@@ -47,10 +49,10 @@ function PushWalletSyncInner() {
             preferredNetwork === 'PUSH'
         ) {
             const addr = universalAccount.address;
+            setNetwork('PUSH');
             if (address !== addr) {
                 setAddress(addr);
                 setIsConnected(true);
-                setNetwork('PUSH');
                 refreshWalletBalance();
                 fetchProfile(addr);
             }
@@ -64,6 +66,16 @@ function PushWalletSyncInner() {
         }
     }, [connectionStatus, universalAccount, preferredNetwork]);
 
+    // Added polling for PUSH balance updates
+    useEffect(() => {
+        if (connectionStatus === ConnectionStatus.CONNECTED && preferredNetwork === 'PUSH') {
+            const interval = setInterval(() => {
+                refreshWalletBalance();
+            }, 10000); // 10s polling
+            return () => clearInterval(interval);
+        }
+    }, [connectionStatus, preferredNetwork, refreshWalletBalance]);
+
     return null;
 }
 
@@ -71,13 +83,23 @@ export default function PushProviderInner() {
     return (
         <PushUniversalWalletProvider
             config={{
-                network: PUSH_NETWORK.TESTNET_DONUT,
-                rpcUrl: process.env.NEXT_PUBLIC_PUSH_RPC_ENDPOINT || 'https://evm.donut.rpc.push.org',
-                version: 4,
+                uid: 'bynomo-push-wallet',
+                network: PUSH_NETWORK.TESTNET,
+                rpcUrl: process.env.NEXT_PUBLIC_PUSH_RPC_ENDPOINT || 'https://evm.rpc-testnet-donut-node1.push.org/',
+                login: {
+                    email: true,
+                    google: true,
+                    wallet: {
+                        enabled: true,
+                    }
+                }
             }}
             app={{
                 title: 'BYNOMO Protocol',
-            }}
+                description: 'Binary Options on Push Chain',
+                logoUrl: 'https://bynomo.fun/overflowlogo.png',
+                url: 'https://bynomo.fun',
+            } as any}
             themeMode="dark"
         >
             <PushWalletSyncInner />

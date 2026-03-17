@@ -7,7 +7,6 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useWalletConnection as useSuiConnection } from '@/lib/sui/wallet';
 import { useModal } from 'connectkit';
-import { PUSH_CONNECT_EVENT } from '@/components/push/PushProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Globe, ShieldCheck, Mail } from 'lucide-react';
 
@@ -113,9 +112,8 @@ export const WalletConnectModal: React.FC = () => {
 
     const handlePushConnect = () => {
         setPreferredNetwork('PUSH');
+        openConnectKit(true);
         setOpen(false);
-        // Dispatch event — PushWalletSyncInner (inside PushProvider) listens and opens the Push wallet modal
-        setTimeout(() => window.dispatchEvent(new CustomEvent(PUSH_CONNECT_EVENT)), 100);
     };
 
     const handleStarknetConnect = async () => {

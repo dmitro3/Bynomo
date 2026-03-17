@@ -6,29 +6,21 @@
 import { ethers } from 'ethers';
 import { getPushConfig } from './config';
 
-// Singleton Provider instance
-let provider: ethers.JsonRpcProvider | null = null;
-
-/**
- * Get or create a Push Chain provider instance
- */
-export function getPushProvider(): ethers.JsonRpcProvider {
-    if (!provider) {
-        const config = getPushConfig();
-        provider = new ethers.JsonRpcProvider(config.rpcEndpoint);
-    }
-    return provider;
-}
-
-/**
- * Get PUSH native token balance for a given address
- */
 export async function getPUSHBalance(address: string): Promise<number> {
-    const provider = getPushProvider();
-
     try {
+        const config = getPushConfig();
+        // Use a static provider to ensure we are always on the correct network (Push Chain)
+        // This avoids issues when MetaMask is connected to another network like BSC
+        const provider = new ethers.JsonRpcProvider(config.rpcEndpoint, {
+            chainId: config.chainId,
+            name: 'push-donut'
+        });
+
+        console.log(`Fetching PUSH balance for ${address} on chain ${config.chainId}...`);
         const balance = await provider.getBalance(address);
-        return parseFloat(ethers.formatEther(balance));
+        const balNum = parseFloat(ethers.formatEther(balance));
+        console.log(`PUSH balance for ${address}: ${balNum}`);
+        return balNum;
     } catch (error) {
         console.error('Failed to get PUSH balance:', error);
         return 0;

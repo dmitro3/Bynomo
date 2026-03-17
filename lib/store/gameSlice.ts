@@ -373,7 +373,14 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       // Get current network and selected currency from store
       const network = (get() as any).network || 'BNB';
       const selectedCurrency = (get() as any).selectedCurrency;
-      const currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network;
+      let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network === 'PUSH' ? 'PC' : network;
+
+      // Handle special address-based currency overrides
+      if (userAddress && (userAddress.endsWith('.near') || userAddress.endsWith('.testnet'))) {
+        currency = 'NEAR';
+      } else if (userAddress && /^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
+        currency = 'XTZ';
+      }
 
       // Call API endpoint to place bet from house balance
       const response = await fetch('/api/balance/bet', {
@@ -415,7 +422,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         direction: direction,
         timestamp: Date.now(),
         status: 'active',
-        network: network, // Save the network used (e.g. XLM, NEAR, BNB)
+        network: currency, // Save the currency identifier used (e.g. XLM, NEAR, PC)
         ...(gameMode === 'binomo' ? {
           strikePrice: currentPrice,
           endTime: Date.now() + (durationSeconds * 1000)

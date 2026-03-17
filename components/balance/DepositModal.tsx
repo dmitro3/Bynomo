@@ -15,6 +15,8 @@ import { buildDepositTransaction as buildSuiDepositTransaction } from '@/lib/sui
 
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
+import { useWalletClient } from 'wagmi';
+import { parseEther } from 'viem';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -42,6 +44,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   // Sui Hooks
   const { mutateAsync: signAndExecuteSui } = useSignAndExecuteTransaction();
   const suiAccount = useCurrentAccount();
+
+  // wagmi wallet client — already authorized, no eth_requestAccounts needed
+  const { data: walletClient } = useWalletClient();
 
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
@@ -156,9 +161,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         toast.info('Please confirm the transaction in your NEAR wallet...');
         txHash = await depositNEAR(amount);
       } else if (network === 'PUSH') {
-        const { depositPC } = await import('@/lib/push/wallet');
-        toast.info('Please confirm the transaction in your Push wallet...');
-        txHash = await depositPC(depositAmount);
+        if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
+        const { getPushConfig } = await import('@/lib/push/config');
+        const pushConfig = getPushConfig();
+        if (!pushConfig.treasuryAddress) throw new Error('Push Chain treasury address not configured.');
+        toast.info('Please confirm the transaction in your wallet...');
+        txHash = await walletClient.sendTransaction({
+          to: pushConfig.treasuryAddress as `0x${string}`,
+          value: parseEther(depositAmount.toString()),
+        });
       } else if (network === 'STRK') {
         const { depositSTRK } = await import('@/lib/starknet/wallet');
         toast.info('Please confirm the transaction in your Starknet wallet...');

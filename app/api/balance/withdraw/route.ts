@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       } else if (normalizedCurrency === 'STRK') {
         const { transferSTRKFromTreasury } = await import('@/lib/starknet/backend-client');
         signature = await transferSTRKFromTreasury(userAddress, netWithdrawAmount);
-      } else if (normalizedCurrency === 'PUSH') {
+      } else if (normalizedCurrency === 'PUSH' || normalizedCurrency === 'PC') {
         const { transferPUSHFromTreasury } = await import('@/lib/push/backend-client');
         signature = await transferPUSHFromTreasury(userAddress, netWithdrawAmount);
       } else {

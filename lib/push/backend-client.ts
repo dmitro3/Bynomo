@@ -21,7 +21,10 @@ export function getPushTreasuryWallet(): ethers.Wallet {
         throw new Error('PUSH_TREASURY_SECRET_KEY (or BNB_TREASURY_SECRET_KEY) is not configured');
     }
 
-    const provider = new ethers.JsonRpcProvider(config.rpcEndpoint);
+    const provider = new ethers.JsonRpcProvider(config.rpcEndpoint, {
+        chainId: config.chainId,
+        name: 'push-donut'
+    });
     return new ethers.Wallet(secretKey, provider);
 }
 

@@ -6,9 +6,9 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { bsc } from 'viem/chains';
-import { WagmiProvider, useAccount } from 'wagmi';
+import { WagmiProvider, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
-import { config as wagmiConfig } from '@/lib/bnb/wagmi';
+import { config as wagmiConfig, pushChainDonut } from '@/lib/bnb/wagmi';
 
 // Solana Imports
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet } from '@solana/wallet-adapter-react';
@@ -23,7 +23,6 @@ import '@mysten/dapp-kit/dist/index.css';
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
-import { PushProvider } from '@/components/push/PushProvider';
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -31,7 +30,14 @@ function WalletSync() {
   const { wallets: privyWallets } = useWallets();
   const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
   const suiAccount = useCurrentAccount();
-  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+  const { address: wagmiAddress, isConnected: wagmiConnected, chainId: wagmiChainId } = useAccount();
+
+  // Fetch PC balance via wagmi (reliable, uses already-established connection)
+  const { data: pushBalanceData } = useBalance({
+    address: wagmiAddress,
+    chainId: pushChainDonut.id,
+    query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id },
+  });
 
   const {
     address,
@@ -43,6 +49,13 @@ function WalletSync() {
     fetchProfile,
     preferredNetwork
   } = useOverflowStore();
+
+  // Sync Push Chain PC balance directly into the store whenever wagmi reports it
+  useEffect(() => {
+    if (preferredNetwork === 'PUSH' && pushBalanceData) {
+      useOverflowStore.setState({ walletBalance: parseFloat(pushBalanceData.formatted) });
+    }
+  }, [pushBalanceData, preferredNetwork]);
 
   // Restoration Effect for Stellar
   const attemptedRestore = useRef(false);
@@ -106,8 +119,19 @@ function WalletSync() {
       return;
     }
 
-    // 3. Push Chain — handled by PushProvider (headless), skip here
+    // 3. Push Chain (via wagmi/ConnectKit on chainId 42101)
     if (preferredNetwork === 'PUSH') {
+      if (wagmiConnected && wagmiAddress && wagmiChainId === pushChainDonut.id) {
+        if (address !== wagmiAddress) {
+          setAddress(wagmiAddress);
+          setIsConnected(true);
+          setNetwork('PUSH');
+          refreshWalletBalance();
+          fetchProfile(wagmiAddress);
+        }
+        return;
+      }
+      // Still waiting for user to switch network — keep existing state
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'PUSH') return;
       return;
     }
@@ -178,7 +202,7 @@ function WalletSync() {
     const hasTezos = state.network === 'XTZ' && !!state.address;
     const hasNEAR = state.network === 'NEAR' && !!state.address;
     const hasSTRK = state.network === 'STRK' && !!state.address;
-    const hasPUSH = state.network === 'PUSH' && !!state.address;
+    const hasPUSH = wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id;
 
     let shouldClear = false;
     if (isDemoMode) {
@@ -204,7 +228,7 @@ function WalletSync() {
     user, authenticated, privyWallets, privyReady,
     solanaConnected, solanaPublicKey,
     suiAccount,
-    wagmiAddress, wagmiConnected,
+    wagmiAddress, wagmiConnected, wagmiChainId,
     preferredNetwork, address, accountType,
     setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile
   ]);
@@ -293,7 +317,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                       {children}
                       <WalletConnectModal />
                       <ToastProvider />
-                      <PushProvider />
                     </WalletProvider>
                   </SuiClientProvider>
                 </WalletModalProvider>

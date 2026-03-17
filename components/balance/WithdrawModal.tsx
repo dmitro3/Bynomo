@@ -28,8 +28,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const toast = useToast();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain' : 'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -143,6 +143,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
             {network === 'NEAR' && <img src="/logos/near-logo.svg" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
+            {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

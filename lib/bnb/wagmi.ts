@@ -1,26 +1,27 @@
 import { getDefaultConfig } from 'connectkit';
 import { createConfig, http } from 'wagmi';
-import { bscTestnet, bsc } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { defineChain } from 'viem';
 
-export const pushChain = defineChain({
-    id: 9, // Push Chain Mainnet (eip155:9)
-    name: 'Push Chain',
-    nativeCurrency: { name: 'Push', symbol: 'PUSH', decimals: 18 },
+export const pushChainDonut = defineChain({
+    id: 42101,
+    name: 'Push Chain Donut Testnet',
+    nativeCurrency: { name: 'Push', symbol: 'PC', decimals: 18 },
     rpcUrls: {
-        default: { http: [process.env.NEXT_PUBLIC_PUSH_RPC_ENDPOINT || 'https://evm.rpc.push.org'] },
+        default: { http: ['https://evm.donut.rpc.push.org'] },
     },
     blockExplorers: {
         default: { name: 'Push Explorer', url: 'https://explorer.push.org' },
     },
+    testnet: true,
 });
 
 export const config = createConfig(
     getDefaultConfig({
-        // Push Chain is handled by @pushchain/ui-kit — not added here to avoid ConnectKit conflicts
-        chains: [bsc],
+        chains: [bsc, pushChainDonut],
         transports: {
             [bsc.id]: http(),
+            [pushChainDonut.id]: http('https://evm.donut.rpc.push.org'),
         },
 
         // Required API Keys
@@ -30,8 +31,8 @@ export const config = createConfig(
         appName: 'BYNOMO',
 
         // Optional App Info
-        appDescription: 'BYNOMO on BNB Smart Chain',
-        appUrl: 'https://family.co', // your app's url
-        appIcon: 'https://family.co/logo.png', // your app's icon
+        appDescription: 'Binary Options on Push Chain',
+        appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+        appIcon: typeof window !== 'undefined' ? `${window.location.origin}/overflowlogo.png` : '/overflowlogo.png',
     }),
 );

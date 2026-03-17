@@ -40,6 +40,7 @@ export const WalletConnect: React.FC = () => {
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'NEAR': return '/logos/near-logo.svg';
       case 'STRK': return '/logos/starknet-strk-logo.svg';
+      case 'PUSH': return '/logos/push-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   };
@@ -53,6 +54,7 @@ export const WalletConnect: React.FC = () => {
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
       case 'STRK': return 'STRK';
+      case 'PUSH': return 'PUSH';
       default: return 'Connected';
     }
   };

@@ -27,11 +27,38 @@ export async function depositPC(amountPC: number): Promise<string> {
     try {
         const amountWei = ethers.parseEther(amountPC.toString());
 
-        const tx = await pushChainClient.universal.sendTransaction({
-            to: config.treasuryAddress as `0x${string}`,
-            value: amountWei,
-            data: '0x' as `0x${string}`,
+        console.log('Push Chain Deposit Debug:', {
+            amountPC,
+            amountWei: amountWei.toString(),
+            treasuryAddress: config.treasuryAddress,
+            clientUniversal: !!pushChainClient.universal,
         });
+
+        const targetAddress = (config.treasuryAddress as string).toLowerCase() as `0x${string}`;
+
+        console.log('Push Chain SendTransaction Request:', {
+            to: targetAddress,
+            value: amountWei.toString(),
+            isDirect: !!pushChainClient.sendTransaction
+        });
+
+        let tx;
+        if (pushChainClient.sendTransaction) {
+            // Direct call from usePushChainClient wrapper
+            tx = await pushChainClient.sendTransaction({
+                to: targetAddress,
+                value: amountWei,
+            });
+        } else if (pushChainClient.universal?.sendTransaction) {
+            // Call via universal sub-client
+            tx = await pushChainClient.universal.sendTransaction({
+                to: targetAddress,
+                value: amountWei,
+                data: '0x' as `0x${string}`,
+            });
+        } else {
+            throw new Error('Push Chain client sendTransaction method not found');
+        }
 
         console.log(`PC deposit transaction sent: ${tx.hash}`);
         return tx.hash;

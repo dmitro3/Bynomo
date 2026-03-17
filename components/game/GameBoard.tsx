@@ -14,6 +14,8 @@ import { useToast } from '@/lib/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
+import { useWalletClient } from 'wagmi';
+import { parseEther } from 'viem';
 import posthog from 'posthog-js';
 
 
@@ -54,6 +56,7 @@ export const GameBoard: React.FC = () => {
   const { wallets } = useWallets();
   const { } = usePrivy();
   const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
+  const { data: walletClient } = useWalletClient();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -71,7 +74,7 @@ export const GameBoard: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : 'BNB';
   const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
   // Connection status
@@ -198,6 +201,19 @@ export const GameBoard: React.FC = () => {
         toast.info(`Confirming ${blitzEntryFee} STRK Blitz Entry...`);
         const txHash = await depositSTRK(blitzEntryFee);
         console.log("Starknet Blitz payment hash:", txHash);
+      } else if (network === 'PUSH') {
+        if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
+        const { getPushConfig } = await import('@/lib/push/config');
+        const pushConfig = getPushConfig();
+        if (!pushConfig.treasuryAddress) throw new Error('Push Chain treasury not configured');
+        toast.info(`Confirming ${blitzEntryFee} PC Blitz Entry...`);
+        const hash = await walletClient.sendTransaction({
+          to: getAddress(pushConfig.treasuryAddress) as `0x${string}`,
+          value: parseEther(blitzEntryFee.toString()),
+        });
+        console.log("Push Chain Blitz payment tx:", hash);
+      } else {
+        throw new Error(`Blitz not supported for network: ${network}`);
       }
 
       toast.success("Payment successful! Blitz Mode enabled.");
