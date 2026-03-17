@@ -23,6 +23,7 @@ import '@mysten/dapp-kit/dist/index.css';
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
+import { PushProvider } from '@/components/push/PushProvider';
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -49,9 +50,7 @@ function WalletSync() {
     if (preferredNetwork === 'XLM' && !attemptedRestore.current) {
       attemptedRestore.current = true;
       const checkStellar = async () => {
-        // Check if already connected in store to avoid redundant work
         if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') return;
-
         try {
           const { restoreSession } = await import('@/lib/stellar/wallet-kit');
           const restoredAddress = await restoreSession();
@@ -70,10 +69,9 @@ function WalletSync() {
     }
   }, [preferredNetwork, address, setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile]);
 
-
   // Main Sync Effect
   useEffect(() => {
-    // 0. Check Demo Mode (Priority)
+    // 0. Demo Mode
     if (accountType === 'demo') {
       if (address !== '0xDEMO_1234567890') {
         setAddress('0xDEMO_1234567890');
@@ -83,7 +81,7 @@ function WalletSync() {
       return;
     }
 
-    // 1. Check Solana (Priority if preferred)
+    // 1. Solana
     if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
       const addr = solanaPublicKey.toBase58();
       if (address !== addr) {
@@ -96,7 +94,7 @@ function WalletSync() {
       return;
     }
 
-    // 2. Check Sui
+    // 2. Sui
     if (suiAccount?.address && preferredNetwork === 'SUI') {
       if (address !== suiAccount.address) {
         setAddress(suiAccount.address);
@@ -108,7 +106,13 @@ function WalletSync() {
       return;
     }
 
-    // 3. Check BNB (Wagmi or Privy)
+    // 3. Push Chain — handled by PushProvider (headless), skip here
+    if (preferredNetwork === 'PUSH') {
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'PUSH') return;
+      return;
+    }
+
+    // 4. BNB (Wagmi or Privy)
     if (preferredNetwork === 'BNB') {
       if (wagmiConnected && wagmiAddress) {
         if (address !== wagmiAddress) {
@@ -133,28 +137,22 @@ function WalletSync() {
       }
     }
 
-    // 4. Check Stellar - Logic is now handled by restoration effect above or manual connection
+    // 5. Stellar
     if (preferredNetwork === 'XLM') {
-      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') {
-        return;
-      }
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XLM') return;
     }
 
-    // 5. Check Tezos
+    // 6. Tezos
     if (preferredNetwork === 'XTZ') {
-      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XTZ') {
-        return;
-      }
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'XTZ') return;
     }
 
-    // 6. Check NEAR
+    // 7. NEAR
     if (preferredNetwork === 'NEAR') {
-      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'NEAR') {
-        return;
-      }
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'NEAR') return;
     }
 
-    // 7. Check Starknet
+    // 8. Starknet
     if (preferredNetwork === 'STRK') {
       const injectedStarknetAddress = typeof window !== 'undefined'
         ? (window as unknown as { starknet?: { selectedAddress?: string } }).starknet?.selectedAddress
@@ -167,13 +165,10 @@ function WalletSync() {
         fetchProfile(injectedStarknetAddress);
         return;
       }
-
-      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'STRK') {
-        return;
-      }
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'STRK') return;
     }
 
-    // 8. Cleanup/Sync Decision
+    // 9. Cleanup
     const state = useOverflowStore.getState();
     const isDemoMode = state.accountType === 'demo';
     const hasSolana = solanaConnected && solanaPublicKey;
@@ -183,11 +178,9 @@ function WalletSync() {
     const hasTezos = state.network === 'XTZ' && !!state.address;
     const hasNEAR = state.network === 'NEAR' && !!state.address;
     const hasSTRK = state.network === 'STRK' && !!state.address;
+    const hasPUSH = state.network === 'PUSH' && !!state.address;
 
-    // Determine if we should clear
     let shouldClear = false;
-
-    // If we are in demo mode, NEVER clear the address (wait for manual exit)
     if (isDemoMode) {
       shouldClear = false;
     } else {
@@ -198,7 +191,8 @@ function WalletSync() {
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK) shouldClear = true;
+      else if (preferredNetwork === 'PUSH' && !hasPUSH) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {
@@ -227,11 +221,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [queryClient] = useState(() => new QueryClient());
 
-  // Solana wallet adapter v2+ auto-discovers installed wallets via Wallet Standard
-  // No need to explicitly add adapters - this avoids duplicate key errors (e.g. MetaMask)
   const solanaWallets = useMemo(() => [], []);
 
-  // Fix: Move hook to top level
   const solanaEndpoint = useMemo(() => {
     try {
       const { getSolanaConfig } = require('@/lib/solana/config');
@@ -248,11 +239,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const initializeApp = async () => {
       try {
         const { updateAllPrices, loadTargetCells, startGlobalPriceFeed } = useOverflowStore.getState();
-
-        // Initialize Stellar Wallet Kit
         const { initWalletKit } = await import('@/lib/stellar/wallet-kit');
         await initWalletKit().catch(console.error);
-
         await loadTargetCells().catch(console.error);
         const stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
         setIsReady(true);
@@ -305,6 +293,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                       {children}
                       <WalletConnectModal />
                       <ToastProvider />
+                      <PushProvider />
                     </WalletProvider>
                   </SuiClientProvider>
                 </WalletModalProvider>

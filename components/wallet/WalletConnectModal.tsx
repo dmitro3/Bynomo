@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useWalletConnection as useSuiConnection } from '@/lib/sui/wallet';
 import { useModal } from 'connectkit';
+import { PUSH_CONNECT_EVENT } from '@/components/push/PushProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Globe, ShieldCheck, Mail } from 'lucide-react';
 
@@ -108,6 +109,13 @@ export const WalletConnectModal: React.FC = () => {
         } catch (error) {
             console.error("NEAR connection error:", error);
         }
+    };
+
+    const handlePushConnect = () => {
+        setPreferredNetwork('PUSH');
+        setOpen(false);
+        // Dispatch event — PushWalletSyncInner (inside PushProvider) listens and opens the Push wallet modal
+        setTimeout(() => window.dispatchEvent(new CustomEvent(PUSH_CONNECT_EVENT)), 100);
     };
 
     const handleStarknetConnect = async () => {
@@ -297,6 +305,27 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Argent X, Braavos</p>
                             </div>
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-indigo-300 transition-colors" />
+                        </button>
+
+                        {/* Push Chain Option */}
+                        <button
+                            onClick={handlePushConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/0 via-pink-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">
+                                <img src="/logos/push-logo.png" alt="Push Chain" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                <span className="text-pink-400 font-bold text-xs hidden" style={{ display: 'flex' }}>P</span>
+                            </div>
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Push Chain</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-pink-500/20 text-pink-400 font-bold uppercase tracking-wider">PUSH</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, any EVM wallet</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-pink-400 transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}

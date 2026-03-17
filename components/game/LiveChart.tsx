@@ -88,6 +88,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       case 'XLM': return 'XLM';
       case 'SUI': return 'USDC';
       case 'STRK': return 'STRK';
+      case 'PUSH': return 'PC';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';

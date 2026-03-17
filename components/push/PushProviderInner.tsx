@@ -1,0 +1,86 @@
+'use client';
+
+import React, { useEffect } from 'react';
+import {
+    PushUniversalWalletProvider,
+    usePushWalletContext,
+    usePushChainClient,
+    ConnectionStatus,
+} from '@pushchain/ui-kit';
+import { PUSH_NETWORK } from '@pushchain/core/src/lib/constants/enums';
+import { useOverflowStore } from '@/lib/store';
+import { setPushChainClientGlobal } from '@/lib/push/push-chain-client-store';
+
+export const PUSH_CONNECT_EVENT = 'push_wallet_connect';
+
+function PushWalletSyncInner() {
+    const { universalAccount, connectionStatus, handleConnectToPushWallet } = usePushWalletContext();
+    const { pushChainClient } = usePushChainClient();
+
+    const preferredNetwork = useOverflowStore(state => state.preferredNetwork);
+    const address = useOverflowStore(state => state.address);
+    const setAddress = useOverflowStore(state => state.setAddress);
+    const setIsConnected = useOverflowStore(state => state.setIsConnected);
+    const setNetwork = useOverflowStore(state => state.setNetwork);
+    const refreshWalletBalance = useOverflowStore(state => state.refreshWalletBalance);
+    const fetchProfile = useOverflowStore(state => state.fetchProfile);
+
+    // Listen for connect event dispatched from WalletConnectModal
+    useEffect(() => {
+        const handler = () => handleConnectToPushWallet();
+        window.addEventListener(PUSH_CONNECT_EVENT, handler);
+        return () => window.removeEventListener(PUSH_CONNECT_EVENT, handler);
+    }, [handleConnectToPushWallet]);
+
+    // Store pushChainClient in module-level global for use in DepositModal etc.
+    useEffect(() => {
+        if (pushChainClient) {
+            setPushChainClientGlobal(pushChainClient);
+        }
+    }, [pushChainClient]);
+
+    // Sync Push wallet state to Zustand
+    useEffect(() => {
+        if (
+            connectionStatus === ConnectionStatus.CONNECTED &&
+            universalAccount?.address &&
+            preferredNetwork === 'PUSH'
+        ) {
+            const addr = universalAccount.address;
+            if (address !== addr) {
+                setAddress(addr);
+                setIsConnected(true);
+                setNetwork('PUSH');
+                refreshWalletBalance();
+                fetchProfile(addr);
+            }
+        } else if (connectionStatus === ConnectionStatus.NOT_CONNECTED) {
+            const state = useOverflowStore.getState();
+            if (state.network === 'PUSH') {
+                setAddress(null);
+                setIsConnected(false);
+                setNetwork(null);
+            }
+        }
+    }, [connectionStatus, universalAccount, preferredNetwork]);
+
+    return null;
+}
+
+export default function PushProviderInner() {
+    return (
+        <PushUniversalWalletProvider
+            config={{
+                network: PUSH_NETWORK.TESTNET_DONUT,
+                rpcUrl: process.env.NEXT_PUBLIC_PUSH_RPC_ENDPOINT || 'https://evm.donut.rpc.push.org',
+                version: 4,
+            }}
+            app={{
+                title: 'BYNOMO Protocol',
+            }}
+            themeMode="dark"
+        >
+            <PushWalletSyncInner />
+        </PushUniversalWalletProvider>
+    );
+}

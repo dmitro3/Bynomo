@@ -36,6 +36,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'NEAR': return 'NEAR';
       case 'STRK': return 'STRK';
       case 'SUI': return 'USDC';
+      case 'PUSH': return 'PC';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';
@@ -56,6 +57,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'STRK': return '/logos/starknet-strk-logo.svg';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
+      case 'PUSH': return '/logos/push-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   }, [network, currencySymbol]);
