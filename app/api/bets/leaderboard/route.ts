@@ -140,12 +140,13 @@ export async function GET(request: NextRequest) {
     try {
       // Note: supabase-js doesn't take AbortController directly here, so we just
       // bound our own Promise timeout around the fetch function.
-      data = await Promise.race<LeaderboardRow[]>([
+      const result = await Promise.race([
         fetchLeaderboardFromSupabase(limit),
-        new Promise((_, reject) => {
+        new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Leaderboard fetch timeout')), 10_000);
         }),
       ]);
+      data = result as LeaderboardRow[];
     } finally {
       clearTimeout(timeout);
     }
