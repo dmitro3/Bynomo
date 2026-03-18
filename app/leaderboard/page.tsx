@@ -40,8 +40,11 @@ export default function LeaderboardPage() {
     }, []);
 
     useEffect(() => {
+        // Initial load
         fetchLeaderboard();
-        const interval = setInterval(fetchLeaderboard, 60000);
+
+        // Poll infrequently to reduce backend pressure during incidents.
+        const interval = setInterval(fetchLeaderboard, 5 * 60 * 1000); // 5 minutes
         return () => clearInterval(interval);
     }, [fetchLeaderboard]);
 
