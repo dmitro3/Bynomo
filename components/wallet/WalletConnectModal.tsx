@@ -312,8 +312,11 @@ export const WalletConnectModal: React.FC = () => {
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/0 via-pink-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">
-                                <img src="/logos/push-logo.png" alt="Push Chain" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                <span className="text-pink-400 font-bold text-xs hidden" style={{ display: 'flex' }}>P</span>
+                                <img
+                                    src="/logos/push-logo.png"
+                                    alt="Push Chain"
+                                    className="w-full h-full object-contain"
+                                />
                             </div>
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">

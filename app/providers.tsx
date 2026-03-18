@@ -5,6 +5,7 @@ import { useOverflowStore } from '@/lib/store';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { formatUnits } from 'viem';
 import { bsc } from 'viem/chains';
 import { WagmiProvider, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
@@ -53,7 +54,8 @@ function WalletSync() {
   // Sync Push Chain PC balance directly into the store whenever wagmi reports it
   useEffect(() => {
     if (preferredNetwork === 'PUSH' && pushBalanceData) {
-      useOverflowStore.setState({ walletBalance: parseFloat(pushBalanceData.formatted) });
+      const formatted = formatUnits(pushBalanceData.value, pushBalanceData.decimals);
+      useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
     }
   }, [pushBalanceData, preferredNetwork]);
 
@@ -215,7 +217,6 @@ function WalletSync() {
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
-      else if (preferredNetwork === 'PUSH' && !hasPUSH) shouldClear = true;
       else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH) shouldClear = true;
     }
 
