@@ -689,11 +689,7 @@ export const GameBoard: React.FC = () => {
                     </div>
                   )}
 
-                  {!isWalletConnected && (
-                    <p className="text-gray-500 text-[10px] text-center font-mono">
-                      Connect wallet to start trading
-                    </p>
-                  )}
+                  {!isWalletConnected && null}
                 </div>
 
               ) : activeTab === 'wallet' ? (
