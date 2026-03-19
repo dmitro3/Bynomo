@@ -220,6 +220,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Filtered assets based on search and category
   const filteredAssets = useMemo(() => {
     return (Object.keys(assetConfig) as AssetType[]).filter(assetId => {
+      // Push-only rollout: hide the BYNOMO token from the asset picker for now.
+      if (assetId === 'BYNOMO') return false;
+
       const asset = assetConfig[assetId];
       const matchesSearch = asset.name.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
         asset.symbol.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
