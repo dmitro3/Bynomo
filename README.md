@@ -353,6 +353,113 @@ sequenceDiagram
 
 ---
 
+## Launch Plan
+
+### Phase 0: Stability and hardening (in progress)
+
+1. Finalize core reliability on `/trade`
+   - Reduce first-load latency for chart/price boot.
+   - Keep Hermes timeout + cached fallback behavior stable.
+2. Lock down operational surfaces
+   - Keep admin and waitlist reads server-side and controlled.
+   - Ensure env setup and security reporting docs stay current.
+3. Validate production readiness
+   - Green build/lint/test baseline before each deploy.
+
+### Phase 1: Controlled beta rollout
+
+1. Launch with a limited user cohort.
+2. Monitor key health metrics
+   - price feed timeouts
+   - bet settlement correctness
+   - withdrawal success rate
+   - leaderboard latency/error rate
+3. Tighten incident response loop
+   - detect, patch, verify, and document quickly.
+
+### Phase 2: Public launch
+
+1. Open access progressively after beta stability thresholds are met.
+2. Scale core APIs and observability dashboards.
+3. Expand community growth channels
+   - X/Twitter, Telegram, Discord, referral loops.
+
+### Phase 3: Chain-by-chain expansion
+
+1. Keep rollout incremental (one chain at a time).
+2. For each new chain:
+   - enable wallet + treasury path
+   - run deposit/withdraw reconciliation checks
+   - validate pricing/settlement behavior end-to-end
+3. Maintain a single operational standard for security and payouts across chains.
+
+### Launch gates (must pass before each phase transition)
+
+- 0 critical security findings open
+- Build and TypeScript checks passing
+- Settlement and balance invariants verified
+- Incident playbook and rollback path confirmed
+
+### Marketing Plan (go-to-market)
+
+1. Positioning and narrative
+   - Lead with the core thesis: fast binary rounds + verifiable oracle pricing.
+   - Emphasize trust gap vs legacy Web2 options platforms.
+2. Pre-launch content
+   - Publish short demo clips, product explainers, and architecture snippets.
+   - Share transparent breakdowns of settlement logic and risk controls.
+3. Launch campaigns
+   - Coordinate launch day across X/Twitter, Telegram, and Discord.
+   - Run limited-time onboarding incentives for early users and referrals.
+4. Growth loops
+   - Strengthen referral mechanics (codes, leaderboard visibility, milestone rewards).
+   - Convert waitlist users in waves based on product stability.
+5. Post-launch retention
+   - Track activation, D1/D7 retention, and repeat betting cohorts.
+   - Use product updates and community touchpoints to keep users engaged.
+
+### Tech + ecosystem roadmap (requested scope)
+
+#### 1) Product and tech upgrades
+
+- Add P2P Mode so risk is minimal
+  - Change classic mode from P2T (person to treasury) to P2P.
+  - Reduce treasury risk exposure.
+  - Keep platform revenue from trading fees and user withdrawal fees.
+- Add 200+ new crypto, forex, stocks, and commodities charts for binary trading
+  - Powered by Pyth price feeds.
+- Add mobile-first design improvements.
+- Enable access code + referral mode
+  - Waitlist and invite-only onboarding.
+- Introduce leverage 1-100x *(optional)*.
+- Introduce trader profiles *(optional)*
+  - Highest PnL, most accurate trader, most trades, biggest risk taker.
+- Introduce tournaments *(optional)*.
+- Add social trading *(optional)*
+  - Follow traders, copy trades, see leaderboards, view win rate.
+- Add public dashboard
+  - Total trades, volume, payouts, treasury balance, win/loss ratio.
+- Go multichain by enabling top 50 highest-user chains *(optional)*
+  - Subject to Solana-focused approval and adoption checks after 3 months of public launch.
+
+#### 2) Ecosystem growth, community, and marketing (50%)
+
+- Focus on driving organic adoption.
+- Micro-influencer strategy
+  - Partner with 100 small creators (1k-20k followers) in trading, crypto, and Web3 communities.
+- Public launch on X
+  - Use the same launch pattern inspired by Euphoria Fi on MegaETH.
+  - Run giveaway-led word-of-mouth campaigns to maximize spread.
+- Launch Bynomo Ambassador Program
+  - Regional groups and trading tutorials.
+- Community launch campaign
+  - Invite-only access codes
+  - Referral system
+  - Waitlist onboarding
+- Start weekly podcast / AMA series on X with top traders for visibility *(optional)*.
+
+---
+
 ## ⚡Future
 
 Endless possibilities: anything to everything related to P2P mode:
