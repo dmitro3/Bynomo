@@ -24,13 +24,17 @@ Contact: bynomo.fun@gmail.com
 
 ## Story / Inspiration
 
-In 2021, I came across an advertisement for a forex options trading app called Binomo. It was promoted heavily, and I decided to try the free mode (paper trading). Within a week, I turned the starting amount into 10x.
+In 2021, I saw an advertisement of a forex option trading app called binomo. It was a mobile app and was promoted by a lot of big influencers.
 
-After that, I switched to real mode and put in three months of my income. I ended up losing it all. Later, I learned on Reddit that the system was allegedly algorithmically manipulated, with trial-mode behavior designed to make users win while real-mode results favored the house.
+One day I decided to use it in free mode, which is paper trading mode. Within a week, I made 10x the initial money.
 
-It wasn’t just me—reports like this were widely shared, and the community felt flooded with the same pattern. That experience pushed me to build an options trading platform that could solve the core trust problem for millions of traders.
+Then I decided to use the real mode and put 3 months of my income, and lost it all.
 
-In Web3 back then, the required sub-second data feeds and Pyth oracles simply didn’t exist yet, making a high-frequency binary options and prediction dapp impractical with the available tooling. I waited five years—until 2026—when the necessary oracle speed finally made this kind of product real.
+Later I realised on Reddit that the company was running on algorithms, backdoors manipulators, and completely fake, making the user win in trial mode and lose in real mode.
+This didn't happen only with me; 99% users that were using options trading platform, and the entire Reddit was flooded with it.
+
+That day I decided to build an options trading platform to solve the problem of mine with other millions of traders, but in Web3 the <1s data feeds/ Pyth oracles did not exist back then, and it was impossible to build a high-frequency options trading/ prediction dapp as the tools were limited.
+But waited for 5 years and executed it this year, 2026.
 
 ---
 
