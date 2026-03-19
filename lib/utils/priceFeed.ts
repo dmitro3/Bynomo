@@ -52,6 +52,17 @@ const HERMES_ENDPOINT = 'https://hermes.pyth.network';
 
 // Cache the last successful multi-asset snapshot so the UI can render even if Hermes is slow.
 let lastAllPricesCache: Record<string, number> = {};
+const PRICE_CACHE_STORAGE_KEY = 'bynomo_last_price_cache_v1';
+
+// Hydrate cache from localStorage (client-side only) to avoid long loader waits.
+if (typeof window !== 'undefined') {
+  try {
+    const raw = window.localStorage.getItem(PRICE_CACHE_STORAGE_KEY);
+    if (raw) lastAllPricesCache = JSON.parse(raw) as Record<string, number>;
+  } catch {
+    // Ignore cache errors and fall back to empty cache.
+  }
+}
 
 export interface PriceData {
   price: number;
@@ -129,6 +140,16 @@ export class PythPriceFeed {
       if (this.lastPrice !== null) {
         return {
           price: this.lastPrice,
+          confidence: 0,
+          timestamp: Date.now() / 1000,
+          expo: -8
+        };
+      }
+      // Fallback to last-known multi-asset cache if available.
+      const cached = lastAllPricesCache[this.asset as string];
+      if (cached && cached > 0) {
+        return {
+          price: cached,
           confidence: 0,
           timestamp: Date.now() / 1000,
           expo: -8
@@ -217,6 +238,13 @@ export class PythPriceFeed {
     // Update cache when we have some data.
     if (Object.keys(results).length > 0) {
       lastAllPricesCache = { ...lastAllPricesCache, ...results };
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(PRICE_CACHE_STORAGE_KEY, JSON.stringify(lastAllPricesCache));
+        } catch {
+          // Ignore storage write failures (private mode, quota, etc.)
+        }
+      }
     }
 
     // If Pyth returns nothing, fall back to last known snapshot.
