@@ -9,7 +9,7 @@ const STEPS = [
         id: '01',
         phase: 'LIQUIDITY INJECTION',
         title: 'Neural Link & Deposit',
-        description: 'Connect your wallet and move assets into the BYNOMO hybrid vault. Your liquidity is secured on-chain while enabling millisecond execution speed.',
+        description: 'Connect your wallet (Push Chain) and deposit to the BYNOMO treasury. Once recorded, your balance is updated in the BYNOMO house balance (Supabase) so you can bet instantly without on-chain bet transactions.',
         color: 'from-blue-500/20 to-cyan-400/20',
         accent: '#3b82f6'
     },
@@ -17,7 +17,7 @@ const STEPS = [
         id: '02',
         phase: 'PREDICTIVE ANALYSIS',
         title: 'Select Execution Mode',
-        description: 'Choose between Classic (2x) or Box Mode (up to 10x). Our high-frequency engine tracks Pyth price feeds with zero latency.',
+        description: 'Choose between Classic (2x) or Box Mode (up to 10x). Outcomes are resolved using oracle-driven pricing (Pyth Hermes) at round expiry with fast 5s–1m timeframes.',
         color: 'from-purple-500/20 to-pink-400/20',
         accent: '#a855f7'
     },
@@ -25,7 +25,7 @@ const STEPS = [
         id: '03',
         phase: 'MATCHING ENGINE',
         title: 'Neural Round Sync',
-        description: 'Once your predict is locked, our neural matching engine pairs your trade against the global treasury liquidity in real-time.',
+        description: 'When you place a bet, we deduct from your house balance and resolve the round at expiry from the latest oracle prices. Results are persisted to bet history and payouts are credited to your house balance.',
         color: 'from-amber-500/20 to-orange-400/20',
         accent: '#f59e0b'
     },
@@ -33,7 +33,7 @@ const STEPS = [
         id: '04',
         phase: 'INSTANT SETTLEMENT',
         title: 'Atomic Payouts',
-        description: 'At round completion, wins are settled instantly to your account. No waiting for block confirmations to see your updated balance.',
+        description: 'At round completion, your win is credited to your house balance immediately (no on-chain bet settlement to wait for). When you withdraw, the treasury sends funds on-chain and the house balance is updated.',
         color: 'from-emerald-500/20 to-teal-400/20',
         accent: '#10b981'
     }

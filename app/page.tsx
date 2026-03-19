@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksDemo from './waitlist/HowItWorksDemo';
@@ -68,7 +69,7 @@ const testimonials = [
 const faqs = [
     {
         question: "How does the House Balance work?",
-        answer: "To ensure millisecond execution, BYNOMO uses a hybrid house balance system. You deposit SOL or BNB into a non-custodial treasury, which is then reflected in your game balance for instant off-chain betting."
+        answer: "To ensure millisecond execution, BYNOMO uses a hybrid house balance system. For now (Push Chain mainnet first), you deposit PC into a non-custodial treasury, which is then reflected in your game balance for instant off-chain betting. New chains will be revealed and launched one-by-one."
     },
     {
         question: "What assets can I trade?",
@@ -382,12 +383,12 @@ export default function WaitlistPage() {
                 >
                     <div className="cta-glow" />
                     <h2 className="cta-title">Ready to trade the future with decentralized precision?</h2>
-                    <button className="cta-button" onClick={scrollToTop}>
+                    <Link href="/trade" className="cta-button" aria-label="Start trading">
                         Start now
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateY(1px)' }}>
                             <path d="m9 18 6-6-6-6" />
                         </svg>
-                    </button>
+                    </Link>
                 </motion.div>
             </section>
 
@@ -399,9 +400,9 @@ export default function WaitlistPage() {
                     <div className="footer-meta-item">2026 © All rights reserved</div>
 
                     <div className="footer-link-group">
-                        <a href="#" className="footer-meta-item">Twitter</a>
-                        <a href="#" className="footer-meta-item">Discord</a>
-                        <a href="#" className="footer-meta-item">Instagram</a>
+                        <a href="https://x.com/bynomofun" target="_blank" rel="noopener noreferrer" className="footer-meta-item">X / Twitter</a>
+                        <a href="https://t.me/bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Telegram</a>
+                        <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Discord</a>
                     </div>
 
                     <div className="footer-link-group">

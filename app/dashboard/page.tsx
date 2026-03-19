@@ -72,7 +72,8 @@ export default function AdminDashboard() {
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'>('users');
+    // Default to Waitlist so collected emails are visible immediately.
+    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'>('waitlist');
     const [waitlist, setWaitlist] = useState<any[]>([]);
     const [accessCodes, setAccessCodes] = useState<any[]>([]);
 
