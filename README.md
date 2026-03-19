@@ -98,19 +98,34 @@ The platform makes money in two primary ways:
    - The house edge is driven by the difference between total bet amounts lost and total payouts paid, plus the withdrawal take-rate.
 
 Estimated earnings (best-effort):
-If you reach about $5M in monthly bet volume, a reasonable expectation is roughly $100k-$250k/month.
-At higher scale (e.g., ~$20M/month bet volume), the same model implies roughly $400k-$1.0M/month depending on cashout behavior and effective fee utilization.
+
+| Monthly bet volume | Expected monthly earnings range | Notes |
+|---|---|---|
+| About $5M | About $100k to $250k per month | Based on withdrawal take rate plus house edge model assumptions |
+| About $20M | About $400k to $1.0M per month | Depends on cashout behavior and effective fee utilization |
+
+```mermaid
+flowchart LR
+  A[Monthly bet volume] --> B[Scenario]
+  B --> C[About 5M]
+  C --> D[About 100k to 250k earnings per month]
+  B --> E[About 20M]
+  E --> F[About 400k to 1.0M earnings per month]
+  D --> G[Depends on cashout behavior and fee utilization]
+  F --> G
+```
 
 ---
 
 ## Market Opportunity
 
-Binary options / prediction: $27.56B (2025) → ~$116B by 2034 (19.8% CAGR)
-Crypto prediction markets: $45B+ annual volume (Polymarket, Kalshi, on-chain)
-Crypto derivatives volume: $86T+ annually (2025)
-Crypto users: 590M+ worldwide
-
-Bynomo is built to serve the part of this market that wants “fast rounds + verifiable oracle pricing + simple binary outcomes”, without the trial-mode bias and settlement opacity common in Web2.
+| Segment | Market signal | Why it matters for Bynomo |
+|---|---|---|
+| Binary options / prediction | $27.56B (2025) → ~$116B by 2034 (19.8% CAGR) | Validates long-term demand for fast binary outcome trading |
+| Crypto prediction markets | $45B+ annual volume (Polymarket, Kalshi, on-chain) | Shows liquidity appetite for oracle-driven prediction markets |
+| Crypto derivatives volume | $86T+ annually (2025) | Indicates a large spec/trader base willing to move quickly |
+| Crypto users | 590M+ worldwide | Large reachable audience for high-frequency “round” experiences |
+| Bynomo positioning | Built for “fast rounds + verifiable oracle pricing + simple binary outcomes”, without Web2 trial-mode bias or settlement opacity | Defines the product wedge and differentiator |
 
 ---
 
@@ -240,10 +255,10 @@ flowchart TD
   C --> D[Supabase RPC deduct_balance_for_bet atomic balance update + audit log]
   D --> E[Client returns success and remaining balance]
 
-  E --> F[Price feed updates continuously (Pyth-based logic in app state)]
+  E --> F[Price feed updates continuously Pyth-based logic in app state]
   F --> G[Bet resolves when timeframe expires]
 
-  G --> H{Did user win}
+  G --> H[Did user win]
   H -- Yes --> I[Client calls POST api balance win]
   I --> J[Supabase RPC credit_balance_for_payout credits user balance + audit log]
   H -- No --> K[No payout credit]
@@ -258,7 +273,7 @@ flowchart TD
 flowchart TD
   U[User requests withdrawal] --> W[POST api balance withdraw]
   W --> V[Fetch user balance + status from Supabase]
-  V --> X{Valid and sufficient balance}
+  V --> X[Valid and sufficient balance]
   X -- No --> Y[Reject 400 403 404]
   X -- Yes --> Z[Apply treasury fee feePercent = 0.02]
   Z --> T[netWithdrawAmount = amount - feeAmount]

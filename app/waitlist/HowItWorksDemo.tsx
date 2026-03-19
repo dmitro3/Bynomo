@@ -150,7 +150,7 @@ function ChainSelectVisual() {
                             transition={{ delay: index * 0.1 }}
                             className={`flex items-center gap-4 p-3 rounded-xl border transition-all cursor-pointer group ${index === 0 ? 'bg-white/10 border-white/20' : 'bg-transparent border-transparent hover:bg-white/5'}`}
                         >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${chain.bg ? 'bg-white p-1' : ''} ${index === 0 ? 'scale-110' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${index === 0 ? 'bg-white p-1' : ''} ${index === 0 ? 'scale-110' : ''}`}>
                                 <img src={chain.logo} alt={chain.name} className="w-full h-full object-contain" />
                             </div>
                             <div>
