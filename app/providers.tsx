@@ -24,6 +24,7 @@ import '@mysten/dapp-kit/dist/index.css';
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
+import type { AssetType } from '@/lib/utils/priceFeed';
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -268,6 +269,32 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const { initWalletKit } = await import('@/lib/stellar/wallet-kit');
         await initWalletKit().catch(console.error);
         await loadTargetCells().catch(console.error);
+
+        // Seed a faster default asset for the chart.
+        // We try a small set in parallel and pick the first one that returns a valid price.
+        // This helps avoid long "Connecting to Pyth Network..." delays when some feeds are slower.
+        try {
+          const { fetchPrice } = await import('@/lib/utils/priceFeed');
+          const store = useOverflowStore.getState();
+
+          const candidates: AssetType[] = ['BTC', 'ETH', 'SOL', 'SUI', 'BNB'];
+
+          const seeded = await Promise.any(
+            candidates.map(async (asset) => {
+              const p = await fetchPrice(asset);
+              if (p?.price && p.price > 0) return { asset, price: p.price };
+              throw new Error('No valid price');
+            })
+          );
+
+          store.setSelectedAsset(seeded.asset);
+          // Seed at least 2 points so LiveChart can render quickly.
+          store.updatePrice(seeded.price, seeded.asset);
+          store.updatePrice(seeded.price, seeded.asset);
+        } catch (e) {
+          // Non-fatal: we'll still start the global feed and show the default BNB chart.
+        }
+
         const stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
         setIsReady(true);
         return () => { if (stopPriceFeed) stopPriceFeed(); };
