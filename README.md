@@ -24,18 +24,13 @@ Contact: bynomo.fun@gmail.com
 
 ## Story / Inspiration
 
-in 2021, i saw an advertisement of a forex option trading app called binomo.
-it was a mobile app and was promoted by a lot of big influencers.
-one day i decided to use it in free mode which is paper trading mode.
-within a week i made 10x the initial money.
-then i decided to use the real mode and put 3 months of my income and lost it all.
+In 2021, I came across an advertisement for a forex options trading app called Binomo. It was promoted heavily, and I decided to try the free mode (paper trading). Within a week, I turned the starting amount into 10x.
 
-later i realised on reddit that the company was running on algorithms, backdoors manipulators and completely fake making the user win in trial mode and lose in real mode.
-This didn't happened only with me but 99% users that were using options trading platform and the entire reddit was flooded with it.
+After that, I switched to real mode and put in three months of my income. I ended up losing it all. Later, I learned on Reddit that the system was allegedly algorithmically manipulated, with trial-mode behavior designed to make users win while real-mode results favored the house.
 
-That day i decided to build a options trading platform to solve the problem of mine with other millions of traders.
-but in web3 the <1s data feeds/ pyth oracles did not existed back then and it was impossible to build a high frequency options trading/ prediction dapp as the tools were limited.
-but waited for 5 years and executed it this year 2026.
+It wasn’t just me—reports like this were widely shared, and the community felt flooded with the same pattern. That experience pushed me to build an options trading platform that could solve the core trust problem for millions of traders.
+
+In Web3 back then, the required sub-second data feeds and Pyth oracles simply didn’t exist yet, making a high-frequency binary options and prediction dapp impractical with the available tooling. I waited five years—until 2026—when the necessary oracle speed finally made this kind of product real.
 
 ---
 
@@ -306,6 +301,50 @@ sequenceDiagram
   end
 
   Note over API: If Supabase times out, serve cached snapshot if available or return 503.
+```
+
+### 5) User flow (connect -> deposit -> bet -> resolve -> persistence)
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant FE as Frontend trade page
+  participant AUTH as Wallet or social login
+  participant API_BET as API place bet
+  participant API_WIN as API credit payout
+  participant API_SAVE as API save bet result
+  participant SB as Supabase
+
+  U->>FE: Open trade page
+  FE->>AUTH: Connect wallet or login
+  AUTH-->>FE: Connected
+
+  FE->>FE: Start price feed from Hermes
+  FE-->>U: Show chart and controls
+
+  U->>FE: Place bet
+  FE->>API_BET: Request bet placement
+  API_BET->>SB: Update balances via RPC
+  SB-->>API_BET: Balance deducted
+  API_BET-->>FE: Bet accepted
+
+  FE->>FE: Resolve bet on timeframe expiry
+
+  alt Win
+    FE->>API_WIN: Request payout credit
+    API_WIN->>SB: Credit payout via RPC
+    SB-->>API_WIN: Payout credited
+    API_WIN-->>FE: Payout credited
+  else Lose
+    FE->>FE: No payout credit
+  end
+
+  FE->>API_SAVE: Save resolved bet result
+  API_SAVE->>SB: Upsert bet history row
+  SB-->>API_SAVE: Bet persisted
+  API_SAVE-->>FE: Persistence complete
+
+  FE-->>U: Chart resolves and balance updates
 ```
 
 ---
