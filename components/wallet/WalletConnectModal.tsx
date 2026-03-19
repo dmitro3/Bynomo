@@ -22,13 +22,13 @@ export const WalletConnectModal: React.FC = () => {
     const { setOpen: openConnectKit } = useModal();
 
     const handlePrivyConnect = () => {
-        setPreferredNetwork('BNB');
+        setPreferredNetwork('PUSH');
         loginPrivy();
         setOpen(false);
     };
 
     const handleWagmiConnect = () => {
-        setPreferredNetwork('BNB');
+        setPreferredNetwork('PUSH');
         openConnectKit(true);
         setOpen(false);
     };
@@ -175,7 +175,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* BNB Wagmi Option */}
                         <button
                             onClick={handleWagmiConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform shrink-0">
@@ -194,7 +194,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* Solana Option */}
                         <button
                             onClick={handleSolanaConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 via-teal-500/5 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20 group-hover:scale-110 transition-transform shrink-0">
@@ -213,7 +213,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* Sui Option */}
                         <button
                             onClick={handleSuiConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform shrink-0">
@@ -232,7 +232,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* Stellar Option */}
                         <button
                             onClick={handleStellarConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-400/10 flex items-center justify-center border border-blue-400/20 group-hover:scale-110 transition-transform shrink-0">
@@ -251,7 +251,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* Tezos Option */}
                         <button
                             onClick={handleTezosConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 group-hover:scale-110 transition-transform shrink-0">
@@ -270,7 +270,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* NEAR Option */}
                         <button
                             onClick={handleNearConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-black/0 via-white/5 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform shrink-0">
@@ -289,7 +289,7 @@ export const WalletConnectModal: React.FC = () => {
                         {/* Starknet Option */}
                         <button
                             onClick={handleStarknetConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/0 via-indigo-400/5 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-indigo-400/10 flex items-center justify-center border border-indigo-400/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">

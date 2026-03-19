@@ -46,7 +46,9 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   isConnected: false,
   isConnecting: false,
   network: null,
-  preferredNetwork: typeof window !== 'undefined' ? localStorage.getItem('solnomo_preferred_network') as 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | null : null,
+  // Push-only mode (chains get launched one by one in the future).
+  // We intentionally ignore any persisted localStorage value.
+  preferredNetwork: 'PUSH',
   selectedCurrency: null,
   error: null,
   isConnectModalOpen: false,
@@ -182,17 +184,20 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
    * Set active network (BNB, SOL, SUI, XLM, XTZ, NEAR, STRK or PUSH)
    */
   setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | null) => {
-    set({ network });
+    // Enforce push-only selection at the state layer.
+    set({ network: network === null ? null : 'PUSH' });
   },
 
   /**
    * Set preferred network (manually chosen by user)
    */
   setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | null) => {
-    set({ preferredNetwork: network });
+    // Enforce push-only selection at the state layer.
+    const effective = network === null ? null : 'PUSH';
+    set({ preferredNetwork: effective });
     if (typeof window !== 'undefined') {
-      if (network) {
-        localStorage.setItem('solnomo_preferred_network', network);
+      if (effective) {
+        localStorage.setItem('solnomo_preferred_network', effective);
       } else {
         localStorage.removeItem('solnomo_preferred_network');
       }

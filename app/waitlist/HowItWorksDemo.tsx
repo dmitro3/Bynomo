@@ -6,11 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 // --- Assets / Icons ---
 // Reused from previous code
 const CHAINS = [
-    { name: 'Solana', id: 'SOL', color: '#9945FF', logo: '/logos/solana-sol-logo.png' },
-    { name: 'Sui', id: 'SUI', color: '#4DA2FF', logo: '/logos/sui-logo.png' },
-    { name: 'Near', id: 'NEAR', color: '#000000', logo: '/logos/near-logo.svg', bg: 'white' },
-    { name: 'BNB', id: 'BNB', color: '#F3BA2F', logo: '/logos/bnb-bnb-logo.png' },
-    { name: 'Stellar', id: 'XLM', color: '#7D00FF', logo: '/logos/stellar-xlm-logo.png' },
+    // Push-only mode for now; other chains will be launched one by one later.
+    { name: 'Push Chain', id: 'PUSH', color: '#EC4899', logo: '/logos/push-logo.png' },
 ];
 
 export default function HowItWorksDemo() {
@@ -19,7 +16,7 @@ export default function HowItWorksDemo() {
     const features = [
         {
             title: "Multi-Chain Access",
-            desc: "Connect instantly with Solana, Sui, Near, BNB, or Stellar. No bridging required.",
+            desc: "Connect instantly with Push Chain. No bridging required.",
             component: <ChainSelectVisual />
         },
         {

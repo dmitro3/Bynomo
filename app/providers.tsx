@@ -6,7 +6,6 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { formatUnits } from 'viem';
-import { bsc } from 'viem/chains';
 import { WagmiProvider, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
 import { config as wagmiConfig, pushChainDonut } from '@/lib/bnb/wagmi';
@@ -91,7 +90,8 @@ function WalletSync() {
       if (address !== '0xDEMO_1234567890') {
         setAddress('0xDEMO_1234567890');
         setIsConnected(true);
-        setNetwork('BNB');
+        // Demo mode is also push-only for now.
+        setNetwork('PUSH');
       }
       return;
     }
@@ -301,8 +301,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 accentColor: '#A855F7',
                 showWalletLoginFirst: true,
               },
-              supportedChains: [bsc],
-              defaultChain: bsc,
+              supportedChains: [pushChainDonut],
+              defaultChain: pushChainDonut,
               embeddedWallets: {
                 createOnLogin: 'users-without-wallets',
               },

@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                                             </div>
 
                                             <div className="flex flex-wrap gap-2">
-                                                {['BNB', 'NEAR', 'SOL', 'SUI', 'XTZ', 'XLM', 'STRK'].map(chain => (
+                                                {['PUSH'].map(chain => (
                                                     <button
                                                         key={chain}
                                                         onClick={() => setChainFilter(prev => prev === chain ? 'ALL' : chain)}
