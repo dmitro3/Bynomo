@@ -69,7 +69,7 @@ const testimonials = [
 const faqs = [
     {
         question: "How does the House Balance work?",
-        answer: "To ensure millisecond execution, BYNOMO uses a hybrid house balance system. For now (Push Chain mainnet first), you deposit PC into a non-custodial treasury, which is then reflected in your game balance for instant off-chain betting. New chains will be revealed and launched one-by-one."
+        answer: "To ensure millisecond execution, BYNOMO uses a hybrid house balance system. You deposit to the treasury for your selected chain, and it is then reflected in your game balance for instant off-chain betting."
     },
     {
         question: "What assets can I trade?",

@@ -10,11 +10,13 @@ Bynomo delivers fast binary options trading with millisecond-resolution price fe
 The product is inspired by the shortcomings of Web2 binary options apps (paper-mode bias, opaque settlement, and algorithmic manipulation),
 and rebuilt for Web3 using real-time oracle pricing and a transparent, data-driven trading loop.
 
-Live link: https://bynomo.fun/
-X/Twitter: https://x.com/bynomofun
-Demo video: https://youtu.be/pjFNfzP9laA
-Telegram: https://t.me/bynomo
-Discord: https://discord.gg/5MAHQpWZ7b
+| Item | Link |
+|---|---|
+| Live link | https://bynomo.fun/ |
+| X/Twitter | https://x.com/bynomofun |
+| Demo video | https://youtu.be/pjFNfzP9laA |
+| Telegram | https://t.me/bynomo |
+| Discord | https://discord.gg/5MAHQpWZ7b |
 
 Contact: bynomo.fun@gmail.com
 
@@ -22,7 +24,18 @@ Contact: bynomo.fun@gmail.com
 
 ## Story / Inspiration
 
-in 2021, i saw an advertisement of a forex option trading app called binomo, it was a mobile app and was promoted by a lot of big influencers, one day i decided to use it in free mode which is paper trading mode, within a week i made 10x the initial money, then i decided to use the real mode and put 3 months of my income and lost it all, later i realised on reddit that the company was running on algorithms, backdoors manipulators and completely fake making the user win in trial mode and lose in real mode. This didn't happened only with me but 99% users that were using options trading platform and the entire reddit was flooded with it. That day i decided to build a options trading platform to solve the problem of mine with other millions of traders but in web3 the <1s data feeds/ pyth oracles did not existed back then and it was impossible to build a high frequency options trading/ prediction dapp as the tools were limited but waited for 5 years and executed it this year 2026.
+in 2021, i saw an advertisement of a forex option trading app called binomo.
+it was a mobile app and was promoted by a lot of big influencers.
+one day i decided to use it in free mode which is paper trading mode.
+within a week i made 10x the initial money.
+then i decided to use the real mode and put 3 months of my income and lost it all.
+
+later i realised on reddit that the company was running on algorithms, backdoors manipulators and completely fake making the user win in trial mode and lose in real mode.
+This didn't happened only with me but 99% users that were using options trading platform and the entire reddit was flooded with it.
+
+That day i decided to build a options trading platform to solve the problem of mine with other millions of traders.
+but in web3 the <1s data feeds/ pyth oracles did not existed back then and it was impossible to build a high frequency options trading/ prediction dapp as the tools were limited.
+but waited for 5 years and executed it this year 2026.
 
 ---
 
@@ -183,12 +196,102 @@ http://localhost:3000
 - Lint: `yarn lint`
 - Tests: `yarn test`
 
+For contributing (setup, lint/tests, and PR expectations), see `docs/CONTRIBUTING.md`.
+
 ---
 
 ## Security Notes
 
 - Treasury private keys are loaded via server environment variables (do not expose them to the client).
 - The project includes protections against backend overload by caching and timeout behavior in critical endpoints (e.g., leaderboard provider).
+- See `docs/SECURITY_REPORTING.md` for how to report security issues responsibly.
+
+---
+
+## Mermaid Diagrams
+
+### 1) High-level architecture (client + API + Supabase)
+
+```mermaid
+flowchart LR
+  U[User] -->|Open UI| FE[Next.js React App App Router + Components + Zustand]
+  FE -->|Wallet connect| W[Wallet Integrations wagmi/viem + Solana adapter + Sui dapp-kit + NEAR/Stellar/Tezos/Starknet/Push]
+  FE -->|Place bet| API_BET[POST api balance bet Next.js Route Handler]
+  FE -->|Save bet result| API_SAVE[POST api bets save]
+  FE -->|Claim winnings| API_WIN[POST api balance win]
+  FE -->|Withdraw| API_WITH[POST api balance withdraw]
+  FE -->|Leaderboard| API_LB[GET api bets leaderboard limit]
+
+  API_BET --> SB[Supabase]
+  API_SAVE --> SB
+  API_WIN --> SB
+  API_WITH --> SB
+  API_LB --> SB
+
+  SB[(Supabase Tables/Views + RPC bet_history, user_balances, user_profiles)]
+```
+
+### 2) Trade / bet lifecycle (bet placed -> resolve -> payout + persistence)
+
+```mermaid
+flowchart TD
+  A[User selects target + amount] --> B[Game engine creates active bet in-memory state]
+  B --> C[UI calls POST api balance bet]
+  C --> D[Supabase RPC deduct_balance_for_bet atomic balance update + audit log]
+  D --> E[Client returns success and remaining balance]
+
+  E --> F[Price feed updates continuously (Pyth-based logic in app state)]
+  F --> G[Bet resolves when timeframe expires]
+
+  G --> H{Did user win}
+  H -- Yes --> I[Client calls POST api balance win]
+  I --> J[Supabase RPC credit_balance_for_payout credits user balance + audit log]
+  H -- No --> K[No payout credit]
+
+  G --> L[Client always calls POST api bets save]
+  L --> M[Upsert row into bet_history resolved_at + win/loss + payout]
+```
+
+### 3) Withdrawal flow (treasury fee + on-chain/treasury transfer + balance update)
+
+```mermaid
+flowchart TD
+  U[User requests withdrawal] --> W[POST api balance withdraw]
+  W --> V[Fetch user balance + status from Supabase]
+  V --> X{Valid and sufficient balance}
+  X -- No --> Y[Reject 400 403 404]
+  X -- Yes --> Z[Apply treasury fee feePercent = 0.02]
+  Z --> T[netWithdrawAmount = amount - feeAmount]
+
+  T --> S[Transfer from the chain treasury BNB SOL SUI XLM XTZ NEAR STRK PUSH]
+  S --> R[Call Supabase RPC update_balance_for_withdrawal deducts withdrawal amount]
+
+  R --> OK[Return tx hash + newBalance]
+```
+
+### 4) Leaderboard flow with caching + timeout guard
+
+```mermaid
+sequenceDiagram
+  participant FE as Frontend leaderboard page
+  participant API as Admin leaderboard API
+  participant SB as Supabase bet_history and user_profiles
+
+  FE->>API: Fetch leaderboard limit 50
+  API->>API: Check in memory cache TTL 60s
+  alt Cache hit
+    API-->>FE: Return leaderboard cached true
+  else Cache miss
+    API->>SB: Select bet_history fields
+    SB-->>API: bet_history rows
+    API->>API: Aggregate per wallet profit and win rate
+    API->>SB: Select user_profiles for usernames
+    SB-->>API: usernames map
+    API-->>FE: Return leaderboard cached false
+  end
+
+  Note over API: If Supabase times out, serve cached snapshot if available or return 503.
+```
 
 ---
 
@@ -202,92 +305,4 @@ Futures
 DEX
 
 Ultimate Objective: To be the next PolyMarket for Binary Options Predictions
-
----
-
-## Mermaid Diagrams
-
-### 1) High-level architecture (client + API + Supabase)
-
-```mermaid
-flowchart LR
-  U[User] -->|Open UI| FE[Next.js React App<br/>App Router + Components + Zustand]
-  FE -->|Wallet connect| W[Wallet Integrations<br/>wagmi/viem + Solana adapter + Sui dapp-kit + NEAR/Stellar/Tezos/Starknet/Push]
-  FE -->|Place bet| API_BET[POST /api/balance/bet<br/>Next.js Route Handler]
-  FE -->|Save bet result| API_SAVE[POST /api/bets/save]
-  FE -->|Claim winnings| API_WIN[POST /api/balance/win]
-  FE -->|Withdraw| API_WITH[POST /api/balance/withdraw]
-  FE -->|Leaderboard| API_LB[GET /api/bets/leaderboard?limit=...]
-
-  API_BET --> SB[Supabase]
-  API_SAVE --> SB
-  API_WIN --> SB
-  API_WITH --> SB
-  API_LB --> SB
-
-  SB[(Supabase Tables/Views + RPC<br/>bet_history, user_balances, user_profiles)]
-```
-
-### 2) Trade / bet lifecycle (bet placed -> resolve -> payout + persistence)
-
-```mermaid
-flowchart TD
-  A[User selects target + amount] --> B[Game engine creates active bet<br/>in-memory state]
-  B --> C[UI calls POST /api/balance/bet]
-  C --> D[Supabase RPC deduct_balance_for_bet<br/>atomic balance update + audit log]
-  D --> E[Client returns success and remaining balance]
-
-  E --> F[Price feed updates continuously<br/>(Pyth-based logic in app state)]
-  F --> G[Bet resolves when timeframe expires]
-
-  G --> H{Did user win?}
-  H -- Yes --> I[Client calls POST /api/balance/win]
-  I --> J[Supabase RPC credit_balance_for_payout<br/>credits user balance + audit log]
-  H -- No --> K[No payout credit]
-
-  G --> L[Client always calls POST /api/bets/save]
-  L --> M[Upsert row into bet_history<br/>resolved_at + win/loss + payout]
-```
-
-### 3) Withdrawal flow (treasury fee + on-chain/treasury transfer + balance update)
-
-```mermaid
-flowchart TD
-  U[User requests withdrawal] --> W[POST /api/balance/withdraw]
-  W --> V[Fetch user balance + status from Supabase]
-  V --> X{Valid + sufficient balance?}
-  X -- No --> Y[Reject (400/403/404)]
-  X -- Yes --> Z[Apply treasury fee<br/>feePercent = 0.02]
-  Z --> T[netWithdrawAmount = amount - feeAmount]
-
-  T --> S[Transfer from the chain treasury<br/>BNB/SOL/SUI/XLM/XTZ/NEAR/STRK/PUSH]
-  S --> R[Call Supabase RPC update_balance_for_withdrawal<br/>deducts withdrawal amount]
-
-  R --> OK[Return tx hash + newBalance]
-```
-
-### 4) Leaderboard flow with caching + timeout guard
-
-```mermaid
-sequenceDiagram
-  participant FE as Frontend (/leaderboard page)
-  participant API as GET /api/bets/leaderboard
-  participant SB as Supabase (bet_history + user_profiles)
-
-  FE->>API: fetch('/api/bets/leaderboard?limit=50')
-  API->>API: Check in-memory cache (TTL ~ 60s)
-  alt Cache hit
-    API-->>FE: JSON { leaderboard, cached: true }
-  else Cache miss
-    API->>SB: select bet_history fields
-    SB-->>API: bet_history rows
-    API->>API: Aggregate per wallet<br/>net_profit + win_rate
-    API->>SB: select user_profiles for usernames
-    SB-->>API: usernames map
-    API-->>FE: JSON { leaderboard, cached: false }
-  end
-
-  Note over API: If Supabase times out (e.g., upstream 522),
-  API serves cached snapshot when available or returns 503 quickly.
-```
 

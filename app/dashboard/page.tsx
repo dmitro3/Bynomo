@@ -8,13 +8,25 @@ interface CurrencyStat {
     userCount: number;
 }
 
+interface ModeStats {
+    totalVolume: number;
+    totalBets: number;
+    platformPnL: number;
+    totalUsers: number;
+    totalReferrals: number;
+}
+
 interface Stats {
+    // Overall (demo + real) fallback fields
     totalVolume: number;
     totalBets: number;
     totalUsers: number;
     platformPnL: number;
     revenue: number;
     currencyStats: Record<string, CurrencyStat>;
+    // Split metrics
+    demo: ModeStats;
+    real: ModeStats;
 }
 
 interface User {
@@ -75,6 +87,7 @@ export default function AdminDashboard() {
     // Default to Waitlist so collected emails are visible immediately.
     const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'>('waitlist');
     const [waitlist, setWaitlist] = useState<any[]>([]);
+    const [waitlistError, setWaitlistError] = useState<string | null>(null);
     const [accessCodes, setAccessCodes] = useState<any[]>([]);
 
     const [isAuthorized, setIsAuthorized] = useState(false);
@@ -144,6 +157,7 @@ export default function AdminDashboard() {
 
     const fetchData = async () => {
         setLoading(true);
+        setWaitlistError(null);
         try {
             const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, waitlistRes, accessCodesRes] = await Promise.all([
                 fetch('/api/admin/stats'),
@@ -179,6 +193,14 @@ export default function AdminDashboard() {
             if (waitlistRes.ok) {
                 const data = await waitlistRes.json();
                 setWaitlist(data.waitlist || []);
+                setWaitlistError(null);
+            } else {
+                try {
+                    const data = await waitlistRes.json();
+                    setWaitlistError(data?.error || `Failed to load waitlist (HTTP ${waitlistRes.status})`);
+                } catch {
+                    setWaitlistError(`Failed to load waitlist (HTTP ${waitlistRes.status})`);
+                }
             }
             if (accessCodesRes.ok) {
                 const data = await accessCodesRes.json();
@@ -287,12 +309,24 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                    <StatBox title="Platform Yield" value={`$${stats?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
-                    <StatBox title="Market Volume" value={`$${stats?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.totalBets || 0} Total Bets`} />
-                    <StatBox title="Registered Nodes" value={stats?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
-                    <StatBox title="Total Referrals" value={users.reduce((acc, u) => acc + (u.referral?.referral_count || 0), 0).toString()} label="Network Growth" />
-                    <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                <div className="space-y-6">
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Real Mode Stats</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <StatBox title="Platform Yield" value={`$${stats?.real?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
+                        <StatBox title="Market Volume" value={`$${stats?.real?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.real?.totalBets || 0} Total Bets`} />
+                        <StatBox title="Registered Nodes" value={stats?.real?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
+                        <StatBox title="Total Referrals" value={(stats?.real?.totalReferrals ?? 0).toString()} label="Network Growth" />
+                        <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                    </div>
+
+                    <div className="pt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Demo Mode Stats</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <StatBox title="Platform Yield" value={`$${stats?.demo?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
+                        <StatBox title="Market Volume" value={`$${stats?.demo?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.demo?.totalBets || 0} Total Bets`} />
+                        <StatBox title="Registered Nodes" value={stats?.demo?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
+                        <StatBox title="Total Referrals" value={(stats?.demo?.totalReferrals ?? 0).toString()} label="Network Growth" />
+                        <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                    </div>
                 </div>
 
                 {/* Navigation & Search */}
@@ -383,13 +417,23 @@ export default function AdminDashboard() {
                                             </div>
 
                                             <div className="flex flex-wrap gap-2">
-                                                {['PUSH'].map(chain => (
+                                                {[
+                                                    { label: 'BNB', value: 'BNB' },
+                                                    { label: 'SOL', value: 'SOL' },
+                                                    { label: 'SUI', value: 'SUI' },
+                                                    { label: 'XLM', value: 'XLM' },
+                                                    { label: 'XTZ', value: 'XTZ' },
+                                                    { label: 'NEAR', value: 'NEAR' },
+                                                    { label: 'STRK', value: 'STRK' },
+                                                    // Push Chain bets are stored with `network = 'PC'`
+                                                    { label: 'PUSH', value: 'PC' },
+                                                ].map(({ label, value }) => (
                                                     <button
-                                                        key={chain}
-                                                        onClick={() => setChainFilter(prev => prev === chain ? 'ALL' : chain)}
-                                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border transition-all ${chainFilter === chain ? 'bg-white/10 border-white/30 text-white' : 'bg-transparent border-white/5 text-white/30 hover:border-white/20'}`}
+                                                        key={value}
+                                                        onClick={() => setChainFilter(prev => prev === value ? 'ALL' : value)}
+                                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border transition-all ${chainFilter === value ? 'bg-white/10 border-white/30 text-white' : 'bg-transparent border-white/5 text-white/30 hover:border-white/20'}`}
                                                     >
-                                                        {chain}
+                                                        {label}
                                                     </button>
                                                 ))}
                                             </div>
@@ -592,7 +636,15 @@ export default function AdminDashboard() {
                                     <Table key="waitlist">
                                         <THead labels={['Position', 'Email Instance', 'Timestamp', 'Status']} />
                                         <tbody>
-                                            {loading ? <LoadingRow /> : waitlist.map((w, i) => (
+                                            {loading ? (
+                                                <LoadingRow />
+                                            ) : waitlist.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-8 py-32 text-center text-[10px] font-black uppercase tracking-widest text-white/10">
+                                                        {waitlistError ? waitlistError : 'No waitlist emails yet.'}
+                                                    </td>
+                                                </tr>
+                                            ) : waitlist.map((w, i) => (
                                                 <tr key={w.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
                                                     <td className="px-8 py-6 font-mono text-white/20 text-[10px]">#{waitlist.length - i}</td>
                                                     <td className="px-8 py-6 font-bold text-white tracking-tight">{w.email}</td>

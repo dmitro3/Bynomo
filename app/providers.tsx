@@ -9,6 +9,7 @@ import { formatUnits } from 'viem';
 import { WagmiProvider, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
 import { config as wagmiConfig, pushChainDonut } from '@/lib/bnb/wagmi';
+import { bsc } from 'wagmi/chains';
 
 // Solana Imports
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet } from '@solana/wallet-adapter-react';
@@ -301,8 +302,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 accentColor: '#A855F7',
                 showWalletLoginFirst: true,
               },
-              supportedChains: [pushChainDonut],
-              defaultChain: pushChainDonut,
+              supportedChains: [bsc, pushChainDonut],
+              defaultChain: bsc,
               embeddedWallets: {
                 createOnLogin: 'users-without-wallets',
               },

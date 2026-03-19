@@ -50,6 +50,9 @@ export type AssetType = keyof typeof PRICE_FEED_IDS | keyof typeof CUSTOM_TOKENS
 // Pyth Hermes API endpoint (public, free to use)
 const HERMES_ENDPOINT = 'https://hermes.pyth.network';
 
+// Cache the last successful multi-asset snapshot so the UI can render even if Hermes is slow.
+let lastAllPricesCache: Record<string, number> = {};
+
 export interface PriceData {
   price: number;
   confidence: number;
@@ -97,7 +100,10 @@ export class PythPriceFeed {
       const assetId = (PRICE_FEED_IDS as any)[this.asset];
       const id = assetId.startsWith('0x') ? assetId : `0x${assetId}`;
 
-      const response = await fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?ids%5B%5D=${id}`);
+      const response = await fetch(
+        `${HERMES_ENDPOINT}/v2/updates/price/latest?ids%5B%5D=${id}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const priceFeeds = await response.json();
@@ -172,7 +178,10 @@ export class PythPriceFeed {
     try {
       // 1. Pyth
       const queryString = ids.map(id => `ids%5B%5D=${id}`).join('&');
-      const response = await fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`);
+      const response = await fetch(
+        `${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
       if (response.ok) {
         const data = await response.json();
         if (data.parsed) {
@@ -201,8 +210,17 @@ export class PythPriceFeed {
       }
     } catch (err) {
       console.error('Error in fetchAllPrices:', err);
+      // If Hermes fails, return last known prices so the chart can render.
+      return lastAllPricesCache;
     }
-    return results;
+
+    // Update cache when we have some data.
+    if (Object.keys(results).length > 0) {
+      lastAllPricesCache = { ...lastAllPricesCache, ...results };
+    }
+
+    // If Pyth returns nothing, fall back to last known snapshot.
+    return Object.keys(results).length > 0 ? results : lastAllPricesCache;
   }
 
   getLastPrice(): number | null {
@@ -213,10 +231,23 @@ export class PythPriceFeed {
 export const startMultiPythPriceFeed = (
   callback: (prices: Record<string, number>) => void
 ): (() => void) => {
-  let intervalId = setInterval(async () => {
+  let isActive = true;
+
+  const run = async () => {
+    if (!isActive) return;
     const prices = await PythPriceFeed.fetchAllPrices();
-    callback(prices);
+    if (isActive) callback(prices);
+  };
+
+  // Fetch immediately so we don't block initial UI for an extra interval tick.
+  run().catch(() => {
+    // fetchAllPrices already falls back to cache; ignore here.
+  });
+
+  const intervalId = setInterval(() => {
+    run().catch(() => {});
   }, 1000);
+
   return () => clearInterval(intervalId);
 };
 

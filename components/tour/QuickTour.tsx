@@ -63,7 +63,7 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         ...(isConnected ? [] : [{
             target: '[data-tour="connect-button"]',
             title: 'Welcome! Connect First',
-            content: 'Start by connecting your wallet. For now, this build supports Push Chain only.',
+            content: 'Start by connecting your wallet. Choose any supported chain to begin trading.',
             position: 'bottom' as const
         }]),
         {
@@ -94,7 +94,7 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
             target: '[data-tour="deposit-section"]',
             title: 'Manage Your Funds',
             content: isConnected
-                ? 'Easily deposit Push Chain funds to start trading. Your house balance is updated instantly.'
+                ? 'Deposit funds on your selected chain. Your house balance is updated instantly.'
                 : 'After connecting, you can manage your deposits and withdrawals right here.',
             position: 'top' as const
         }

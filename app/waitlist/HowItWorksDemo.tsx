@@ -6,7 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 // --- Assets / Icons ---
 // Reused from previous code
 const CHAINS = [
-    // Push-only mode for now; other chains will be launched one by one later.
+    { name: 'BNB', id: 'BNB', color: '#FBBF24', logo: '/logos/bnb-bnb-logo.png' },
+    { name: 'Solana', id: 'SOL', color: '#14B8A6', logo: '/logos/solana-sol-logo.png' },
+    { name: 'Sui', id: 'SUI', color: '#3B82F6', logo: '/logos/sui-logo.png' },
+    { name: 'Stellar', id: 'XLM', color: '#60A5FA', logo: '/logos/stellar-xlm-logo.png' },
+    { name: 'Tezos', id: 'XTZ', color: '#818CF8', logo: '/logos/tezos-xtz-logo.png' },
+    { name: 'NEAR', id: 'NEAR', color: '#F5F5F5', logo: '/logos/near-logo.svg' },
+    { name: 'Starknet', id: 'STRK', color: '#A78BFA', logo: '/logos/starknet-strk-logo.svg' },
+    // Push Chain bets are stored as `network = PC` in the backend, but the UI uses PUSH.
     { name: 'Push Chain', id: 'PUSH', color: '#EC4899', logo: '/logos/push-logo.png' },
 ];
 
@@ -16,7 +23,7 @@ export default function HowItWorksDemo() {
     const features = [
         {
             title: "Multi-Chain Access",
-            desc: "Connect instantly with Push Chain. No bridging required.",
+            desc: "Connect instantly across supported networks. No bridging required.",
             component: <ChainSelectVisual />
         },
         {

@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import type { WaitlistEntry } from '@/lib/supabase/client';
+import { supabaseService } from '@/lib/supabase/serviceClient';
 
 export async function GET(request: NextRequest) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseService
             .from('waitlist')
-            .select('*')
+            .select('id,email,created_at')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        return NextResponse.json({ waitlist: data });
+        return NextResponse.json({ waitlist: (data as WaitlistEntry[] | null) ?? [] });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

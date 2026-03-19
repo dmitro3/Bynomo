@@ -67,6 +67,9 @@ Set these in `.env.local`:
 
 Set these in `.env.local`:
 
+Supabase (admin/server access):
+`SUPABASE_SERVICE_KEY`
+
 `PRIVY_APP_SECRET`
 
 BNB treasury:
