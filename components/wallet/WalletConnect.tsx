@@ -3,11 +3,13 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useOverflowStore } from '@/lib/store';
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
+import { useDisconnect as useWagmiDisconnect } from 'wagmi';
 
 export const WalletConnect: React.FC = () => {
   const { logout: logoutPrivy, authenticated, user, ready } = usePrivy();
   const { disconnect: disconnectSolana, connected: solanaConnected } = useSolanaWallet();
   const { mutate: disconnectSui } = useSuiDisconnect();
+  const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
 
   const { network, address, setConnectModalOpen, disconnect: disconnectStore, setPreferredNetwork } = useOverflowStore();
 
@@ -16,17 +18,23 @@ export const WalletConnect: React.FC = () => {
   };
 
   const handleDisconnect = () => {
-    if (network === 'BNB') logoutPrivy();
-    else if (network === 'SOL') disconnectSolana();
-    else if (network === 'SUI') disconnectSui();
-    else if (network === 'XLM') {
+    if (network === 'BNB') {
+      logoutPrivy();
+      wagmiDisconnect();
+    } else if (network === 'SOL') {
+      disconnectSolana();
+    } else if (network === 'SUI') {
+      disconnectSui();
+    } else if (network === 'XLM') {
       import('@/lib/stellar/wallet-kit').then(m => m.disconnectWallet());
     } else if (network === 'STRK') {
       import('@/lib/starknet/wallet').then(m => m.disconnectStarknetWallet());
+    } else if (network === 'PUSH') {
+      wagmiDisconnect();
     }
     // XTZ and NEAR don't need special SDK disconnect
 
-    // Explicitly reset our store state and preference
+    // Reset store state and clear preference so page reload stays logged out
     disconnectStore();
     setPreferredNetwork(null);
   };

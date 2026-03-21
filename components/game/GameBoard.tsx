@@ -14,7 +14,7 @@ import { useToast } from '@/lib/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
-import { useWalletClient } from 'wagmi';
+import { useWalletClient, useDisconnect as useWagmiDisconnect } from 'wagmi';
 import { parseEther } from 'viem';
 import posthog from 'posthog-js';
 
@@ -57,6 +57,7 @@ export const GameBoard: React.FC = () => {
   const { } = usePrivy();
   const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
   const { data: walletClient } = useWalletClient();
+  const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -736,7 +737,12 @@ export const GameBoard: React.FC = () => {
 
                       {/* Disconnect Button */}
                       <button
-                        onClick={() => useStore.getState().disconnect()}
+                        onClick={() => {
+                          const s = useStore.getState();
+                          if (s.network === 'PUSH' || s.network === 'BNB') wagmiDisconnect();
+                          s.setPreferredNetwork(null);
+                          s.disconnect();
+                        }}
                         className="w-full py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all duration-200"
                       >
                         Disconnect Wallet
