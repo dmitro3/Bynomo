@@ -72,6 +72,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const updateBalance = useStore((state) => state.updateBalance);
   const userAddress = useStore((state) => state.address);
   const houseBalance = useStore((state) => state.houseBalance);
+  const isPlacingBet = useStore((state) => state.isPlacingBet);
 
   const gameMode = useStore((state) => state.gameMode);
   const timeframeSeconds = useStore((state) => state.timeframeSeconds);
@@ -89,6 +90,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       case 'SUI': return 'USDC';
       case 'STRK': return 'STRK';
       case 'PUSH': return 'PC';
+      case 'SOMNIA': return 'STT';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';
@@ -111,9 +113,29 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   // Track resolved (past) cells - cells that have been "hit" by the chart
   const [resolvedCells, setResolvedCells] = useState<ResolvedCell[]>([]);
+  const resolvedDrawBetIdsRef = useRef<Set<string>>(new Set());
 
   // Local state for tracking cell bets (cells with active bets)
   const [cellBets, setCellBets] = useState<Map<string, CellBet>>(new Map());
+
+  // --- Draw mode state (third mode) ---
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  interface PendingDrawBox {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    priceTop: number;
+    priceBottom: number;
+    durationSeconds: number;
+    multiplier: number;
+    startTime: number;
+  }
+
+  const [pendingBox, setPendingBox] = useState<PendingDrawBox | null>(null);
 
 
   // Warning state for insufficient funds
@@ -121,6 +143,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   // Asset search and category filtering
   const [assetSearchQuery, setAssetSearchQuery] = useState('');
+  const [watchlist, setWatchlist] = useState<AssetType[]>([]);
   const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks'>('All');
 
   // Bet results for visual feedback (win/lose notifications)
@@ -175,6 +198,16 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     });
   }, [activeBets, selectedAsset]);
 
+  // Clear draw UI state when leaving draw mode
+  useEffect(() => {
+    if (gameMode !== 'draw') {
+      setIsDrawing(false);
+      setDrawStart(null);
+      setDrawCurrent(null);
+      setPendingBox(null);
+    }
+  }, [gameMode]);
+
 
 
   // Asset display configuration
@@ -192,7 +225,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
     XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
     XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
-    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near-logo.svg', category: 'Crypto' },
+    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near.png', category: 'Crypto' },
     // Metals
     GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
     SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
@@ -247,6 +280,31 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     setIsLoadingPrice(true); // Show loading when switching assets
   }, [selectedAsset]);
 
+  // Persisted watchlist for quick switching.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('bynomo_watchlist_assets');
+      if (raw) {
+        const parsed = JSON.parse(raw) as AssetType[];
+        if (Array.isArray(parsed)) setWatchlist(parsed);
+      }
+    } catch (e) {
+      console.error('Failed to load watchlist', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bynomo_watchlist_assets', JSON.stringify(watchlist));
+    } catch (e) {
+      console.error('Failed to save watchlist', e);
+    }
+  }, [watchlist]);
+
+  const toggleWatchlist = (asset: AssetType) => {
+    setWatchlist((prev) => prev.includes(asset) ? prev.filter((a) => a !== asset) : [...prev, asset]);
+  };
+
   // Hide loading when price data arrives
   useEffect(() => {
     if (currentPrice > 0 && priceHistory.length >= 2) {
@@ -296,8 +354,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const isMobile = dimensions.width < 640;
   const historyWidthRatio = isMobile ? 0.35 : 0.50;
   const targetColWidthPx = isMobile ? 100 : 250;
-  const gridInterval = (gameMode === 'box' ? timeframeSeconds : 30) * 1000; // ms per column
-  const pixelsPerSecond = gameMode === 'box'
+  const gridInterval = ((gameMode === 'box' || gameMode === 'draw') ? timeframeSeconds : 30) * 1000; // ms per column
+  const pixelsPerSecond = (gameMode === 'box' || gameMode === 'draw')
     ? Math.max(2, targetColWidthPx / (gridInterval / 1000))
     : (isMobile ? 25 : 50);
   const numRows = 12; // Standardize for all assets to ensure consistent box size
@@ -321,7 +379,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     );
 
     const mobileZoomFactor = isMobile ? 5.0 : 1.0;
-    const rangePercent = (gameMode === 'box' ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
+    const rangePercent = ((gameMode === 'box' || gameMode === 'draw') ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
 
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);
@@ -362,6 +420,156 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   }, [scales, currentPrice]);
 
 
+
+  // --- Draw mode helpers ---
+  const getRelativePos = (e: React.MouseEvent): { x: number; y: number } => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const handleDrawMouseDown = (e: React.MouseEvent) => {
+    if (gameMode !== 'draw' || !scales || e.button !== 0) return;
+    const pos = getRelativePos(e);
+    // Require drawing to start on/after the current price tip.
+    if (pos.x <= scales.tipX) return;
+
+    setPendingBox(null);
+    setDrawStart(pos);
+    setDrawCurrent(pos);
+    setIsDrawing(true);
+    e.preventDefault();
+  };
+
+  const handleDrawMouseMove = (e: React.MouseEvent) => {
+    if (gameMode !== 'draw' || !scales) return;
+    if (!isDrawing || !drawStart) return;
+
+    const pos = getRelativePos(e);
+
+    const maxW = pixelsPerSecond * 20;
+    const maxH = dimensions.height * 0.20;
+
+    const clampedX = Math.max(scales.tipX + 2, Math.min(pos.x, drawStart.x + maxW));
+    const clampedY = Math.max(drawStart.y - maxH, Math.min(pos.y, drawStart.y + maxH));
+    setDrawCurrent({ x: clampedX, y: clampedY });
+  };
+
+  const finalizeDrawBox = () => {
+    if (!drawStart || !drawCurrent || !scales || dimensions.height === 0) {
+      setIsDrawing(false);
+      setDrawStart(null);
+      setDrawCurrent(null);
+      return;
+    }
+
+    setIsDrawing(false);
+
+    const minX = Math.min(drawStart.x, drawCurrent.x);
+    const maxX = Math.max(drawStart.x, drawCurrent.x);
+    const minY = Math.min(drawStart.y, drawCurrent.y);
+    const maxY = Math.max(drawStart.y, drawCurrent.y);
+
+    const minBoxHeightPx = 2;
+    const maxBoxHeightPx = dimensions.height * 0.20;
+    const minBoxWidthPx = pixelsPerSecond * 0.3;
+    const maxBoxWidthPx = pixelsPerSecond * 20;
+
+    if (maxX - minX < minBoxWidthPx || maxY - minY < minBoxHeightPx) {
+      setDrawStart(null);
+      setDrawCurrent(null);
+      return;
+    }
+
+    const constrainedHeight = Math.min(maxY - minY, maxBoxHeightPx);
+    const constrainedWidth = Math.min(maxX - minX, maxBoxWidthPx);
+
+    const priceRange = scales.maxY - scales.minY;
+    const priceTop = scales.minY + (1 - minY / dimensions.height) * priceRange;
+    const priceBottom =
+      scales.minY + (1 - (minY + constrainedHeight) / dimensions.height) * priceRange;
+
+    const startOffsetSeconds = (minX - scales.tipX) / pixelsPerSecond;
+    const durationSeconds = constrainedWidth / pixelsPerSecond;
+    const startTime = Date.now() + startOffsetSeconds * 1000;
+
+    const sizeRatio = constrainedHeight / dimensions.height;
+    const priceInsideBox =
+      currentPriceRef.current >= priceBottom && currentPriceRef.current <= priceTop;
+
+    let multiplier: number;
+    if (priceInsideBox) {
+      multiplier = 1.01;
+    } else {
+      const distFromEdge = Math.min(
+        Math.abs(currentPriceRef.current - priceTop),
+        Math.abs(currentPriceRef.current - priceBottom)
+      );
+      const distNormalized = Math.min(distFromEdge / Math.max(priceRange, 0.0001), 1);
+      const distFactor = Math.pow(distNormalized, 0.7) * 6;
+      const sizeFactor = Math.min(1 / Math.max(sizeRatio * 15, 0.5), 2);
+      const durationBonus = Math.min(durationSeconds / 60, 1) * 0.3;
+      const rawMult = (1 + distFactor) * sizeFactor + durationBonus;
+      multiplier = Math.max(1.02, Math.min(rawMult, 15));
+    }
+
+    setPendingBox({
+      x: minX,
+      y: minY,
+      width: constrainedWidth,
+      height: constrainedHeight,
+      priceTop,
+      priceBottom,
+      durationSeconds,
+      multiplier,
+      startTime,
+    });
+
+    setDrawStart(null);
+    setDrawCurrent(null);
+  };
+
+  const handleDrawMouseUp = () => {
+    if (isDrawing) finalizeDrawBox();
+  };
+
+  const handleDrawMouseLeave = () => {
+    if (isDrawing) finalizeDrawBox();
+  };
+
+  const handlePlaceDrawBet = async () => {
+    if (!pendingBox || !userAddress || !betAmount) return;
+    const requiredAmount = parseFloat(betAmount);
+    if (isNaN(requiredAmount) || requiredAmount <= 0) return;
+
+    const currentBalance = houseBalance || 0;
+    if (currentBalance < requiredAmount) {
+      setShowInsufficientFunds(true);
+      setTimeout(() => setShowInsufficientFunds(false), 2000);
+      setPendingBox(null);
+      return;
+    }
+
+    const endTime = pendingBox.startTime + Math.round(pendingBox.durationSeconds) * 1000;
+    const targetId = `UP-${pendingBox.multiplier}-${Math.round(pendingBox.durationSeconds)}`;
+
+    try {
+      await placeBetFromHouseBalance(
+        betAmount,
+        targetId,
+        userAddress,
+        undefined,
+        {
+          priceTop: pendingBox.priceTop,
+          priceBottom: pendingBox.priceBottom,
+          startTime: pendingBox.startTime,
+          endTime,
+        }
+      );
+    } finally {
+      setPendingBox(null);
+    }
+  };
 
   // Handle classic (binomo) mode bet results at the graph tip
   const lastProcessedResultRef = useRef<number>(0);
@@ -768,6 +976,49 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     });
   }, [betCells, cellBets, scales, currentPrice, resolveBet, userAddress, fetchBalance, playWinSound, playLoseSound, gameMode]);
 
+  // Draw mode settlement: resolve when `now >= endTime` and price stays inside [priceBottom, priceTop]
+  useEffect(() => {
+    if (!scales || gameMode !== 'draw') return;
+
+    const drawBets = activeBets.filter((bet: any) =>
+      bet.mode === 'draw' &&
+      bet.asset === selectedAsset &&
+      bet.status === 'active' &&
+      typeof bet.endTime === 'number' &&
+      typeof bet.priceTop === 'number' &&
+      typeof bet.priceBottom === 'number'
+    );
+
+    drawBets.forEach((bet: any) => {
+      if (now < bet.endTime) return;
+      if (resolvedDrawBetIdsRef.current.has(bet.id)) return;
+      resolvedDrawBetIdsRef.current.add(bet.id);
+      setTimeout(() => resolvedDrawBetIdsRef.current.delete(bet.id), 5000);
+
+      const won = currentPrice <= bet.priceTop && currentPrice >= bet.priceBottom;
+      const payout = won ? bet.amount * bet.multiplier : 0;
+
+      resolveBet(bet.id, won, payout);
+
+      setBetResults(prev => [
+        ...prev,
+        {
+          id: `draw-${bet.id}`,
+          won,
+          amount: bet.amount,
+          payout,
+          multiplier: bet.multiplier,
+          timestamp: Date.now(),
+          x: scales.tipX,
+          y: (scales.yScale(bet.priceTop) + scales.yScale(bet.priceBottom)) / 2,
+        },
+      ]);
+
+      if (won) playWinSound();
+      else playLoseSound();
+    });
+  }, [scales, gameMode, activeBets, selectedAsset, now, currentPrice, resolveBet, playWinSound, playLoseSound]);
+
   return (
     <div ref={containerRef} className="absolute inset-0 z-0 bg-[#02040A] overflow-hidden select-none">
       {/* Loading State */}
@@ -937,6 +1188,162 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
           })}
         </div>
+      )}
+
+      {/* Draw mode: interaction overlay + active draw rectangles */}
+      {gameMode === 'draw' && scales && (
+        <>
+          {/* Mouse capture overlay (prevents placing new bets while confirming) */}
+          <div
+            className="absolute inset-0 z-30"
+            style={{ cursor: 'crosshair', pointerEvents: pendingBox ? 'none' : 'auto' }}
+            onMouseDown={handleDrawMouseDown}
+            onMouseMove={handleDrawMouseMove}
+            onMouseUp={handleDrawMouseUp}
+            onMouseLeave={handleDrawMouseLeave}
+          />
+
+          {/* Preview while dragging */}
+          {isDrawing && drawStart && drawCurrent && (
+            <div
+              className="absolute z-25 pointer-events-none"
+              style={{
+                left: Math.min(drawStart.x, drawCurrent.x),
+                top: Math.min(drawStart.y, drawCurrent.y),
+                width: Math.abs(drawCurrent.x - drawStart.x),
+                height: Math.abs(drawCurrent.y - drawStart.y),
+                border: '2px dashed rgba(168,85,247,0.9)',
+                backgroundColor: 'rgba(168,85,247,0.08)',
+                borderRadius: 4,
+              }}
+            />
+          )}
+
+          {/* Pending placement preview + confirm panel */}
+          {pendingBox && !isDrawing && (
+            <>
+              <div
+                className="absolute z-25 pointer-events-none"
+                style={{
+                  left: pendingBox.x,
+                  top: pendingBox.y,
+                  width: pendingBox.width,
+                  height: pendingBox.height,
+                  border: '2px dashed rgba(168,85,247,0.95)',
+                  backgroundColor: 'rgba(168,85,247,0.12)',
+                  borderRadius: 4,
+                }}
+              />
+
+              <div
+                className="absolute z-[35]"
+                style={{
+                  left: Math.min(pendingBox.x + pendingBox.width + 10, Math.max(16, dimensions.width - 220)),
+                  top: Math.max(10, pendingBox.y - 10),
+                  width: 200,
+                }}
+              >
+                <div className="bg-black/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-3 shadow-2xl">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider text-purple-300">Draw Bet</div>
+                      <div className="text-white text-sm font-mono">
+                        {pendingBox.multiplier.toFixed(2)}x
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Range</div>
+                      <div className="text-white text-[11px] font-mono">
+                        {pendingBox.priceBottom.toFixed(4)} - {pendingBox.priceTop.toFixed(4)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Payout</div>
+                    <div className="text-white text-[13px] font-mono">
+                      {(parseFloat(betAmount) * pendingBox.multiplier).toFixed(2)} {currencySymbol}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePlaceDrawBet}
+                      disabled={isPlacingBet || !userAddress}
+                      className="flex-1 py-2 rounded-xl bg-purple-600/90 hover:bg-purple-600 text-white text-xs font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isPlacingBet ? 'Placing...' : `Bet ${betAmount} ${currencySymbol}`}
+                    </button>
+                    <button
+                      onClick={() => setPendingBox(null)}
+                      disabled={isPlacingBet}
+                      className="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 text-xs font-black disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Active draw bet rectangles */}
+          <svg className="absolute inset-0 w-full h-full z-20 pointer-events-none" viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}>
+            {activeBets
+              .filter((bet: any) =>
+                bet.mode === 'draw' &&
+                bet.asset === selectedAsset &&
+                bet.status === 'active' &&
+                typeof bet.startTime === 'number' &&
+                typeof bet.endTime === 'number' &&
+                typeof bet.priceTop === 'number' &&
+                typeof bet.priceBottom === 'number'
+              )
+              .map((bet: any) => {
+                const bStartX = scales.xScale(bet.startTime);
+                const bEndX = scales.xScale(bet.endTime);
+                if (bEndX <= bStartX) return null;
+
+                const clampedStartX = Math.max(scales.tipX, bStartX);
+                const width = bEndX - clampedStartX;
+                if (width <= 0) return null;
+
+                const tY = scales.yScale(bet.priceTop);
+                const bY = scales.yScale(bet.priceBottom);
+                const height = bY - tY;
+                if (height <= 0) return null;
+
+                const isWinning = currentPrice <= bet.priceTop && currentPrice >= bet.priceBottom;
+                const fill = isWinning ? 'rgba(34,197,94,0.18)' : 'rgba(168,85,247,0.14)';
+                const stroke = isWinning ? 'rgba(34,197,94,0.7)' : 'rgba(168,85,247,0.65)';
+
+                return (
+                  <g key={bet.id}>
+                    <rect
+                      x={clampedStartX}
+                      y={tY}
+                      width={width}
+                      height={height}
+                      rx={4}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={clampedStartX + 6}
+                      y={tY + 16}
+                      fill="rgba(255,255,255,0.85)"
+                      fontSize={10}
+                      fontFamily="monospace"
+                      fontWeight={800}
+                    >
+                      x{Number(bet.multiplier).toFixed(2)}
+                    </text>
+                  </g>
+                );
+              })}
+          </svg>
+        </>
       )}
 
       {/* Classic mode: Active Bets SVG Overlay - Strike and Expiration lines */}
@@ -1277,6 +1684,20 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           </button>
         </div>
 
+        {watchlist.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5 max-w-[280px]">
+            {watchlist.slice(0, 8).map((asset) => (
+              <button
+                key={asset}
+                onClick={() => setSelectedAsset(asset)}
+                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${selectedAsset === asset ? 'bg-purple-500/30 border-purple-500/40 text-white' : 'bg-black/50 border-white/15 text-white/70 hover:text-white'}`}
+              >
+                {asset}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Price Display */}
         <div className="pointer-events-none" data-tour="price-display">
           <h2 className="text-gray-500 text-[10px] sm:text-xs tracking-widest font-mono mb-0.5 sm:mb-1 uppercase font-black opacity-60">
@@ -1540,6 +1961,16 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                       </div>
                       <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
                     </div>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWatchlist(asset);
+                      }}
+                      className={`px-1.5 py-1 rounded-lg text-xs font-black cursor-pointer ${watchlist.includes(asset) ? 'text-yellow-300 bg-yellow-500/10' : 'text-gray-500 hover:text-yellow-300'}`}
+                      title={watchlist.includes(asset) ? 'Remove from watchlist' : 'Add to watchlist'}
+                    >
+                      {watchlist.includes(asset) ? '★' : '☆'}
+                    </span>
                     {selectedAsset === asset && (
                       <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,1)]" />
                     )}
