@@ -79,6 +79,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
     const [marketTokens, setMarketTokens] = useState<MarketToken[]>([]);
     const [gameHistory, setGameHistory] = useState<BetHistory[]>([]);
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
@@ -159,7 +160,7 @@ export default function AdminDashboard() {
         setLoading(true);
         setWaitlistError(null);
         try {
-            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, waitlistRes, accessCodesRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes] = await Promise.all([
                 fetch('/api/admin/stats'),
                 fetch('/api/admin/users'),
                 fetch('/api/admin/transactions'),
@@ -167,7 +168,8 @@ export default function AdminDashboard() {
                 fetch('/api/admin/game-history'),
                 fetch('/api/admin/danger-zone'),
                 fetch('/api/admin/waitlist'),
-                fetch('/api/admin/access-codes')
+                fetch('/api/admin/access-codes'),
+                fetch('/api/admin/withdrawal-requests/pending')
             ]);
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) {
@@ -206,6 +208,10 @@ export default function AdminDashboard() {
                 const data = await accessCodesRes.json();
                 setAccessCodes(data.codes || []);
             }
+            if (pendingWithdrawalsRes.ok) {
+                const data = await pendingWithdrawalsRes.json();
+                setPendingWithdrawals(data.requests || []);
+            }
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
         } finally {
@@ -240,6 +246,30 @@ export default function AdminDashboard() {
             }
         } catch (error) {
             console.error('Failed to update status:', error);
+        }
+    };
+
+    const acceptWithdrawalRequest = async (requestId: number) => {
+        try {
+            const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/accept`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) await fetchData();
+        } catch (e) {
+            console.error('Failed to accept withdrawal request:', e);
+        }
+    };
+
+    const rejectWithdrawalRequest = async (requestId: number) => {
+        try {
+            const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) await fetchData();
+        } catch (e) {
+            console.error('Failed to reject withdrawal request:', e);
         }
     };
 
@@ -483,35 +513,74 @@ export default function AdminDashboard() {
                                     <Table key="financial">
                                         <THead labels={['Time', 'Identity', 'Operation', 'Amount', 'Ref']} />
                                         <tbody>
-                                            {loading ? <LoadingRow /> : transactions.map(t => {
-                                                const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
-                                                return (
-                                                    <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                                        <td className="px-8 py-6 text-[10px] font-mono">{new Date(t.created_at).toLocaleString()}</td>
-                                                        <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
-                                                        <td className="px-8 py-6">
-                                                            <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black'}>
-                                                                {t.operation_type}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            {explorerUrl ? (
-                                                                <a
-                                                                    href={explorerUrl}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="font-mono text-[10px] text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
-                                                                >
-                                                                    {t.transaction_hash.slice(0, 10)}...
-                                                                </a>
-                                                            ) : (
-                                                                <span className="font-mono text-[10px] text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                            {loading ? <LoadingRow /> : (
+                                                <>
+                                                    {/* Pending withdrawals require manual acceptance */}
+                                                    {pendingWithdrawals && pendingWithdrawals.length > 0 && pendingWithdrawals.map((w: any) => (
+                                                        <tr key={w.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                                                            <td className="px-8 py-6 text-[10px] font-mono">
+                                                                {w.requested_at ? new Date(w.requested_at).toLocaleString() : '---'}
+                                                            </td>
+                                                            <td className="px-8 py-6 font-mono text-xs">{shortenAddress(w.user_address)}</td>
+                                                            <td className="px-8 py-6">
+                                                                <span className="text-amber-300 bg-amber-300/10 px-2 py-0.5 rounded uppercase text-[9px] font-black">
+                                                                    pending_withdrawal
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-8 py-6 text-white font-mono font-bold">
+                                                                -{Number(w.amount).toFixed(4)} {w.currency}
+                                                            </td>
+                                                            <td className="px-8 py-6 text-right">
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <button
+                                                                        onClick={() => acceptWithdrawalRequest(w.id)}
+                                                                        className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded text-[9px] font-black uppercase hover:bg-emerald-500/20 transition-colors"
+                                                                    >
+                                                                        Accept
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => rejectWithdrawalRequest(w.id)}
+                                                                        className="px-2 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded text-[9px] font-black uppercase hover:bg-rose-500/20 transition-colors"
+                                                                    >
+                                                                        Reject
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+
+                                                    {/* Existing deposits/withdrawals audit log */}
+                                                    {transactions.map(t => {
+                                                        const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
+                                                        return (
+                                                            <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                                                                <td className="px-8 py-6 text-[10px] font-mono">{new Date(t.created_at).toLocaleString()}</td>
+                                                                <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
+                                                                <td className="px-8 py-6">
+                                                                    <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black'}>
+                                                                        {t.operation_type}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
+                                                                <td className="px-8 py-6 text-right">
+                                                                    {explorerUrl ? (
+                                                                        <a
+                                                                            href={explorerUrl}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="font-mono text-[10px] text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
+                                                                        >
+                                                                            {t.transaction_hash.slice(0, 10)}...
+                                                                        </a>
+                                                                    ) : (
+                                                                        <span className="font-mono text-[10px] text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </>
+                                            )}
                                         </tbody>
                                     </Table>
                                 )}
