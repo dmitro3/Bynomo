@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
+import { transferSOMNIAFromTreasury } from '@/lib/somnia/backend-client';
+import { ethers } from 'ethers';
+import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 
 interface WithdrawRequest {
   userAddress: string;
   amount: number;
   currency: string;
+  userTier?: 'free' | 'standard' | 'vip';
+  signature?: string;
+  signedAt?: number;
+  accountType?: 'real' | 'demo';
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: WithdrawRequest = await request.json();
-    const { userAddress, amount, currency = 'BNB' } = body;
+    const {
+      userAddress,
+      amount,
+      currency = 'BNB',
+      userTier = 'free',
+      signature: authorizationSignature,
+      signedAt,
+      accountType,
+    } = body;
     const normalizedCurrency = currency.toUpperCase();
 
     // Validate required fields
@@ -38,6 +53,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require signed withdrawal intent for EVM-like chains.
+    const requiresIntentSignature =
+      normalizedCurrency === 'BNB' ||
+      normalizedCurrency === 'PUSH' ||
+      normalizedCurrency === 'PC' ||
+      normalizedCurrency === 'SOMNIA' ||
+      normalizedCurrency === 'STT';
+
+    if (requiresIntentSignature) {
+      if (!authorizationSignature || !signedAt) {
+        return NextResponse.json(
+          { error: 'Missing signed withdrawal authorization' },
+          { status: 401 }
+        );
+      }
+
+      const ageMs = Date.now() - Number(signedAt);
+      if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > 5 * 60 * 1000) {
+        return NextResponse.json(
+          { error: 'Withdrawal authorization expired. Please sign again.' },
+          { status: 401 }
+        );
+      }
+
+      const displayCurrency =
+        normalizedCurrency === 'PC' ? 'PC' :
+        normalizedCurrency === 'STT' ? 'STT' :
+        normalizedCurrency;
+      const expectedMessage = `BYNOMO withdrawal authorization\naddress:${userAddress}\namount:${amount.toFixed(8)}\ncurrency:${displayCurrency}\nsignedAt:${signedAt}`;
+      const recovered = ethers.verifyMessage(expectedMessage, authorizationSignature);
+      if (recovered.toLowerCase() !== userAddress.toLowerCase()) {
+        return NextResponse.json(
+          { error: 'Invalid withdrawal signature' },
+          { status: 401 }
+        );
+      }
+    }
+
     // 1. Get house balance and status from Supabase and validate
     const { data: userData, error: userError } = await supabase
       .from('user_balances')
@@ -62,45 +115,118 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Insufficient house balance in ${currency}` }, { status: 400 });
     }
 
-    // 2. Apply 2% Treasury Fee
-    const feePercent = 0.02;
-    const feeAmount = amount * feePercent;
+    // Manual approval thresholds — amounts ABOVE these require admin review.
+    // Below or equal to the threshold the withdrawal executes instantly.
+    // Testnets (Somnia/Push) are always instant.
+    const AUTO_THRESHOLDS: Record<string, number> = {
+      BNB:    0.08, // manual approval required only above 0.08 BNB
+      SOL:    0.45,
+      BYNOMO: 0.45,
+      SUI:    45,
+      USDC:   45,
+      XLM:    300,
+      XTZ:    150,
+      NEAR:   40,
+      STRK:   1500,
+      // Testnets — always instant
+      STT:    Infinity,
+      SOMNIA: Infinity,
+      PC:     Infinity,
+      PUSH:   Infinity,
+    };
+
+    const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
+    const requiresManualApproval = accountType === 'real' && amount > threshold;
+
+    // 2. Apply tiered Treasury Fee (platform/protocol fee)
+    const feeAmount = calculateFeeAmount(amount, userTier);
     const netWithdrawAmount = amount - feeAmount;
+    const feePercentLabel = getFeePercentLabel(userTier);
 
-    console.log(`Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}, Currency=${currency}`);
+    if (netWithdrawAmount <= 0) {
+      return NextResponse.json(
+        { error: `Withdrawal amount after ${feePercentLabel} fee must be greater than zero` },
+        { status: 400 }
+      );
+    }
 
-    // 3. Perform transfer from treasury based on network
-    let signature: string;
+    console.log(
+      `Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}, Currency=${currency}, manual=${requiresManualApproval}`,
+    );
+
+    if (requiresManualApproval) {
+      const { data: pendingRow, error: pendingError } = await supabase
+        .from('withdrawal_requests')
+        .insert({
+          user_address: userAddress,
+          currency: currency,
+          amount,
+          fee_amount: feeAmount,
+          net_amount: netWithdrawAmount,
+          signature: authorizationSignature || null,
+          signed_at: signedAt || null,
+          status: 'pending',
+        })
+        .select('*')
+        .single();
+
+      if (pendingError) {
+        return NextResponse.json({ error: pendingError.message || 'Failed to create withdrawal request' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        status: 'pending',
+        requestId: pendingRow.id,
+        newBalance: userData.balance,
+      });
+    }
+
+    // Otherwise, perform transfer immediately (demo account behavior).
+
+    // Move the platform/protocol fee portion from treasury to the fee collector.
+    // A failure here must NOT block the user's withdrawal — log the error and continue.
+    let feeTxHash: string | null = null;
+    try {
+      feeTxHash = await collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount);
+    } catch (feeErr) {
+      console.error('[withdraw] Fee collection failed (non-blocking):', feeErr);
+    }
+
+    // Perform net transfer from treasury to the user.
+    let withdrawTxHash: string;
     try {
       if (normalizedCurrency === 'BNB') {
-        signature = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferBNBFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
         if (normalizedCurrency === 'BYNOMO') {
           const { transferTokenFromTreasury } = await import('@/lib/solana/backend-client');
           const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
-          signature = await transferTokenFromTreasury(userAddress, netWithdrawAmount, BYNOMO_MINT);
+          withdrawTxHash = await transferTokenFromTreasury(userAddress, netWithdrawAmount, BYNOMO_MINT);
         } else {
           const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');
-          signature = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
+          withdrawTxHash = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
         }
       } else if (normalizedCurrency === 'SUI') {
         const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
-        signature = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'XLM') {
         const { transferXLMFromTreasury } = await import('@/lib/stellar/backend-client');
-        signature = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'XTZ') {
         const { transferXTZFromTreasury } = await import('@/lib/tezos/backend-client');
-        signature = await transferXTZFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferXTZFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'NEAR') {
         const { transferNEARFromTreasury } = await import('@/lib/near/backend-client');
-        signature = await transferNEARFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferNEARFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'STRK') {
         const { transferSTRKFromTreasury } = await import('@/lib/starknet/backend-client');
-        signature = await transferSTRKFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferSTRKFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'PUSH' || normalizedCurrency === 'PC') {
         const { transferPUSHFromTreasury } = await import('@/lib/push/backend-client');
-        signature = await transferPUSHFromTreasury(userAddress, netWithdrawAmount);
+        withdrawTxHash = await transferPUSHFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === 'SOMNIA' || normalizedCurrency === 'STT') {
+        withdrawTxHash = await transferSOMNIAFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error(`Unsupported currency for withdrawal: ${currency}`);
       }
@@ -110,12 +236,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Withdrawal failed: ${message}` }, { status: 500 });
     }
 
+    const combinedTxHash = feeTxHash ? `${feeTxHash}|netTx:${withdrawTxHash}` : withdrawTxHash;
+
     // 3. Update Supabase balance using RPC
     const { data, error } = await supabase.rpc('update_balance_for_withdrawal', {
       p_user_address: userAddress,
       p_withdrawal_amount: amount,
       p_currency: currency,
-      p_transaction_hash: signature,
+      p_transaction_hash: combinedTxHash,
     });
 
     if (error) {
@@ -124,7 +252,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          txHash: signature,
+          txHash: withdrawTxHash,
           warning: 'BNB sent but balance update failed. Please contact support.',
           error: error.message
         },
@@ -136,7 +264,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      txHash: signature,
+      txHash: withdrawTxHash,
       newBalance: result.new_balance,
     });
   } catch (error) {
