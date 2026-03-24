@@ -5,7 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useWalletClient } from 'wagmi';
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -26,10 +27,35 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
   const { address, withdrawFunds, houseBalance, network, refreshWalletBalance, isConnected } = useOverflowStore();
   const toast = useToast();
+  const { wallets } = useWallets();
+  const { authenticated } = usePrivy();
+  const { data: walletClient } = useWalletClient();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain' : 'BNB Chain';
+  const userTier = useOverflowStore(state => state.userTier);
+  const feePercent = userTier === 'vip' ? 0.08 : userTier === 'standard' ? 0.09 : 0.10;
+  const feeLabel = `${Math.round(feePercent * 100)}%`;
+  const currencySymbol =
+    network === 'SUI' ? 'USDC' :
+      network === 'SOL' ? (selectedCurrency || 'SOL') :
+        network === 'XLM' ? 'XLM' :
+          network === 'XTZ' ? 'XTZ' :
+            network === 'NEAR' ? 'NEAR' :
+              network === 'STRK' ? 'STRK' :
+                network === 'PUSH' ? 'PC' :
+                  network === 'SOMNIA' ? 'STT' :
+                    'BNB';
+
+  const networkName =
+    network === 'SUI' ? 'Sui Network' :
+      network === 'SOL' ? 'Solana' :
+        network === 'XLM' ? 'Stellar' :
+          network === 'XTZ' ? 'Tezos' :
+            network === 'NEAR' ? 'NEAR Protocol' :
+              network === 'STRK' ? 'Starknet Mainnet' :
+                network === 'PUSH' ? 'Push Chain' :
+                  network === 'SOMNIA' ? 'Somnia Testnet' :
+                    'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -95,19 +121,49 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       const withdrawAmount = parseFloat(amount);
       toast.info('Processing withdrawal...');
 
+      let signature: string | undefined;
+      let signedAt: number | undefined;
+      const isEvmLike = network === 'BNB' || network === 'PUSH' || network === 'SOMNIA';
+
+      if (isEvmLike) {
+        signedAt = Date.now();
+        const message = `BYNOMO withdrawal authorization\naddress:${address}\namount:${withdrawAmount.toFixed(8)}\ncurrency:${currencySymbol}\nsignedAt:${signedAt}`;
+
+        if (walletClient) {
+          // MetaMask / any wagmi-connected wallet (works for BNB, PUSH, SOMNIA)
+          signature = await walletClient.signMessage({ account: address as `0x${string}`, message });
+        } else if (authenticated) {
+          // Privy embedded wallet fallback (BNB only)
+          const wallet = wallets.find((w) => w.address.toLowerCase() === address.toLowerCase());
+          if (!wallet) throw new Error('Wallet not found for signing');
+          const provider = await wallet.getEthereumProvider();
+          const ethersModule = await import('ethers');
+          const signer = await new ethersModule.ethers.BrowserProvider(provider).getSigner();
+          signature = await signer.signMessage(message);
+        } else {
+          throw new Error('Unable to sign withdrawal authorization message for this wallet');
+        }
+      }
+
       // Call the withdrawal store action (which calls the backend)
-      const result = await withdrawFunds(address, withdrawAmount);
+      const result = await withdrawFunds(address, withdrawAmount, { signature, signedAt });
 
       // Refresh balances
       refreshWalletBalance();
 
-      console.log('Withdrawal successful:', result.txHash);
+      const txHash = (result && (result as any).txHash) ? String((result as any).txHash) : 'PENDING';
+      const status = result && (result as any).status;
 
-      toast.success(
-        `Successfully withdrew ${withdrawAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
-      );
-
-      if (onSuccess) onSuccess(withdrawAmount, result.txHash);
+      if (status === 'pending') {
+        toast.success('Withdrawal request submitted. Awaiting manual approval.');
+        if (onSuccess) onSuccess(withdrawAmount, txHash);
+      } else {
+        console.log('Withdrawal successful:', txHash);
+        toast.success(
+          `Successfully withdrew ${withdrawAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
+        );
+        if (onSuccess) onSuccess(withdrawAmount, txHash);
+      }
       onClose();
     } catch (err: any) {
       console.error('Withdrawal error:', err);
@@ -139,9 +195,10 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
+            {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}
             {currencySymbol === 'BYNOMO' ? <img src="/overflowlogo.png" alt="BYNOMO" className="w-5 h-5" /> : (network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />)}
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
-            {network === 'NEAR' && <img src="/logos/near-logo.svg" alt="NEAR" className="w-5 h-5" />}
+            {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
             {houseBalance.toFixed(4)} {currencySymbol}
@@ -181,11 +238,11 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             </button>
             <div className="text-right">
               <p className="text-[10px] text-gray-500 font-mono">
-                Admin Fee: <span className="text-red-400">2%</span>
+                Admin Fee: <span className="text-red-400">{feeLabel}</span>
               </p>
               {amount && !isNaN(parseFloat(amount)) && (
                 <p className="text-[10px] text-gray-400 font-mono">
-                  You Receive: <span className="text-green-400">{(parseFloat(amount) * 0.98).toFixed(4)} {currencySymbol}</span>
+                  You Receive: <span className="text-green-400">{(parseFloat(amount) * (1 - feePercent)).toFixed(4)} {currencySymbol}</span>
                 </p>
               )}
             </div>
