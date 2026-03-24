@@ -14,11 +14,78 @@ and rebuilt for Web3 using real-time oracle pricing and a transparent, data-driv
 |---|---|
 | Live link | https://bynomo.fun/ |
 | X/Twitter | https://x.com/bynomofun |
-| Demo video | https://youtu.be/pjFNfzP9laA |
+| Demo video | |
 | Telegram | https://t.me/bynomo |
 | Discord | https://discord.gg/5MAHQpWZ7b |
 
-Contact: bynomo.fun@gmail.com
+Contact: bynomo.fun@gmail.com / amaansayyad2001@gmail.com
+
+---
+
+## Somnia(Reactivity)
+
+Bynomo integrates Somnia as a first-class trading network (STT) and uses Somnia Reactivity for real-time treasury event confirmations inside the trading UX.
+
+- Somnia chain support (wallet connect, deposit, withdraw, balances)
+- Somnia treasury + reactor integration
+- Reactivity WebSocket subscription for on-chain confirmation events
+- Immediate UI updates after deposit/withdraw confirmation (no page refresh)
+- Explorer-linked success toasts for verified on-chain events
+
+### How Reactivity is used
+
+The Reactivity pipeline is implemented in these modules:
+
+- `lib/somnia/reactivity.ts`
+  - Creates read SDK/public WS client on Somnia testnet
+  - Subscribes to reactor logs (`DepositConfirmed`, `WithdrawConfirmed`)
+  - Decodes topics/data into typed app events
+- `lib/hooks/useSomniaReactivity.ts`
+  - Filters events to the connected wallet on Somnia
+  - Ignores stale backlog events and deduplicates repeats
+  - Emits user toasts with explorer links
+  - Debounces balance refetch (`fetchBalance` + `refreshWalletBalance`)
+- `components/game/GameBoard.tsx`
+  - Mounts `useSomniaReactivity()` in the live trade UI
+
+### Reactivity event flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant FE as Bynomo UI
+  participant T as Somnia Treasury
+  participant R as Reactor Contract
+  participant WS as Reactivity WS Client
+
+  U->>T: Deposit / Withdraw tx
+  T-->>R: Emits confirmed event
+  R-->>WS: DepositConfirmed / WithdrawConfirmed log
+  WS-->>FE: Decoded typed event
+  FE-->>U: Success toast + explorer tx link
+  FE->>FE: Debounced balance refresh
+```
+
+### Hackathon requirement alignment
+
+- **Reactivity integration:** implemented via live WS event subscriptions on Somnia
+- **On-chain event consumption:** treasury reactor confirmations are decoded and consumed
+- **User-visible reactive UX:** confirmation toasts + balance update without manual refresh
+- **Meaningful app logic:** confirmation events directly drive trading wallet/house-balance UX
+- **Production-minded handling:** event dedupe, backlog filtering, guarded error paths
+
+### Environment note
+
+Use one runtime env file: `.env`.  
+All required keys (including Somnia Reactivity keys) are listed in **Local Development → Configure environment** below.
+
+### Demo steps
+
+1. Connect wallet on Somnia network
+2. Make a deposit (STT)
+3. Observe confirmation toast from reactor event + explorer link
+4. Confirm balance updates in UI without refresh
+5. Make a withdrawal and verify the same reactive confirmation path
 
 ---
 
@@ -183,15 +250,59 @@ yarn install
 
 ### 2) Configure environment
 
-Copy the example env file:
+Create one runtime env file:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Fill in required values in `.env.local` (RPC endpoints, Supabase URL/anon key, PostHog keys, and treasury secrets). Do not commit `.env.local`.
+Fill in required values in `.env` (RPC endpoints, Supabase keys, and treasury secrets).  
+`.env.example` is only a template; the app reads `.env`.
 
 For a clean, grouped env setup guide (without secret values), see `docs/ENVIRONMENT.md`.
+
+#### Required env keys (current codebase)
+
+Use these exact key names:
+
+- Core
+  - `NEXT_PUBLIC_APP_NAME`
+  - `NEXT_PUBLIC_ROUND_DURATION`
+  - `NEXT_PUBLIC_PRICE_UPDATE_INTERVAL`
+  - `NEXT_PUBLIC_CHART_TIME_WINDOW`
+- Supabase
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_KEY`
+- Privy
+  - `NEXT_PUBLIC_PRIVY_APP_ID`
+  - `PRIVY_APP_SECRET`
+- EVM / BNB / Push / Somnia
+  - `NEXT_PUBLIC_TREASURY_ADDRESS`
+  - `NEXT_PUBLIC_BNB_NETWORK`
+  - `NEXT_PUBLIC_BNB_RPC_ENDPOINT`
+  - `BNB_TREASURY_SECRET_KEY`
+  - `NEXT_PUBLIC_PUSH_RPC_ENDPOINT`
+  - `NEXT_PUBLIC_PUSH_TREASURY_ADDRESS`
+  - `PUSH_TREASURY_SECRET_KEY`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_ID`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_NAME`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_SYMBOL`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_DECIMALS`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_RPC`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_WS_RPC`
+  - `NEXT_PUBLIC_SOMNIA_TESTNET_EXPLORER`
+  - `NEXT_PUBLIC_SOMNIA_TREASURY_ADDRESS`
+  - `NEXT_PUBLIC_SOMNIA_REACTOR_ADDRESS`
+  - `NEXT_PUBLIC_SOMNIA_REACTIVITY_PRECOMPILE`
+  - `SOMNIA_TREASURY_SECRET_KEY` (optional if BNB key is reused)
+- Other supported chains
+  - `NEXT_PUBLIC_SOLANA_NETWORK`, `NEXT_PUBLIC_SOL_TREASURY_ADDRESS`, `SOL_TREASURY_SECRET_KEY`
+  - `NEXT_PUBLIC_SUI_NETWORK`, `NEXT_PUBLIC_SUI_RPC_ENDPOINT`, `NEXT_PUBLIC_SUI_TREASURY_ADDRESS`, `SUI_TREASURY_SECRET_KEY`, `NEXT_PUBLIC_USDC_TYPE`
+  - `NEXT_PUBLIC_STELLAR_NETWORK`, `NEXT_PUBLIC_STELLAR_HORIZON_URL`, `NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS`, `STELLAR_TREASURY_SECRET`
+  - `NEXT_PUBLIC_TEZOS_RPC_URL`, `NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS`, `TEZOS_TREASURY_SECRET_KEY`
+  - `NEXT_PUBLIC_NEAR_TREASURY_ADDRESS`, `NEAR_TREASURY_ACCOUNT_ID`, `NEAR_TREASURY_PRIVATE_KEY`
+  - `NEXT_PUBLIC_STARKNET_TREASURY_ADDRESS`, `NEXT_PUBLIC_STARKNET_RPC_URL`, `NEXT_PUBLIC_STARKNET_CHAIN_ID`, `STARKNET_TREASURY_PRIVATE_KEY`, `STARKNET_TREASURY_CAIRO_VERSION`
 
 ### 3) Run the dev server
 
@@ -274,7 +385,7 @@ flowchart TD
   W --> V[Fetch user balance + status from Supabase]
   V --> X[Valid and sufficient balance]
   X -- No --> Y[Reject 400 403 404]
-  X -- Yes --> Z[Apply treasury fee feePercent = 0.02]
+  X -- Yes --> Z[Apply treasury fee feePercent = 0.1]
   Z --> T[netWithdrawAmount = amount - feeAmount]
 
   T --> S[Transfer from the chain treasury BNB SOL SUI XLM XTZ NEAR STRK PUSH]
