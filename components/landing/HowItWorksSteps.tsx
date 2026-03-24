@@ -9,23 +9,23 @@ const STEPS = [
         id: '01',
         phase: 'LIQUIDITY INJECTION',
         title: 'Neural Link & Deposit',
-        description: 'Connect your wallet (Push Chain) and deposit to the BYNOMO treasury. Once recorded, your balance is updated in the BYNOMO house balance (Supabase) so you can bet instantly without on-chain bet transactions.',
+        description: 'Connect your wallet and deposit to the BYNOMO treasury. Once recorded, your balance is updated in the BYNOMO house balance (Supabase) so you can bet instantly without on-chain bet transactions.',
         color: 'from-blue-500/20 to-cyan-400/20',
         accent: '#3b82f6'
     },
     {
         id: '02',
         phase: 'PREDICTIVE ANALYSIS',
-        title: 'Select Execution Mode',
-        description: 'Choose between Classic (2x) or Box Mode (up to 10x). Outcomes are resolved using oracle-driven pricing (Pyth Hermes) at round expiry with fast 5s–1m timeframes.',
+        title: 'Choose Your Game Mode',
+        description: 'Pick from all 3 modes: Classic, Box, or Draw. Classic is directional up/down with fixed 2x logic, Box uses a price-range target with higher multipliers, and Draw uses your custom drawn zone as the win condition.',
         color: 'from-purple-500/20 to-pink-400/20',
         accent: '#a855f7'
     },
     {
         id: '03',
         phase: 'MATCHING ENGINE',
-        title: 'Neural Round Sync',
-        description: 'When you place a bet, we deduct from your house balance and resolve the round at expiry from the latest oracle prices. Results are persisted to bet history and payouts are credited to your house balance.',
+        title: 'Mode-Specific Settlement',
+        description: 'At expiry, BYNOMO resolves your bet from oracle prices by mode: Classic checks price direction, Box checks whether the close lands inside your selected box, and Draw checks whether price action respects your drawn region. Result and payout are then posted to history.',
         color: 'from-amber-500/20 to-orange-400/20',
         accent: '#f59e0b'
     },

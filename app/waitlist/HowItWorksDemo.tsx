@@ -11,7 +11,7 @@ const CHAINS = [
     { name: 'Sui', id: 'SUI', color: '#3B82F6', logo: '/logos/sui-logo.png' },
     { name: 'Stellar', id: 'XLM', color: '#60A5FA', logo: '/logos/stellar-xlm-logo.png' },
     { name: 'Tezos', id: 'XTZ', color: '#818CF8', logo: '/logos/tezos-xtz-logo.png' },
-    { name: 'NEAR', id: 'NEAR', color: '#F5F5F5', logo: '/logos/near-logo.svg' },
+    { name: 'NEAR', id: 'NEAR', color: '#F5F5F5', logo: '/logos/near.png' },
     { name: 'Starknet', id: 'STRK', color: '#A78BFA', logo: '/logos/starknet-strk-logo.svg' },
     // Push Chain bets are stored as `network = PC` in the backend, but the UI uses PUSH.
     { name: 'Push Chain', id: 'PUSH', color: '#EC4899', logo: '/logos/push-logo.png' },
