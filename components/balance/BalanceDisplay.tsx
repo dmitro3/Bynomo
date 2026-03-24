@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
+import { ReceiptDrawer, type ReceiptData } from './ReceiptDrawer';
 import { useToast } from '@/lib/hooks/useToast';
 
 /**
@@ -28,6 +29,7 @@ export const BalanceDisplay: React.FC = () => {
   const demoBalance = useOverflowStore(state => state.demoBalance);
   const accountType = useOverflowStore(state => state.accountType);
   const network = useOverflowStore(state => state.network);
+  const userTier = useOverflowStore(state => state.userTier);
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
   const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
   const toggleAccountType = useOverflowStore(state => state.toggleAccountType);
@@ -40,6 +42,9 @@ export const BalanceDisplay: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const feePercent = userTier === 'vip' ? 0.08 : userTier === 'standard' ? 0.09 : 0.10;
 
   // Actions from other slices (using the unified store)
   const setAddress = useOverflowStore(state => state.setAddress);
@@ -95,7 +100,19 @@ export const BalanceDisplay: React.FC = () => {
    * Refreshes balance and shows success message
    */
   const handleDepositSuccess = async (amount: number, txHash: string) => {
-    // Balance is now updated automatically by the store action
+    const fee = amount * feePercent;
+    setReceipt({
+      kind: 'deposit',
+      amount,
+      fee,
+      net: amount - fee,
+      chain: network || 'BNB',
+      currency: currentSymbol,
+      txHash,
+      createdAt: Date.now(),
+      status: 'confirmed',
+    });
+    setIsReceiptOpen(true);
   };
 
   /**
@@ -103,7 +120,19 @@ export const BalanceDisplay: React.FC = () => {
    * Refreshes balance and shows success message
    */
   const handleWithdrawSuccess = async (amount: number, txHash: string) => {
-    // Balance is now updated automatically by the store action
+    const fee = amount * feePercent;
+    setReceipt({
+      kind: 'withdrawal',
+      amount,
+      fee,
+      net: amount - fee,
+      chain: network || 'BNB',
+      currency: currentSymbol,
+      txHash,
+      createdAt: Date.now(),
+      status: txHash === 'PENDING' ? 'pending' : 'confirmed',
+    });
+    setIsReceiptOpen(true);
   };
 
   // Choose balance based on account type
@@ -118,6 +147,7 @@ export const BalanceDisplay: React.FC = () => {
     : network === 'NEAR' ? 'NEAR'
     : network === 'STRK' ? 'STRK'
     : network === 'PUSH' ? 'PC'
+    : network === 'SOMNIA' ? 'STT'
     : 'BNB';
 
   return (
@@ -227,9 +257,10 @@ export const BalanceDisplay: React.FC = () => {
                           network === 'SOL' ? '/logos/solana-sol-logo.png' :
                              network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
                                network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
-                                 network === 'NEAR' ? '/logos/near-logo.svg' :
+                                 network === 'NEAR' ? '/logos/near.png' :
                                    network === 'STRK' ? '/logos/starknet-strk-logo.svg' :
                                      network === 'PUSH' ? '/logos/push-logo.png' :
+                                     network === 'SOMNIA' ? '/logos/somnia.jpg' :
                                      '/logos/bnb-bnb-logo.png'
                      }
                     alt={currentSymbol}
@@ -301,6 +332,12 @@ export const BalanceDisplay: React.FC = () => {
         isOpen={isWithdrawModalOpen}
         onClose={() => setIsWithdrawModalOpen(false)}
         onSuccess={handleWithdrawSuccess}
+      />
+
+      <ReceiptDrawer
+        open={isReceiptOpen}
+        onClose={() => setIsReceiptOpen(false)}
+        receipt={receipt}
       />
     </>
   );
