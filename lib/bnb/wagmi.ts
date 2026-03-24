@@ -16,10 +16,33 @@ export const pushChainDonut = defineChain({
     testnet: true,
 });
 
+export const somniaTestnet = defineChain({
+    id: Number(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_ID) || 50312,
+    name: process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_NAME || 'Somnia Testnet',
+    nativeCurrency: {
+        name: 'Somnia Test Token',
+        symbol: process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_SYMBOL || 'STT',
+        decimals: Number(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_DECIMALS) || 18,
+    },
+    rpcUrls: {
+        default: {
+            http: [process.env.NEXT_PUBLIC_SOMNIA_TESTNET_RPC || 'https://dream-rpc.somnia.network'],
+        },
+    },
+    blockExplorers: {
+        default: {
+            name: 'Somnia Explorer',
+            url: process.env.NEXT_PUBLIC_SOMNIA_TESTNET_EXPLORER || 'https://shannon-explorer.somnia.network',
+        },
+    },
+    testnet: true,
+});
+
 export const config = createConfig(
     getDefaultConfig({
-        chains: [bsc, pushChainDonut],
+        chains: [somniaTestnet, bsc, pushChainDonut],
         transports: {
+            [somniaTestnet.id]: http(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_RPC || 'https://dream-rpc.somnia.network'),
             [bsc.id]: http(),
             [pushChainDonut.id]: http('https://evm.donut.rpc.push.org'),
         },
