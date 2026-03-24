@@ -60,7 +60,7 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
               endPrice: parseFloat(row.end_price) || 0,
               actualChange: (parseFloat(row.end_price) || 0) - (parseFloat(row.strike_price) || 0),
               target: {
-                id: row.mode === 'binomo' ? 'classic' : 'box',
+                id: row.mode === 'binomo' ? 'classic' : row.mode === 'draw' ? 'draw' : 'box',
                 label: `${row.direction} ${row.multiplier}x`,
                 multiplier: parseFloat(row.multiplier) || 1.9,
                 priceChange: 0,
