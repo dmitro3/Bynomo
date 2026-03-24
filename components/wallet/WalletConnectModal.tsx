@@ -7,6 +7,8 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useWalletConnection as useSuiConnection } from '@/lib/sui/wallet';
 import { useModal } from 'connectkit';
+import { useSwitchChain } from 'wagmi';
+import { somniaTestnet, pushChainDonut } from '@/lib/bnb/wagmi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Globe, ShieldCheck, Mail } from 'lucide-react';
 
@@ -20,6 +22,7 @@ export const WalletConnectModal: React.FC = () => {
     const { setVisible: setSolanaModalVisible } = useWalletModal();
     const { connect: connectSui } = useSuiConnection();
     const { setOpen: openConnectKit } = useModal();
+    const { switchChain } = useSwitchChain();
 
     const handlePrivyConnect = () => {
         setPreferredNetwork('BNB');
@@ -112,6 +115,14 @@ export const WalletConnectModal: React.FC = () => {
 
     const handlePushConnect = () => {
         setPreferredNetwork('PUSH');
+        switchChain({ chainId: pushChainDonut.id });
+        openConnectKit(true);
+        setOpen(false);
+    };
+
+    const handleSomniaConnect = () => {
+        setPreferredNetwork('SOMNIA');
+        switchChain({ chainId: somniaTestnet.id });
         openConnectKit(true);
         setOpen(false);
     };
@@ -178,9 +189,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-6 h-6 sm:w-7 sm:h-7" />
-                            </div>
+                            <img
+                                src="/logos/bnb-bnb-logo.png"
+                                alt="BNB"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Binance Chain</span>
@@ -191,15 +204,38 @@ export const WalletConnectModal: React.FC = () => {
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-yellow-500 transition-colors" />
                         </button>
 
+                        {/* Somnia Option */}
+                        <button
+                            onClick={handleSomniaConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/somnia.jpg"
+                                alt="Somnia"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Somnia</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">STT</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">EVM-like (wagmi)</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-purple-300 transition-colors" />
+                        </button>
+
                         {/* Solana Option */}
                         <button
                             onClick={handleSolanaConnect}
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 via-teal-500/5 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/solana-sol-logo.png" alt="Solana" className="w-6 h-6 sm:w-7 sm:h-7" />
-                            </div>
+                            <img
+                                src="/logos/solana-sol-logo.png"
+                                alt="Solana"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Solana</span>
@@ -216,9 +252,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/sui-logo.png" alt="Sui" className="w-6 h-6 sm:w-7 sm:h-7" />
-                            </div>
+                            <img
+                                src="/logos/sui-logo.png"
+                                alt="Sui"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Sui Network</span>
@@ -235,9 +273,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-400/10 flex items-center justify-center border border-blue-400/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/stellar-xlm-logo.png" alt="Stellar" className="w-6 h-6 sm:w-7 sm:h-7" />
-                            </div>
+                            <img
+                                src="/logos/stellar-xlm-logo.png"
+                                alt="Stellar"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Stellar</span>
@@ -254,9 +294,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/tezos-xtz-logo.png" alt="Tezos" className="w-6 h-6 sm:w-7 sm:h-7" />
-                            </div>
+                            <img
+                                src="/logos/tezos-xtz-logo.png"
+                                alt="Tezos"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Tezos</span>
@@ -273,9 +315,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-black/0 via-white/5 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform shrink-0">
-                                <img src="/logos/near-logo.svg" alt="NEAR" className="w-6 h-6 sm:w-7 sm:h-7 invert brightness-200" />
-                            </div>
+                            <img
+                                src="/logos/near.png"
+                                alt="NEAR"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">NEAR</span>
@@ -292,9 +336,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/0 via-indigo-400/5 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-indigo-400/10 flex items-center justify-center border border-indigo-400/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">
-                                <img src="/logos/starknet-strk-logo.svg" alt="Starknet" className="w-full h-full" />
-                            </div>
+                            <img
+                                src="/logos/starknet-strk-logo.svg"
+                                alt="Starknet"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Starknet</span>
@@ -311,13 +357,11 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/0 via-pink-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform shrink-0 p-1.5">
-                                <img
-                                    src="/logos/push-logo.png"
-                                    alt="Push Chain"
-                                    className="w-full h-full object-contain"
-                                />
-                            </div>
+                            <img
+                                src="/logos/push-logo.png"
+                                alt="Push Chain"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-white text-sm sm:text-base">Push Chain</span>
@@ -335,8 +379,8 @@ export const WalletConnectModal: React.FC = () => {
                             className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform shrink-0">
-                                <Mail className="w-6 h-6 sm:w-7 sm:h-7 text-purple-400" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Mail className="w-7 h-7 sm:w-8 sm:h-8 text-purple-300" />
                             </div>
                             <div className="flex-1 text-left">
                                 <div className="flex items-center gap-2">

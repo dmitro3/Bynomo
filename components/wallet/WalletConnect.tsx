@@ -31,6 +31,8 @@ export const WalletConnect: React.FC = () => {
       import('@/lib/starknet/wallet').then(m => m.disconnectStarknetWallet());
     } else if (network === 'PUSH') {
       wagmiDisconnect();
+    } else if (network === 'SOMNIA') {
+      wagmiDisconnect();
     }
     // XTZ and NEAR don't need special SDK disconnect
 
@@ -44,9 +46,10 @@ export const WalletConnect: React.FC = () => {
       case 'SOL': return '/logos/solana-sol-logo.png';
       case 'SUI': return '/logos/sui-logo.png';
       case 'BNB': return '/logos/bnb-bnb-logo.png';
+      case 'SOMNIA': return '/logos/somnia.jpg';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
-      case 'NEAR': return '/logos/near-logo.svg';
+      case 'NEAR': return '/logos/near.png';
       case 'STRK': return '/logos/starknet-strk-logo.svg';
       case 'PUSH': return '/logos/push-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
@@ -58,6 +61,7 @@ export const WalletConnect: React.FC = () => {
       case 'SOL': return 'SOL';
       case 'SUI': return 'SUI';
       case 'BNB': return 'BNB';
+      case 'SOMNIA': return 'SOMNIA';
       case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
