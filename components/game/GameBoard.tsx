@@ -17,6 +17,7 @@ import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-ki
 import { useWalletClient, useDisconnect as useWagmiDisconnect } from 'wagmi';
 import { parseEther } from 'viem';
 import posthog from 'posthog-js';
+import { useSomniaReactivity } from '@/lib/hooks/useSomniaReactivity';
 
 
 export const GameBoard: React.FC = () => {
@@ -53,6 +54,9 @@ export const GameBoard: React.FC = () => {
     setSelectedCurrency
   } = useStore();
 
+  // Real-time house balance updates for Somnia via Somnia Reactivity
+  useSomniaReactivity();
+
   const { wallets } = useWallets();
   const { } = usePrivy();
   const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
@@ -75,7 +79,7 @@ export const GameBoard: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : 'BNB';
   const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
   // Connection status
@@ -213,6 +217,21 @@ export const GameBoard: React.FC = () => {
           value: parseEther(blitzEntryFee.toString()),
         });
         console.log("Push Chain Blitz payment tx:", hash);
+      } else if (network === 'SOMNIA') {
+        if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
+        const { getSomniaConfig } = await import('@/lib/somnia/config');
+        const somniaConfig = getSomniaConfig();
+        if (!somniaConfig.treasuryAddress) throw new Error('Somnia treasury not configured');
+        toast.info(`Confirming ${blitzEntryFee} STT Blitz Entry...`);
+        const hash = await walletClient.sendTransaction({
+          to: getAddress(somniaConfig.treasuryAddress as string),
+          value: parseEther(blitzEntryFee.toString()),
+        });
+        toast.info('Waiting for on-chain confirmation...');
+        const { waitForTransactionReceipt } = await import('@wagmi/core');
+        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+        await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
+        console.log("Somnia Blitz payment tx:", hash);
       } else {
         throw new Error(`Blitz not supported for network: ${network}`);
       }
@@ -313,8 +332,21 @@ export const GameBoard: React.FC = () => {
 
   // Sync selectedDuration with store's timeframeSeconds
   useEffect(() => {
+    // Classic: duration picker affects both betting window & grid
+    if (gameMode === 'binomo') {
+      setTimeframeSeconds(selectedDuration);
+      return;
+    }
+
+    // Box/Draw: keep draw sizing/parity stable with the reference behavior
+    if (gameMode === 'draw') {
+      setTimeframeSeconds(5);
+      return;
+    }
+
+    // Box keeps the existing behavior
     setTimeframeSeconds(selectedDuration);
-  }, [selectedDuration, setTimeframeSeconds]);
+  }, [selectedDuration, setTimeframeSeconds, gameMode]);
 
   // Multiplier mapping based on duration
   const getMultiplier = (duration: number) => {
@@ -480,6 +512,15 @@ export const GameBoard: React.FC = () => {
             >
               Box Mode
             </button>
+            <button
+              onClick={() => setGameMode('draw')}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'draw'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
+                : 'text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Draw
+            </button>
           </div>
 
           {/* Tab Navigation - Pill Style */}
@@ -581,17 +622,24 @@ export const GameBoard: React.FC = () => {
                     <label className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2 block">
                       Expiration Time
                     </label>
+                    {gameMode === 'draw' && (
+                      <p className="text-purple-300 text-[10px] font-bold uppercase tracking-widest mb-2">
+                        Draw duration fixed at 5s
+                      </p>
+                    )}
                     <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                       {[5, 10, 15, 30, 60].map(duration => (
                         <button
                           key={duration}
-                          onClick={() => setSelectedDuration(duration)}
+                          onClick={() => gameMode !== 'draw' && setSelectedDuration(duration)}
+                          disabled={gameMode === 'draw'}
                           className={`
                             py-3 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-xs transition-all duration-300 border
                             ${selectedDuration === duration
                               ? 'bg-purple-600/20 border-purple-500/50 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] scale-105 z-10'
                               : 'bg-black/40 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/10'
                             }
+                            disabled:opacity-50 disabled:cursor-not-allowed
                           `}
                         >
                           <div className="flex flex-col items-center gap-0.5">
@@ -645,12 +693,21 @@ export const GameBoard: React.FC = () => {
                         <span className="text-rose-400 text-xs font-black tracking-tighter uppercase">Lower</span>
                       </button>
                     </div>
-                  ) : (
+                  ) : gameMode === 'box' ? (
                     <div className="pt-2">
                       <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 text-center">
                         <p className="text-purple-300 text-xs font-bold uppercase tracking-widest mb-1">Box Mode Active</p>
                         <p className="text-gray-400 text-[10px] leading-relaxed">
                           Click any cell on the grid chart to place your bet. Each cell has a different multiplier based on its distance from the current price.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-2">
+                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 text-center">
+                        <p className="text-purple-300 text-xs font-bold uppercase tracking-widest mb-1">Draw Mode Active</p>
+                        <p className="text-gray-400 text-[10px] leading-relaxed">
+                          Draw a box on chart → then confirm to place your bet.
                         </p>
                       </div>
                     </div>
@@ -739,7 +796,7 @@ export const GameBoard: React.FC = () => {
                       <button
                         onClick={() => {
                           const s = useStore.getState();
-                          if (s.network === 'PUSH' || s.network === 'BNB') wagmiDisconnect();
+                          if (s.network === 'PUSH' || s.network === 'BNB' || s.network === 'SOMNIA') wagmiDisconnect();
                           s.setPreferredNetwork(null);
                           s.disconnect();
                         }}
