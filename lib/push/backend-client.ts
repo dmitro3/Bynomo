@@ -37,7 +37,9 @@ export async function transferPUSHFromTreasury(
 ): Promise<string> {
     try {
         const wallet = getPushTreasuryWallet();
-        const amountWei = ethers.parseEther(amountPUSH.toString());
+        // Avoid scientific notation (e.g. 1e-7), which parseEther rejects.
+        const amountStr = amountPUSH.toFixed(18).replace(/\.?0+$/, '');
+        const amountWei = ethers.parseEther(amountStr);
 
         const tx = await wallet.sendTransaction({
             to: toAddress,

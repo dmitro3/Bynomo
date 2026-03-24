@@ -30,7 +30,9 @@ export async function transferBNBFromTreasury(
 ): Promise<string> {
     try {
         const wallet = getTreasuryWallet();
-        const amountWei = ethers.parseEther(amountBNB.toString());
+        // Avoid scientific notation (e.g. 1e-7), which parseEther rejects.
+        const amountStr = amountBNB.toFixed(18).replace(/\.?0+$/, '');
+        const amountWei = ethers.parseEther(amountStr);
 
         const tx = await wallet.sendTransaction({
             to: toAddress,
