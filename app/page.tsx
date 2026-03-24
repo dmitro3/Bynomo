@@ -7,6 +7,8 @@ import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksDemo from './waitlist/HowItWorksDemo';
 import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
+import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
+import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
 import { supabase } from '@/lib/supabase/client';
 import './waitlist/waitlist.css';
 
@@ -149,6 +151,69 @@ export default function WaitlistPage() {
 
     return (
         <main className="landing-layout selection:bg-purple-500/30">
+
+            {/* ── Announcement Banner ─────────────────────────────────────── */}
+            <div className="relative z-50 w-full overflow-hidden h-14 flex items-center"
+                style={{ background: 'linear-gradient(90deg, #021a0e 0%, #000d06 40%, #000d06 60%, #021a0e 100%)', borderBottom: '1px solid rgba(52,211,153,0.15)' }}>
+
+                {/* Subtle top shimmer line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+
+                {/* Gradient edge fades */}
+                <div className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-[#021a0e] to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#021a0e] to-transparent z-10 pointer-events-none" />
+
+                {/* Scrolling track */}
+                <div className="announcement-track flex items-center whitespace-nowrap">
+                    {[0, 1, 2, 3].map(i => (
+                        <a
+                            key={i}
+                            href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-4 px-14 group"
+                            aria-hidden={i > 0}
+                        >
+                    
+
+                            {/* Emoji */}
+                            <span className="text-xl">🎉</span>
+
+                            {/* Main message */}
+                            <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                                Bynomo is accepted for{' '}
+                                <span className="font-black text-emerald-400 text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
+                                    $4M Bagsapp Funding
+                                </span>
+                            </span>
+
+                            {/* CTA chip */}
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                                style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}>
+                                View on Bags.fm
+                                <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
+                            </span>
+
+                            {/* Separator */}
+                            <span className="text-emerald-900 text-lg mx-6">◆</span>
+                        </a>
+                    ))}
+                </div>
+            </div>
+
+            <style jsx>{`
+                .announcement-track {
+                    animation: announcement-scroll 35s linear infinite;
+                }
+                .announcement-track:hover {
+                    animation-play-state: paused;
+                }
+                @keyframes announcement-scroll {
+                    0%   { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+            `}</style>
+
             {/* Background stays fixed */}
             <div className="fixed inset-0 pointer-events-none">
                 <GridScan
@@ -273,18 +338,18 @@ export default function WaitlistPage() {
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen opacity-50 block lg:hidden" />
             </section>
 
-            <section className="relative py-32 bg-[#02040a] overflow-hidden">
+            <section id="how-it-works" className="relative py-32 bg-[#02040a] overflow-hidden">
                 <div className="section-content relative z-10 max-w-[1400px] mx-auto px-6">
                     <div className="text-center mb-16">
                         <div className="text-white/20 font-mono text-[10px] mb-4 uppercase tracking-[0.4em] flex items-center justify-center gap-3">
                             <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_purple]" />
-                            Execution Protocol
+                            How It Works
                         </div>
                         <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white mb-6 uppercase" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                            Scale your <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/20">trading</span>
+                            How <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/20">Bynomo works</span>
                         </h2>
                         <p className="text-white/30 max-w-2xl mx-auto text-sm font-bold uppercase tracking-widest leading-relaxed">
-                            A triple-layered protocol designed for speed, precision, and trustless settlement.
+                            Connect, deposit, predict, and settle in a fast hybrid flow powered by oracle pricing and secure treasury rails.
                         </p>
                     </div>
 
@@ -297,6 +362,12 @@ export default function WaitlistPage() {
                     <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
                 </div>
             </section>
+
+            {/* CHAINS + DEX LOGOS SECTION */}
+            <LogosMarqueeSection />
+
+            {/* DEXSCREENER EMBED SECTION */}
+            <DexscreenerEmbedSection />
 
             {/* TESTIMONIALS SECTION */}
             <section>
@@ -401,8 +472,10 @@ export default function WaitlistPage() {
 
                     <div className="footer-link-group">
                         <a href="https://x.com/bynomofun" target="_blank" rel="noopener noreferrer" className="footer-meta-item">X / Twitter</a>
+                        <a href="https://linktr.ee/bynomo.fun" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Linktree</a>
                         <a href="https://t.me/bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Telegram</a>
                         <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Discord</a>
+                        <a href="https://bags.fm/Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Bags</a>
                     </div>
 
                     <div className="footer-link-group">
