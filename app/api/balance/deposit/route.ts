@@ -12,19 +12,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { ethers } from 'ethers';
+import { getBNBConfig } from '@/lib/bnb/config';
+import { getPushConfig } from '@/lib/push/config';
+import { getSomniaConfig } from '@/lib/somnia/config';
+import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 
 interface DepositRequest {
   userAddress: string;
   amount: number;
   txHash: string;
   currency: string;
+  userTier?: 'free' | 'standard' | 'vip';
+}
+
+async function verifyEvmDepositTx(
+  txHash: string,
+  userAddress: string,
+  amount: number,
+  currency: string
+): Promise<boolean> {
+  let rpc = '';
+  let treasury = '';
+  if (currency === 'BNB') {
+    const cfg = getBNBConfig();
+    rpc = cfg.rpcEndpoint;
+    treasury = cfg.treasuryAddress;
+  } else if (currency === 'PC' || currency === 'PUSH') {
+    const cfg = getPushConfig();
+    rpc = cfg.rpcEndpoint;
+    treasury = cfg.treasuryAddress;
+  } else if (currency === 'STT' || currency === 'SOMNIA') {
+    const cfg = getSomniaConfig();
+    rpc = cfg.rpcUrls[0];
+    treasury = String(cfg.treasuryAddress || '');
+  } else {
+    return true;
+  }
+
+  if (!rpc || !treasury) return false;
+
+  const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
+    Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('RPC timeout')), ms))]);
+
+  try {
+    const provider = new ethers.JsonRpcProvider(rpc);
+    const [tx, receipt] = await Promise.all([
+      withTimeout(provider.getTransaction(txHash), 12_000),
+      withTimeout(provider.getTransactionReceipt(txHash), 12_000),
+    ]);
+    if (!tx || !receipt || receipt.status !== 1) return false;
+
+    if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) {
+      // Privy/relayed BNB deposits can have a relayer "from" address.
+      // Keep strict sender checks for PUSH/SOMNIA, but allow BNB if treasury/value checks pass.
+      if (currency !== 'BNB') return false;
+      console.warn('[verifyEvmDepositTx] BNB sender mismatch; accepting based on treasury/value checks', {
+        userAddress,
+        txFrom: tx.from,
+        txHash,
+      });
+    }
+    if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
+
+    const minWei = ethers.parseEther(amount.toString());
+    return tx.value >= minWei;
+  } catch (err) {
+    console.error('[verifyEvmDepositTx] RPC error:', err);
+    return false;
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: DepositRequest = await request.json();
-    const { userAddress, amount, txHash, currency = 'BNB' } = body;
+    const { userAddress, amount, txHash, currency = 'BNB', userTier = 'free' } = body;
 
     // Validate required fields
     if (!userAddress || amount === undefined || amount === null || !txHash) {
@@ -83,12 +145,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // For EVM-like chains, verify tx sender/recipient/value on-chain before crediting.
+    const normalizedCurrency = currency.toUpperCase();
+    const feeAmount = calculateFeeAmount(amount, userTier);
+    const netDepositAmount = amount - feeAmount;
+    const feePercentLabel = getFeePercentLabel(userTier);
+
+    if (netDepositAmount <= 0) {
+      return NextResponse.json(
+        { error: `Deposit amount after ${feePercentLabel} fee must be greater than zero` },
+        { status: 400 }
+      );
+    }
+
+    const isEvmLike =
+      normalizedCurrency === 'BNB' ||
+      normalizedCurrency === 'PUSH' ||
+      normalizedCurrency === 'PC' ||
+      normalizedCurrency === 'SOMNIA' ||
+      normalizedCurrency === 'STT';
+    if (isEvmLike) {
+      const isValidTx = await verifyEvmDepositTx(txHash, userAddress, amount, normalizedCurrency);
+      if (!isValidTx) {
+        return NextResponse.json(
+          { error: 'Deposit transaction could not be verified on-chain' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Tiered platform/protocol fee: move the fee portion from treasury to a dedicated collector wallet.
+    // A failure here must NOT block the user's deposit — log the error and continue.
+    let feeTxHash: string | null = null;
+    try {
+      feeTxHash = await collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount);
+    } catch (feeErr) {
+      console.error('[deposit] Fee collection failed (non-blocking):', feeErr);
+    }
+    const combinedTxHash = feeTxHash ? `${txHash}|feeTx:${feeTxHash}` : txHash;
+
     // Call update_balance_for_deposit stored procedure
     const { data, error } = await supabase.rpc('update_balance_for_deposit', {
       p_user_address: userAddress,
-      p_deposit_amount: amount,
-      p_currency: currency,
-      p_transaction_hash: txHash,
+      p_deposit_amount: netDepositAmount,
+      p_currency: normalizedCurrency,
+      p_transaction_hash: combinedTxHash,
     });
 
     // Handle database errors
