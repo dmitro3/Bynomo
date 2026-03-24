@@ -9,6 +9,7 @@ import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getAddress } from 'viem';
+import { getSomniaConfig } from '@/lib/somnia/config';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getSuiConfig } from '@/lib/sui/config';
 import { buildDepositTransaction as buildSuiDepositTransaction } from '@/lib/sui/client';
@@ -52,8 +53,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const toast = useToast();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : 'BNB Chain';
 
   // Quick select amounts
   const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
@@ -166,10 +167,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         const pushConfig = getPushConfig();
         if (!pushConfig.treasuryAddress) throw new Error('Push Chain treasury address not configured.');
         toast.info('Please confirm the transaction in your wallet...');
-        txHash = await walletClient.sendTransaction({
+        const pushHash = await walletClient.sendTransaction({
           to: pushConfig.treasuryAddress as `0x${string}`,
           value: parseEther(depositAmount.toString()),
         });
+        toast.info('Transaction submitted. Waiting for confirmation...');
+        const { waitForTransactionReceipt } = await import('@wagmi/core');
+        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+        await waitForTransactionReceipt(wagmiCfg, { hash: pushHash as `0x${string}`, timeout: 60_000 });
+        txHash = pushHash;
       } else if (network === 'STRK') {
         const { depositSTRK } = await import('@/lib/starknet/wallet');
         toast.info('Please confirm the transaction in your Starknet wallet...');
@@ -237,25 +243,55 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         const { signedTxXdr } = await kit.signTransaction(transaction.toXDR());
         const result = await server.submitTransaction(TransactionBuilder.fromXDR(signedTxXdr, Networks.PUBLIC));
         txHash = (result as any).hash || (result as any).id || signedTxXdr.slice(0, 16);
+      } else if (network === 'SOMNIA') {
+        if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
+
+        const somniaConfig = getSomniaConfig();
+        if (!somniaConfig.treasuryAddress) throw new Error('Somnia treasury address not configured');
+
+        toast.info('Please confirm the transaction in your wallet...');
+        const somniaHash = await walletClient.sendTransaction({
+          to: getAddress(somniaConfig.treasuryAddress as string),
+          value: parseEther(depositAmount.toString()),
+        });
+        toast.info('Transaction submitted. Waiting for on-chain confirmation...');
+        const { waitForTransactionReceipt } = await import('@wagmi/core');
+        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+        await waitForTransactionReceipt(wagmiCfg, { hash: somniaHash as `0x${string}`, timeout: 60_000 });
+        txHash = somniaHash;
       } else {
-        // BNB (EVM via Privy)
-        if (!authenticated) throw new Error('Not authenticated with Privy');
-        const wallet = privyWallets.find(w => w.address.toLowerCase() === address.toLowerCase());
-        if (!wallet) throw new Error('Privy wallet not found');
-
-        const ethereumProvider = await wallet.getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethereumProvider);
-        const signer = await provider.getSigner();
-
+        // BNB (EVM) — support both wagmi wallets (MetaMask) and Privy embedded wallets.
         const bnbConfig = getBNBConfig();
         if (!bnbConfig.treasuryAddress) throw new Error('Treasury address not configured');
 
-        toast.info('Please confirm the transaction in your wallet...');
-        const txResponse = await signer.sendTransaction({
-          to: getAddress(bnbConfig.treasuryAddress),
-          value: ethers.parseEther(depositAmount.toString()),
-        });
-        txHash = txResponse.hash;
+        if (walletClient) {
+          toast.info('Please confirm the transaction in your wallet...');
+          const bnbHash = await walletClient.sendTransaction({
+            to: getAddress(bnbConfig.treasuryAddress as string),
+            value: parseEther(depositAmount.toString()),
+          });
+          toast.info('Transaction submitted. Waiting for on-chain confirmation...');
+          const { waitForTransactionReceipt } = await import('@wagmi/core');
+          const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+          await waitForTransactionReceipt(wagmiCfg, { hash: bnbHash as `0x${string}`, timeout: 60_000 });
+          txHash = bnbHash;
+        } else {
+          if (!authenticated) throw new Error('Not authenticated with Privy');
+          const wallet = privyWallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+          if (!wallet) throw new Error('Privy wallet not found');
+
+          const ethereumProvider = await wallet.getEthereumProvider();
+          const provider = new ethers.BrowserProvider(ethereumProvider);
+          const signer = await provider.getSigner();
+
+          toast.info('Please confirm the transaction in your wallet...');
+          const txResponse = await signer.sendTransaction({
+            to: getAddress(bnbConfig.treasuryAddress),
+            value: ethers.parseEther(depositAmount.toString()),
+          });
+          await txResponse.wait();
+          txHash = txResponse.hash;
+        }
       }
 
       toast.info('Transaction submitted. Waiting for confirmation...');
@@ -302,9 +338,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
+            {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}
             {currencySymbol === 'BYNOMO' ? <img src="/overflowlogo.png" alt="BYNOMO" className="w-5 h-5" /> : (network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />)}
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
-            {network === 'NEAR' && <img src="/logos/near-logo.svg" alt="NEAR" className="w-5 h-5" />}
+            {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {walletBalance.toFixed(4)} {currencySymbol}
