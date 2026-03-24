@@ -8,7 +8,7 @@ import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { formatUnits } from 'viem';
 import { WagmiProvider, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
-import { config as wagmiConfig, pushChainDonut } from '@/lib/bnb/wagmi';
+import { config as wagmiConfig, pushChainDonut, somniaTestnet } from '@/lib/bnb/wagmi';
 import { bsc } from 'wagmi/chains';
 
 // Solana Imports
@@ -41,8 +41,17 @@ function WalletSync() {
     query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id },
   });
 
+  // Fetch STT balance via wagmi (Somnia)
+  const { data: somniaBalanceData } = useBalance({
+    address: wagmiAddress,
+    chainId: somniaTestnet.id,
+    query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id },
+  });
+
   const {
     address,
+    isConnected: storeIsConnected,
+    network: storeNetwork,
     accountType,
     setAddress,
     setIsConnected,
@@ -54,11 +63,19 @@ function WalletSync() {
 
   // Sync Push Chain PC balance directly into the store whenever wagmi reports it
   useEffect(() => {
-    if (preferredNetwork === 'PUSH' && pushBalanceData) {
+    if (wagmiChainId === pushChainDonut.id && pushBalanceData) {
       const formatted = formatUnits(pushBalanceData.value, pushBalanceData.decimals);
       useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
     }
-  }, [pushBalanceData, preferredNetwork]);
+  }, [pushBalanceData, wagmiChainId]);
+
+  // Sync Somnia STT balance into the store whenever wagmi reports it
+  useEffect(() => {
+    if (wagmiChainId === somniaTestnet.id && somniaBalanceData) {
+      const formatted = formatUnits(somniaBalanceData.value, somniaBalanceData.decimals);
+      useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
+    }
+  }, [somniaBalanceData, wagmiChainId]);
 
   // Restoration Effect for Stellar
   const attemptedRestore = useRef(false);
@@ -98,10 +115,35 @@ function WalletSync() {
       return;
     }
 
+    // EVM auto-detection (authoritative from active chain).
+    // This prevents Somnia/Push connections from being mislabeled as BNB
+    // when preferredNetwork is stale in localStorage.
+    if (wagmiConnected && wagmiAddress) {
+      const evmNetwork =
+        wagmiChainId === somniaTestnet.id
+          ? 'SOMNIA'
+          : wagmiChainId === pushChainDonut.id
+            ? 'PUSH'
+            : wagmiChainId === bsc.id
+              ? 'BNB'
+              : null;
+
+      if (evmNetwork) {
+        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== evmNetwork) {
+          setAddress(wagmiAddress);
+          setIsConnected(true);
+          setNetwork(evmNetwork);
+          refreshWalletBalance();
+          fetchProfile(wagmiAddress);
+        }
+        return;
+      }
+    }
+
     // 1. Solana
     if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
       const addr = solanaPublicKey.toBase58();
-      if (address !== addr) {
+      if (address !== addr || !storeIsConnected || storeNetwork !== 'SOL') {
         setAddress(addr);
         setIsConnected(true);
         setNetwork('SOL');
@@ -113,7 +155,7 @@ function WalletSync() {
 
     // 2. Sui
     if (suiAccount?.address && preferredNetwork === 'SUI') {
-      if (address !== suiAccount.address) {
+      if (address !== suiAccount.address || !storeIsConnected || storeNetwork !== 'SUI') {
         setAddress(suiAccount.address);
         setIsConnected(true);
         setNetwork('SUI');
@@ -126,7 +168,7 @@ function WalletSync() {
     // 3. Push Chain (via wagmi/ConnectKit on chainId 42101)
     if (preferredNetwork === 'PUSH') {
       if (wagmiConnected && wagmiAddress && wagmiChainId === pushChainDonut.id) {
-        if (address !== wagmiAddress) {
+        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'PUSH') {
           setAddress(wagmiAddress);
           setIsConnected(true);
           setNetwork('PUSH');
@@ -140,10 +182,27 @@ function WalletSync() {
       return;
     }
 
-    // 4. BNB (Wagmi or Privy)
+    // 4. Somnia (via wagmi/ConnectKit)
+    if (preferredNetwork === 'SOMNIA') {
+      if (wagmiConnected && wagmiAddress && wagmiChainId === somniaTestnet.id) {
+        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'SOMNIA') {
+          setAddress(wagmiAddress);
+          setIsConnected(true);
+          setNetwork('SOMNIA');
+          refreshWalletBalance();
+          fetchProfile(wagmiAddress);
+        }
+        return;
+      }
+      // Still waiting for user to switch network — keep existing state
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'SOMNIA') return;
+      return;
+    }
+
+    // 5. BNB (Wagmi or Privy)
     if (preferredNetwork === 'BNB') {
       if (wagmiConnected && wagmiAddress) {
-        if (address !== wagmiAddress) {
+        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'BNB') {
           setAddress(wagmiAddress);
           setIsConnected(true);
           setNetwork('BNB');
@@ -154,7 +213,7 @@ function WalletSync() {
       }
       if (privyReady && authenticated && privyWallets[0]) {
         const addr = privyWallets[0].address;
-        if (address !== addr) {
+        if (address !== addr || !storeIsConnected || storeNetwork !== 'BNB') {
           setAddress(addr);
           setIsConnected(true);
           setNetwork('BNB');
@@ -201,12 +260,13 @@ function WalletSync() {
     const isDemoMode = state.accountType === 'demo';
     const hasSolana = solanaConnected && solanaPublicKey;
     const hasSui = !!suiAccount?.address;
-    const hasBNB = (wagmiConnected && !!wagmiAddress) || (privyReady && authenticated && !!privyWallets[0]);
+    const hasBNB = (wagmiConnected && !!wagmiAddress && wagmiChainId === bsc.id) || (privyReady && authenticated && !!privyWallets[0]);
     const hasStellar = state.network === 'XLM' && !!state.address;
     const hasTezos = state.network === 'XTZ' && !!state.address;
     const hasNEAR = state.network === 'NEAR' && !!state.address;
     const hasSTRK = state.network === 'STRK' && !!state.address;
     const hasPUSH = wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id;
+    const hasSOMNIA = wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id;
 
     let shouldClear = false;
     if (isDemoMode) {
@@ -219,7 +279,8 @@ function WalletSync() {
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH) shouldClear = true;
+      else if (preferredNetwork === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {
@@ -233,6 +294,7 @@ function WalletSync() {
     suiAccount,
     wagmiAddress, wagmiConnected, wagmiChainId,
     preferredNetwork, address, accountType,
+    storeIsConnected, storeNetwork,
     setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile
   ]);
 
@@ -329,8 +391,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 accentColor: '#A855F7',
                 showWalletLoginFirst: true,
               },
-              supportedChains: [bsc, pushChainDonut],
-              defaultChain: bsc,
+              supportedChains: [somniaTestnet, bsc, pushChainDonut],
+              defaultChain: somniaTestnet,
               embeddedWallets: {
                 createOnLogin: 'users-without-wallets',
               },
