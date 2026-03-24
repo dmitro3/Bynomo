@@ -23,11 +23,21 @@ export default function LeaderboardPage() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [networkFilter, setNetworkFilter] = useState('ALL');
+    const [assetFilter, setAssetFilter] = useState('ALL');
+    const [timeframe, setTimeframe] = useState('24');
+    const address = useStore((s) => s.address);
 
     const fetchLeaderboard = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/bets/leaderboard?limit=50');
+            const params = new URLSearchParams({
+                limit: '50',
+                network: networkFilter,
+                asset: assetFilter,
+                timeframeHours: timeframe,
+            });
+            const res = await fetch(`/api/bets/leaderboard?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
                 setLeaderboard(data.leaderboard || []);
@@ -37,7 +47,7 @@ export default function LeaderboardPage() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [networkFilter, assetFilter, timeframe]);
 
     useEffect(() => {
         // Initial load
@@ -55,7 +65,7 @@ export default function LeaderboardPage() {
             case 'BNB': return '/logos/bnb-bnb-logo.png';
             case 'XLM': return '/logos/stellar-xlm-logo.png';
             case 'XTZ': return '/logos/tezos-xtz-logo.png';
-            case 'NEAR': return '/logos/near-logo.svg';
+            case 'NEAR': return '/logos/near.png';
             case 'STRK': return '/logos/starknet-strk-logo.svg';
             default: return '/logos/bnb-bnb-logo.png';
         }
@@ -81,6 +91,8 @@ export default function LeaderboardPage() {
         (entry.username && entry.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
         entry.wallet_address.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const myRank = filteredLeaderboard.findIndex((e) => !!address && e.wallet_address.toLowerCase() === address.toLowerCase());
 
     return (
         <main className="min-h-screen bg-[#02040a] text-white selection:bg-purple-500/30">
@@ -142,6 +154,18 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Leaderboard Table */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                    {['ALL', 'BNB', 'SOL', 'SUI', 'XLM', 'XTZ', 'NEAR', 'STRK', 'PUSH', 'SOMNIA'].map((n) => (
+                        <button key={n} onClick={() => setNetworkFilter(n)} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${networkFilter === n ? 'bg-white/15 text-white' : 'bg-white/5 text-white/40'}`}>{n}</button>
+                    ))}
+                    {['ALL', 'BTC', 'ETH', 'SOL', 'BNB', 'GOLD', 'NVDA', 'TSLA'].map((a) => (
+                        <button key={a} onClick={() => setAssetFilter(a)} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${assetFilter === a ? 'bg-purple-500/25 text-purple-200' : 'bg-white/5 text-white/40'}`}>{a}</button>
+                    ))}
+                    {['24', '168', '720'].map((h) => (
+                        <button key={h} onClick={() => setTimeframe(h)} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${timeframe === h ? 'bg-blue-500/25 text-blue-200' : 'bg-white/5 text-white/40'}`}>{h === '24' ? '24H' : h === '168' ? '7D' : '30D'}</button>
+                    ))}
+                </div>
+
                 <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -237,6 +261,15 @@ export default function LeaderboardPage() {
                         </table>
                     </div>
                 </motion.div>
+
+                <div className="sticky bottom-4 mt-5">
+                    <div className="inline-flex items-center gap-3 rounded-xl border border-white/15 bg-black/70 backdrop-blur px-4 py-2">
+                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-black">My rank</span>
+                        <span className="text-sm font-black text-white">
+                            {myRank >= 0 ? `#${myRank + 1}` : 'Unranked'}
+                        </span>
+                    </div>
+                </div>
 
                 {/* Footer Meta */}
                 <div className="mt-12 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-white/10 px-4">

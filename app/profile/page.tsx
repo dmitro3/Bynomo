@@ -18,7 +18,7 @@ const TIER_DATA = [
         blitz: 'Enabled',
         payout: '100.0%',
         withdrawal: 'Instant',
-        fee: '2.0%',
+        fee: '10%',
         requirement: '$0',
     },
     {
@@ -32,7 +32,7 @@ const TIER_DATA = [
         blitz: 'Enabled',
         payout: '100.0%',
         withdrawal: 'Instant',
-        fee: '1.75%',
+        fee: '9%',
         requirement: '$50',
     },
     {
@@ -46,7 +46,7 @@ const TIER_DATA = [
         blitz: 'Enabled',
         payout: '100.0%',
         withdrawal: 'Instant',
-        fee: '1.5%',
+        fee: '8%',
         requirement: '$500',
     }
 ];
@@ -192,6 +192,9 @@ export default function ProfilePage() {
                         <Link href="/referrals" className="px-5 py-3 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-all active:scale-95 shadow-xl">
                             Referral System
                         </Link>
+                        <Link href="/withdrawals" className="px-5 py-3 bg-white/10 border border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/15 transition-all active:scale-95">
+                            Withdrawals
+                        </Link>
                     </div>
                 </div>
             </motion.div>
@@ -213,6 +216,52 @@ export default function ProfilePage() {
                         onClick={() => setIsTierModalOpen(true)}
                     />
                 </div>
+
+                {/* Tier Benefits */}
+                <section className="rounded-[2rem] border border-white/10 bg-[#050505] p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Tier Benefits</h2>
+                        <button
+                            onClick={() => setIsTierModalOpen(true)}
+                            className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors"
+                        >
+                            View all tiers <ChevronRight className="w-3 h-3" />
+                        </button>
+                    </div>
+
+                    <div className={`rounded-2xl border ${currentTierData.borderColor} ${currentTierData.bgColor} p-5 mb-4`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <currentTierData.iconComp className={`w-5 h-5 ${currentTierData.color}`} />
+                                <span className={`text-sm font-black uppercase tracking-widest ${currentTierData.color}`}>
+                                    {currentTierData.name} Tier
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-mono text-white/50">{currentTierData.requirement}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <BenefitItem label="Assets" value={currentTierData.assets} />
+                            <BenefitItem label="Blitz" value={currentTierData.blitz} colored />
+                            <BenefitItem label="Payout" value={currentTierData.payout} colored />
+                            <BenefitItem label="Withdrawal" value={currentTierData.withdrawal} />
+                            <BenefitItem label="Protocol Fee" value={currentTierData.fee} />
+                        </div>
+                    </div>
+
+                    {nextTier && (
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-1">Next Unlock</p>
+                                <p className="text-sm font-bold text-white/80">
+                                    Reach <span className="font-mono">{nextTier.requirement}</span> to unlock{' '}
+                                    <span className={nextTier.color}>{nextTier.name}</span>
+                                </p>
+                            </div>
+                            <span className="text-[10px] font-black uppercase text-white/30">Progression</span>
+                        </div>
+                    )}
+                </section>
 
                 {/* Bottom Bento Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

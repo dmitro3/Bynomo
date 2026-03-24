@@ -26,11 +26,27 @@ type LeaderboardRow = {
 let cachedLeaderboard: { data: LeaderboardRow[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 60_000; // 1 minute
 
-async function fetchLeaderboardFromSupabase(limit: number): Promise<LeaderboardRow[]> {
+async function fetchLeaderboardFromSupabase(
+  limit: number,
+  opts?: { network?: string; asset?: string; timeframeHours?: number }
+): Promise<LeaderboardRow[]> {
   // Fetch raw bet history
-  const { data, error } = await supabase
+  let query = supabase
     .from('bet_history')
-    .select('wallet_address, amount, payout, won, network');
+    .select('wallet_address, amount, payout, won, network, asset, created_at');
+
+  if (opts?.network && opts.network !== 'ALL') {
+    query = query.eq('network', opts.network);
+  }
+  if (opts?.asset && opts.asset !== 'ALL') {
+    query = query.eq('asset', opts.asset);
+  }
+  if (opts?.timeframeHours && Number.isFinite(opts.timeframeHours)) {
+    const since = new Date(Date.now() - opts.timeframeHours * 60 * 60 * 1000).toISOString();
+    query = query.gte('created_at', since);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Supabase leaderboard error:', error);
@@ -125,10 +141,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const network = (searchParams.get('network') || 'ALL').toUpperCase();
+    const asset = (searchParams.get('asset') || 'ALL').toUpperCase();
+    const timeframeHoursRaw = searchParams.get('timeframeHours');
+    const timeframeHours = timeframeHoursRaw ? Number(timeframeHoursRaw) : undefined;
     const now = Date.now();
 
     // Serve from cache when fresh
-    if (cachedLeaderboard && now - cachedLeaderboard.fetchedAt < CACHE_TTL_MS) {
+    const useBaseCache = network === 'ALL' && asset === 'ALL' && !timeframeHours;
+    if (useBaseCache && cachedLeaderboard && now - cachedLeaderboard.fetchedAt < CACHE_TTL_MS) {
       return NextResponse.json({ leaderboard: cachedLeaderboard.data, cached: true });
     }
 
@@ -141,7 +162,7 @@ export async function GET(request: NextRequest) {
       // Note: supabase-js doesn't take AbortController directly here, so we just
       // bound our own Promise timeout around the fetch function.
       const result = await Promise.race([
-        fetchLeaderboardFromSupabase(limit),
+        fetchLeaderboardFromSupabase(limit, { network, asset, timeframeHours }),
         new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Leaderboard fetch timeout')), 10_000);
         }),
@@ -151,7 +172,9 @@ export async function GET(request: NextRequest) {
       clearTimeout(timeout);
     }
 
-    cachedLeaderboard = { data, fetchedAt: now };
+    if (useBaseCache) {
+      cachedLeaderboard = { data, fetchedAt: now };
+    }
     return NextResponse.json({ leaderboard: data, cached: false });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);

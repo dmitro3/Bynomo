@@ -15,11 +15,12 @@ interface Toast {
   id: string;
   message: string;
   type: ToastType;
+  links?: Array<{ label: string; href: string }>;
 }
 
 interface ToastStore {
   toasts: Toast[];
-  addToast: (message: string, type: ToastType) => void;
+  addToast: (message: string, type: ToastType, links?: Array<{ label: string; href: string }>) => void;
   removeToast: (id: string) => void;
   clearAll: () => void;
 }
@@ -30,10 +31,10 @@ interface ToastStore {
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
   
-  addToast: (message: string, type: ToastType) => {
+  addToast: (message: string, type: ToastType, links?: Array<{ label: string; href: string }>) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     set((state) => ({
-      toasts: [...state.toasts, { id, message, type }]
+      toasts: [...state.toasts, { id, message, type, links }]
     }));
   },
   
