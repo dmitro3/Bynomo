@@ -28,7 +28,7 @@ export const Leaderboard: React.FC = () => {
             case 'BNB': return '/logos/bnb-bnb-logo.png';
             case 'XLM': return '/logos/stellar-xlm-logo.png';
             case 'XTZ': return '/logos/tezos-xtz-logo.png';
-            case 'NEAR': return '/logos/near-logo.svg';
+            case 'NEAR': return '/logos/near.png';
             case 'STRK': return '/logos/starknet-strk-logo.svg';
             case 'PUSH': return '/logos/push-logo.png';
             default: return '/logos/bnb-bnb-logo.png';

@@ -19,7 +19,7 @@ const TIER_DATA = [
         blitz: true,
         payout: '80%',
         withdrawal: 'Instant',
-        fee: '2.0%',
+        fee: '10%',
         requirement: '$0',
     },
     {
@@ -31,7 +31,7 @@ const TIER_DATA = [
         blitz: true,
         payout: '85%',
         withdrawal: 'Instant',
-        fee: '1.75%',
+        fee: '9%',
         requirement: '$50',
     },
     {
@@ -43,7 +43,7 @@ const TIER_DATA = [
         blitz: true,
         payout: '90%',
         withdrawal: 'Instant',
-        fee: '1.5%',
+        fee: '8%',
         requirement: '$500',
     }
 ];
