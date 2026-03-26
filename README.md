@@ -66,18 +66,13 @@ sequenceDiagram
   FE->>FE: Debounced balance refresh
 ```
 
-### Hackathon requirement alignment
+### Requirement alignment
 
 - **Reactivity integration:** implemented via live WS event subscriptions on Somnia
 - **On-chain event consumption:** treasury reactor confirmations are decoded and consumed
 - **User-visible reactive UX:** confirmation toasts + balance update without manual refresh
 - **Meaningful app logic:** confirmation events directly drive trading wallet/house-balance UX
 - **Production-minded handling:** event dedupe, backlog filtering, guarded error paths
-
-### Environment note
-
-Use one runtime env file: `.env`.  
-All required keys (including Somnia Reactivity keys) are listed in **Local Development → Configure environment** below.
 
 ### Demo steps
 
