@@ -25,7 +25,7 @@ const DEPOSITED_TOPIC: Hex = keccak256(toHex('Deposited(address,uint256,uint256)
 const REACTIVITY_GAS_CONFIG = {
   priorityFeePerGas: parseGwei('1'),
   maxFeePerGas: parseGwei('10'),
-  gasLimit: 2_000_000n,
+  gasLimit: BigInt(2_000_000),
 } as const;
 
 async function main() {
