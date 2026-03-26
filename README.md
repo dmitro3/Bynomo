@@ -86,23 +86,45 @@ sequenceDiagram
 ### Somnia User Flow
 
 ```mermaid
-flowchart TD
-  A[User connects wallet on Somnia] --> B[User deposits STT to treasury]
-  B --> C[Deposit tx confirmed on-chain]
-  C --> D[Reactor emits DepositConfirmed]
-  D --> E[Reactivity WS subscription receives event]
-  E --> F[UI toast + explorer link]
-  F --> G[Store refreshes wallet/house balances]
-  G --> H[User places Classic / Box / Draw / Blitz trade]
-  H --> I[Bet + settlement persisted to Supabase]
-  I --> J[User requests withdrawal]
-  J --> K{Amount above threshold?}
-  K -- No --> L[Auto withdrawal from treasury]
-  K -- Yes --> M[Create pending withdrawal request]
-  M --> N[Admin accepts in dashboard]
-  N --> L
-  L --> O[Reactor emits WithdrawConfirmed]
-  O --> P[UI + balances update reactively]
+sequenceDiagram
+  participant U as User
+  participant FE as Bynomo UI
+  participant T as Somnia Treasury
+  participant R as Reactor Contract
+  participant WS as Reactivity WS Client
+  participant API as Bynomo API
+  participant DB as Supabase
+  participant AD as Admin Dashboard
+
+  U->>FE: Connect wallet on Somnia
+  U->>FE: Submit deposit (STT)
+  FE->>T: Send deposit tx
+  T-->>R: Emit DepositConfirmed
+  R-->>WS: Publish reactor log
+  WS-->>FE: Decode event
+  FE-->>U: Show toast + explorer link
+  FE->>API: Refresh balances
+  API->>DB: Read updated balance state
+  DB-->>FE: Return wallet/house balances
+
+  U->>FE: Place trade (Classic/Box/Draw/Blitz)
+  FE->>API: Create and settle bet
+  API->>DB: Persist bet + balance effects
+  DB-->>FE: Return updated trade state
+
+  U->>FE: Request withdrawal
+  FE->>API: Submit withdrawal request
+  alt Amount above manual threshold
+    API->>DB: Create pending withdrawal request
+    AD->>API: Accept request
+    API->>T: Execute treasury withdrawal
+  else Amount at/below threshold
+    API->>T: Execute treasury withdrawal directly
+  end
+  T-->>R: Emit WithdrawConfirmed
+  R-->>WS: Publish reactor log
+  WS-->>FE: Decode event
+  FE-->>U: Show confirmation + refresh balances
 ```
 
 ### Requirement alignment
