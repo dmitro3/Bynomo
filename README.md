@@ -14,7 +14,7 @@ and rebuilt for Web3 using real-time oracle pricing and a transparent, data-driv
 |---|---|
 | Live link | https://bynomo.fun/ |
 | X/Twitter | https://x.com/bynomofun |
-| Demo video | |
+| Demo video | https://youtu.be/9jluc7bjvG4|
 | Telegram | https://t.me/bynomo |
 | Discord | https://discord.gg/5MAHQpWZ7b |
 
