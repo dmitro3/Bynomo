@@ -279,7 +279,7 @@ function WalletSync() {
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
-      else if (preferredNetwork === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
+      else if (String(preferredNetwork) === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
       else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA) shouldClear = true;
     }
 
