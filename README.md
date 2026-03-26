@@ -66,6 +66,45 @@ sequenceDiagram
   FE->>FE: Debounced balance refresh
 ```
 
+### Somnia Infra / Tech Table
+
+| Layer | What we use | Why it matters |
+|---|---|---|
+| Chain | Somnia Testnet (`chainId: 50312`) | EVM-compatible execution for fast trading actions |
+| RPC (HTTP) | `NEXT_PUBLIC_SOMNIA_TESTNET_RPC` | Read/write on-chain operations (deposit, withdraw, contract calls) |
+| RPC (WebSocket) | `NEXT_PUBLIC_SOMNIA_TESTNET_WS_RPC` | Real-time Reactor event subscriptions |
+| Explorer | `NEXT_PUBLIC_SOMNIA_TESTNET_EXPLORER` | Verifiable tx links surfaced to users |
+| Wallet stack | `wagmi` + `viem` + ConnectKit | Stable EVM wallet connection and chain switching |
+| Reactivity SDK | `@somnia-chain/reactivity` | Reactive subscription infrastructure |
+| Event decoder | `lib/somnia/reactivity.ts` | Decodes `DepositConfirmed` / `WithdrawConfirmed` logs |
+| Reactive hook | `lib/hooks/useSomniaReactivity.ts` | Dedupe, backlog filtering, and balance refresh |
+| UI integration | `components/game/GameBoard.tsx` | Live mount point for Somnia reactive updates |
+| Treasury backend | `lib/somnia/backend-client.ts` | Server-side treasury transfer execution |
+| Contracts | `contracts/somnia/BynomoTreasury.sol`, `contracts/somnia/BynomoTreasuryReactor.sol` | On-chain treasury + reactor event source |
+| Data layer | Supabase (`user_balances`, `balance_audit_log`, `withdrawal_requests`) | Persistent balances, auditability, and request queue state |
+
+### Somnia User Flow
+
+```mermaid
+flowchart TD
+  A[User connects wallet on Somnia] --> B[User deposits STT to treasury]
+  B --> C[Deposit tx confirmed on-chain]
+  C --> D[Reactor emits DepositConfirmed]
+  D --> E[Reactivity WS subscription receives event]
+  E --> F[UI toast + explorer link]
+  F --> G[Store refreshes wallet/house balances]
+  G --> H[User places Classic / Box / Draw / Blitz trade]
+  H --> I[Bet + settlement persisted to Supabase]
+  I --> J[User requests withdrawal]
+  J --> K{Amount above threshold?}
+  K -- No --> L[Auto withdrawal from treasury]
+  K -- Yes --> M[Create pending withdrawal request]
+  M --> N[Admin accepts in dashboard]
+  N --> L
+  L --> O[Reactor emits WithdrawConfirmed]
+  O --> P[UI + balances update reactively]
+```
+
 ### Requirement alignment
 
 - **Reactivity integration:** implemented via live WS event subscriptions on Somnia
