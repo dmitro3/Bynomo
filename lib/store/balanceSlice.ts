@@ -61,7 +61,9 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           ? 'PC'
           : network === 'SOMNIA'
             ? 'STT'
-            : network;
+            : network === 'OCT'
+              ? 'OCT'
+              : network;
 
     if (address && (address.endsWith('.near') || address.endsWith('.testnet'))) {
       currency = 'NEAR';
@@ -163,7 +165,9 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           ? 'PC'
           : network === 'SOMNIA'
             ? 'STT'
-            : network;
+            : network === 'OCT'
+              ? 'OCT'
+              : network;
 
     // Override network for NEAR addresses
     if (address.endsWith('.near') || address.endsWith('.testnet')) {
@@ -235,7 +239,9 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           ? 'PC'
           : network === 'SOMNIA'
             ? 'STT'
-            : network;
+            : network === 'OCT'
+              ? 'OCT'
+              : network;
 
     try {
       set({ isLoading: true, error: null });

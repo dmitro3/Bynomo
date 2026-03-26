@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 import { transferSOMNIAFromTreasury } from '@/lib/somnia/backend-client';
+import { transferOCTFromTreasury } from '@/lib/onechain/backend-client';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
       SOMNIA: Infinity,
       PC:     Infinity,
       PUSH:   Infinity,
+      OCT:    Infinity,
     };
 
     const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
@@ -227,6 +229,8 @@ export async function POST(request: NextRequest) {
         withdrawTxHash = await transferPUSHFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'SOMNIA' || normalizedCurrency === 'STT') {
         withdrawTxHash = await transferSOMNIAFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === 'OCT') {
+        withdrawTxHash = await transferOCTFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error(`Unsupported currency for withdrawal: ${currency}`);
       }

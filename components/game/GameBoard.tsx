@@ -13,7 +13,7 @@ import { ethers } from 'ethers';
 import { useToast } from '@/lib/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
-import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
+import { useSignAndExecuteTransaction, useCurrentAccount, useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
 import { useWalletClient, useDisconnect as useWagmiDisconnect } from 'wagmi';
 import { parseEther } from 'viem';
 import posthog from 'posthog-js';
@@ -62,6 +62,7 @@ export const GameBoard: React.FC = () => {
   const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
   const { data: walletClient } = useWalletClient();
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
+  const { mutate: disconnectSui } = useSuiDisconnect();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -79,7 +80,7 @@ export const GameBoard: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : 'BNB';
   const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
   // Connection status
@@ -232,6 +233,13 @@ export const GameBoard: React.FC = () => {
         const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
         await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
         console.log("Somnia Blitz payment tx:", hash);
+      } else if (network === 'OCT') {
+        if (!suiAccount) throw new Error('Sui-compatible wallet not connected');
+        const { buildOCTDepositTransaction } = await import('@/lib/onechain/client');
+        toast.info(`Confirming ${blitzEntryFee} OCT Blitz Entry...`);
+        const tx = await buildOCTDepositTransaction(blitzEntryFee, address!);
+        const result = await signAndExecuteSui({ transaction: tx as any });
+        console.log("OneChain Blitz payment tx:", result.digest);
       } else {
         throw new Error(`Blitz not supported for network: ${network}`);
       }
@@ -797,6 +805,7 @@ export const GameBoard: React.FC = () => {
                         onClick={() => {
                           const s = useStore.getState();
                           if (s.network === 'PUSH' || s.network === 'BNB' || s.network === 'SOMNIA') wagmiDisconnect();
+                          else if (s.network === 'SUI' || s.network === 'OCT') disconnectSui();
                           s.setPreferredNetwork(null);
                           s.disconnect();
                         }}

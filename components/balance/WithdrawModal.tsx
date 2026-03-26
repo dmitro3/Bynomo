@@ -44,7 +44,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               network === 'STRK' ? 'STRK' :
                 network === 'PUSH' ? 'PC' :
                   network === 'SOMNIA' ? 'STT' :
-                    'BNB';
+                    network === 'OCT' ? 'OCT' :
+                      'BNB';
 
   const networkName =
     network === 'SUI' ? 'Sui Network' :
@@ -55,7 +56,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               network === 'STRK' ? 'Starknet Mainnet' :
                 network === 'PUSH' ? 'Push Chain' :
                   network === 'SOMNIA' ? 'Somnia Testnet' :
-                    'BNB Chain';
+                    network === 'OCT' ? 'OneChain' :
+                      'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -201,6 +203,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
+            {network === 'OCT' && <img src="/logos/onechain.png" alt="OCT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

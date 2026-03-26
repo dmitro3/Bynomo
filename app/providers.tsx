@@ -17,7 +17,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Sui Imports
-import { createNetworkConfig, SuiClientProvider, WalletProvider, useCurrentAccount } from '@mysten/dapp-kit';
+import { createNetworkConfig, SuiClientProvider, WalletProvider, useCurrentAccount, useSuiClientContext } from '@mysten/dapp-kit';
 import { getFullnodeUrl } from '@mysten/sui/client';
 import '@mysten/dapp-kit/dist/index.css';
 
@@ -32,6 +32,7 @@ function WalletSync() {
   const { wallets: privyWallets } = useWallets();
   const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
   const suiAccount = useCurrentAccount();
+  const { selectNetwork: selectSuiNetwork } = useSuiClientContext();
   const { address: wagmiAddress, isConnected: wagmiConnected, chainId: wagmiChainId } = useAccount();
 
   // Fetch PC balance via wagmi (reliable, uses already-established connection)
@@ -47,6 +48,7 @@ function WalletSync() {
     chainId: somniaTestnet.id,
     query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id },
   });
+
 
   const {
     address,
@@ -76,6 +78,16 @@ function WalletSync() {
       useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
     }
   }, [somniaBalanceData, wagmiChainId]);
+
+
+  // Switch Sui client network based on preferredNetwork
+  useEffect(() => {
+    if (preferredNetwork === 'OCT') {
+      selectSuiNetwork('onechain');
+    } else if (preferredNetwork === 'SUI') {
+      selectSuiNetwork('mainnet');
+    }
+  }, [preferredNetwork, selectSuiNetwork]);
 
   // Restoration Effect for Stellar
   const attemptedRestore = useRef(false);
@@ -165,6 +177,18 @@ function WalletSync() {
       return;
     }
 
+    // 2b. OneChain (OCT) — also uses Sui-compatible wallet
+    if (suiAccount?.address && preferredNetwork === 'OCT') {
+      if (address !== suiAccount.address || !storeIsConnected || storeNetwork !== 'OCT') {
+        setAddress(suiAccount.address);
+        setIsConnected(true);
+        setNetwork('OCT');
+        refreshWalletBalance();
+        fetchProfile(suiAccount.address);
+      }
+      return;
+    }
+
     // 3. Push Chain (via wagmi/ConnectKit on chainId 42101)
     if (preferredNetwork === 'PUSH') {
       if (wagmiConnected && wagmiAddress && wagmiChainId === pushChainDonut.id) {
@@ -199,7 +223,7 @@ function WalletSync() {
       return;
     }
 
-    // 5. BNB (Wagmi or Privy)
+    // 6. BNB (Wagmi or Privy)
     if (preferredNetwork === 'BNB') {
       if (wagmiConnected && wagmiAddress) {
         if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'BNB') {
@@ -267,6 +291,7 @@ function WalletSync() {
     const hasSTRK = state.network === 'STRK' && !!state.address;
     const hasPUSH = wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id;
     const hasSOMNIA = wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id;
+    const hasOCT = preferredNetwork === 'OCT' && !!suiAccount?.address;
 
     let shouldClear = false;
     if (isDemoMode) {
@@ -280,7 +305,8 @@ function WalletSync() {
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
       else if (String(preferredNetwork) === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA) shouldClear = true;
+      else if (preferredNetwork === 'OCT' && !hasOCT) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA && !hasOCT) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {
@@ -303,6 +329,7 @@ function WalletSync() {
 
 const { networkConfig } = createNetworkConfig({
   mainnet: { url: getFullnodeUrl('mainnet') },
+  onechain: { url: process.env.NEXT_PUBLIC_ONECHAIN_RPC || 'https://rpc-testnet.onelabs.cc' },
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {

@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useOverflowStore } from '@/lib/store';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { useWalletConnection as useSuiConnection } from '@/lib/sui/wallet';
+import { ConnectModal } from '@mysten/dapp-kit';
 import { useModal } from 'connectkit';
 import { useSwitchChain } from 'wagmi';
 import { somniaTestnet, pushChainDonut } from '@/lib/bnb/wagmi';
@@ -17,10 +17,12 @@ export const WalletConnectModal: React.FC = () => {
     const setOpen = useOverflowStore(state => state.setConnectModalOpen);
     const setPreferredNetwork = useOverflowStore(state => state.setPreferredNetwork);
 
+    const [suiModalOpen, setSuiModalOpen] = useState(false);
+    const [pendingSuiNetwork, setPendingSuiNetwork] = useState<'SUI' | 'OCT' | null>(null);
+
     const { login: loginPrivy } = usePrivy();
     const { select: selectSolanaWallet } = useWallet();
     const { setVisible: setSolanaModalVisible } = useWalletModal();
-    const { connect: connectSui } = useSuiConnection();
     const { setOpen: openConnectKit } = useModal();
     const { switchChain } = useSwitchChain();
 
@@ -45,8 +47,9 @@ export const WalletConnectModal: React.FC = () => {
 
     const handleSuiConnect = () => {
         setPreferredNetwork('SUI');
-        connectSui();
+        setPendingSuiNetwork('SUI');
         setOpen(false);
+        setTimeout(() => setSuiModalOpen(true), 100);
     };
 
     const handleStellarConnect = async () => {
@@ -127,6 +130,13 @@ export const WalletConnectModal: React.FC = () => {
         setOpen(false);
     };
 
+    const handleOneChainConnect = () => {
+        setPreferredNetwork('OCT');
+        setPendingSuiNetwork('OCT');
+        setOpen(false);
+        setTimeout(() => setSuiModalOpen(true), 100);
+    };
+
     const handleStarknetConnect = async () => {
         setOpen(false);
         try {
@@ -146,9 +156,19 @@ export const WalletConnectModal: React.FC = () => {
         }
     };
 
-    if (!isOpen) return null;
-
     return (
+        <>
+        {/* Sui/OCT wallet selection modal */}
+        <ConnectModal
+            open={suiModalOpen}
+            onOpenChange={(open) => {
+                setSuiModalOpen(open);
+                if (!open) setPendingSuiNetwork(null);
+            }}
+            trigger={<span style={{ display: 'none' }} />}
+        />
+
+        {!isOpen ? null : (
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 {/* Backdrop */}
@@ -223,6 +243,31 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">EVM-like (wagmi)</p>
                             </div>
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-purple-300 transition-colors" />
+                        </button>
+
+                        {/* OneChain Option */}
+                        <button
+                            onClick={handleOneChainConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/5 to-blue-600/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/onechain.png"
+                                alt="OneChain"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
+                                }}
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">OneChain</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-blue-600/20 text-blue-400 font-bold uppercase tracking-wider">OCT</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Sui Wallet, BlueMove, etc.</p>
+                            </div>
+                            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                         </button>
 
                         {/* Solana Option */}
@@ -403,5 +448,7 @@ export const WalletConnectModal: React.FC = () => {
                 </motion.div>
             </div>
         </AnimatePresence>
+        )}
+        </>
     );
 };

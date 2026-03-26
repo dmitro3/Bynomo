@@ -38,6 +38,7 @@ export const somniaTestnet = defineChain({
     testnet: true,
 });
 
+
 export const config = createConfig(
     getDefaultConfig({
         chains: [somniaTestnet, bsc, pushChainDonut],

@@ -33,6 +33,8 @@ export const WalletConnect: React.FC = () => {
       wagmiDisconnect();
     } else if (network === 'SOMNIA') {
       wagmiDisconnect();
+    } else if (network === 'OCT') {
+      disconnectSui();
     }
     // XTZ and NEAR don't need special SDK disconnect
 
@@ -47,6 +49,7 @@ export const WalletConnect: React.FC = () => {
       case 'SUI': return '/logos/sui-logo.png';
       case 'BNB': return '/logos/bnb-bnb-logo.png';
       case 'SOMNIA': return '/logos/somnia.jpg';
+      case 'OCT': return '/logos/onechain.png';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'NEAR': return '/logos/near.png';
@@ -62,6 +65,7 @@ export const WalletConnect: React.FC = () => {
       case 'SUI': return 'SUI';
       case 'BNB': return 'BNB';
       case 'SOMNIA': return 'SOMNIA';
+      case 'OCT': return 'OCT';
       case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';

@@ -148,6 +148,7 @@ export const BalanceDisplay: React.FC = () => {
     : network === 'STRK' ? 'STRK'
     : network === 'PUSH' ? 'PC'
     : network === 'SOMNIA' ? 'STT'
+    : network === 'OCT' ? 'OCT'
     : 'BNB';
 
   return (
@@ -261,6 +262,7 @@ export const BalanceDisplay: React.FC = () => {
                                    network === 'STRK' ? '/logos/starknet-strk-logo.svg' :
                                      network === 'PUSH' ? '/logos/push-logo.png' :
                                      network === 'SOMNIA' ? '/logos/somnia.jpg' :
+                                     network === 'OCT' ? '/logos/onechain.png' :
                                      '/logos/bnb-bnb-logo.png'
                      }
                     alt={currentSymbol}
