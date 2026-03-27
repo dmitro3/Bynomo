@@ -64,7 +64,7 @@ export const GameBoard: React.FC = () => {
   const { data: walletClient } = useWalletClient();
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
   const { mutate: disconnectSui } = useSuiDisconnect();
-  const { disconnect: disconnectInitia } = useInterwovenKit();
+  const { disconnect: disconnectInitia, requestTxBlock: requestInitiaTx } = useInterwovenKit();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -258,6 +258,12 @@ export const GameBoard: React.FC = () => {
         const tx = await buildOCTDepositTransaction(blitzEntryFee, address!);
         const result = await signAndExecuteSui({ transaction: tx as any });
         console.log("OneChain Blitz payment tx:", result.digest);
+      } else if (network === 'INIT') {
+        const { buildInitiaDepositTxRequest } = await import('@/lib/initia/client');
+        const txRequest = buildInitiaDepositTxRequest(address!, blitzEntryFee);
+        toast.info(`Confirming ${blitzEntryFee} INIT Blitz Entry...`);
+        const result = await requestInitiaTx(txRequest);
+        console.log("Initia Blitz payment hash:", result.transactionHash);
       } else {
         throw new Error(`Blitz not supported for network: ${network}`);
       }
