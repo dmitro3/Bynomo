@@ -14,8 +14,8 @@ export interface WalletState {
   walletBalance: number;
   isConnected: boolean;
   isConnecting: boolean;
-  network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null;
-  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null;
+  network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null;
+  preferredNetwork: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null;
   selectedCurrency: string | null;
   error: string | null;
   isConnectModalOpen: boolean;
@@ -30,8 +30,8 @@ export interface WalletState {
   // Setters for wallet integration
   setAddress: (address: string | null) => void;
   setIsConnected: (connected: boolean) => void;
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null) => void;
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null) => void;
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null) => void;
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null) => void;
   setSelectedCurrency: (currency: string | null) => void;
 }
 
@@ -155,6 +155,14 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         const { getOCTBalance } = await import('@/lib/onechain/client');
         const bal = await getOCTBalance(address);
         set({ walletBalance: bal });
+      } else if (network === 'ZG') {
+        const { getZGBalance } = await import('@/lib/zg/client');
+        const bal = await getZGBalance(address);
+        set({ walletBalance: bal });
+      } else if (network === 'INIT') {
+        const { getINITBalance } = await import('@/lib/initia/balance');
+        const bal = await getINITBalance(address);
+        set({ walletBalance: bal });
       }
     } catch (error) {
       console.error("Error refreshing wallet balance:", error);
@@ -192,14 +200,11 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
   /**
    * Set active network (BNB, SOL, SUI, XLM, XTZ, NEAR, STRK or PUSH)
    */
-  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null) => {
+  setNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null) => {
     set({ network });
   },
 
-  /**
-   * Set preferred network (manually chosen by user)
-   */
-  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | null) => {
+  setPreferredNetwork: (network: 'BNB' | 'SOL' | 'SUI' | 'XLM' | 'XTZ' | 'NEAR' | 'STRK' | 'PUSH' | 'SOMNIA' | 'OCT' | 'ZG' | 'INIT' | null) => {
     const effective = network;
     set({ preferredNetwork: effective });
     if (typeof window !== 'undefined') {

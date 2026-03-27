@@ -39,6 +39,9 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'PUSH': return 'PC';
       case 'SOMNIA': return 'STT';
       case 'OCT': return 'OCT';
+      case 'ZG': return '0G';
+      case 'INIT': return 'INIT';
+      case 'XLM': return 'XLM';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';
@@ -62,6 +65,9 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'PUSH': return '/logos/push-logo.png';
       case 'SOMNIA': return '/logos/somnia.jpg';
       case 'OCT': return '/logos/onechain.png';
+      case 'ZG': return '/logos/0g.png';
+      case 'INIT': return '/logos/initia.png';
+      case 'XLM': return '/logos/stellar-xlm-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   }, [network, currencySymbol]);

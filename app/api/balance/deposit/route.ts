@@ -15,6 +15,7 @@ import { ethers } from 'ethers';
 import { getBNBConfig } from '@/lib/bnb/config';
 import { getPushConfig } from '@/lib/push/config';
 import { getSomniaConfig } from '@/lib/somnia/config';
+import { getZGConfig } from '@/lib/zg/config';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 
 interface DepositRequest {
@@ -43,6 +44,10 @@ async function verifyEvmDepositTx(
     treasury = cfg.treasuryAddress;
   } else if (currency === 'STT' || currency === 'SOMNIA') {
     const cfg = getSomniaConfig();
+    rpc = cfg.rpcUrls[0];
+    treasury = String(cfg.treasuryAddress || '');
+  } else if (currency === '0G') {
+    const cfg = getZGConfig();
     rpc = cfg.rpcUrls[0];
     treasury = String(cfg.treasuryAddress || '');
   } else {
@@ -111,6 +116,9 @@ export async function POST(request: NextRequest) {
     } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
       // Check if it's a valid Tezos address
       isValid = true;
+    } else if (/^init1[a-z0-9]{38}$/.test(userAddress)) {
+      // Check if it's a valid Initia bech32 address
+      isValid = true;
     } else {
       // Check if it's a valid Solana address
       try {
@@ -163,12 +171,33 @@ export async function POST(request: NextRequest) {
       normalizedCurrency === 'PUSH' ||
       normalizedCurrency === 'PC' ||
       normalizedCurrency === 'SOMNIA' ||
-      normalizedCurrency === 'STT';
+      normalizedCurrency === 'STT' ||
+      normalizedCurrency === '0G';
     if (isEvmLike) {
       const isValidTx = await verifyEvmDepositTx(txHash, userAddress, amount, normalizedCurrency);
       if (!isValidTx) {
         return NextResponse.json(
           { error: 'Deposit transaction could not be verified on-chain' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Initia deposit verification
+    if (normalizedCurrency === 'INIT') {
+      try {
+        const { verifyInitiaDepositTx } = await import('@/lib/initia/backend-client');
+        const verified = await verifyInitiaDepositTx(txHash);
+        if (!verified.confirmed || verified.amountINIT < amount * 0.99) {
+          return NextResponse.json(
+            { error: 'Initia deposit transaction could not be verified on-chain' },
+            { status: 400 }
+          );
+        }
+      } catch (verifyErr) {
+        console.error('[deposit] Initia verification failed:', verifyErr);
+        return NextResponse.json(
+          { error: 'Failed to verify Initia transaction' },
           { status: 400 }
         );
       }

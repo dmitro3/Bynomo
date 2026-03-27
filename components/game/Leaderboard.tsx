@@ -45,6 +45,10 @@ export const Leaderboard: React.FC = () => {
             case 'NEAR': return 'NEAR';
             case 'STRK': return 'STRK';
             case 'PUSH': return 'PC';
+            case 'SOMNIA': return 'STT';
+            case 'OCT': return 'OCT';
+            case 'ZG': return '0G';
+            case 'INIT': return 'INIT';
             default: return 'BNB';
         }
     };

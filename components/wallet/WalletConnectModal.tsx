@@ -7,8 +7,9 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { ConnectModal } from '@mysten/dapp-kit';
 import { useModal } from 'connectkit';
-import { useSwitchChain } from 'wagmi';
-import { somniaTestnet, pushChainDonut } from '@/lib/bnb/wagmi';
+import { useSwitchChain, useDisconnect as useWagmiDisconnect } from 'wagmi';
+import { useInterwovenKit } from '@initia/interwovenkit-react';
+import { pushChainDonut } from '@/lib/bnb/wagmi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Globe, ShieldCheck, Mail } from 'lucide-react';
 
@@ -25,6 +26,8 @@ export const WalletConnectModal: React.FC = () => {
     const { setVisible: setSolanaModalVisible } = useWalletModal();
     const { setOpen: openConnectKit } = useModal();
     const { switchChain } = useSwitchChain();
+    const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
+    const { openConnect: openInitiaConnect } = useInterwovenKit();
 
     const handlePrivyConnect = () => {
         setPreferredNetwork('BNB');
@@ -39,6 +42,7 @@ export const WalletConnectModal: React.FC = () => {
     };
 
     const handleSolanaConnect = () => {
+        wagmiDisconnect();
         setPreferredNetwork('SOL');
         setOpen(false);
         // Use the official Solana wallet adapter modal
@@ -46,6 +50,7 @@ export const WalletConnectModal: React.FC = () => {
     };
 
     const handleSuiConnect = () => {
+        wagmiDisconnect();
         setPreferredNetwork('SUI');
         setPendingSuiNetwork('SUI');
         setOpen(false);
@@ -125,7 +130,12 @@ export const WalletConnectModal: React.FC = () => {
 
     const handleSomniaConnect = () => {
         setPreferredNetwork('SOMNIA');
-        switchChain({ chainId: somniaTestnet.id });
+        openConnectKit(true);
+        setOpen(false);
+    };
+
+    const handleZGConnect = () => {
+        setPreferredNetwork('ZG');
         openConnectKit(true);
         setOpen(false);
     };
@@ -135,6 +145,13 @@ export const WalletConnectModal: React.FC = () => {
         setPendingSuiNetwork('OCT');
         setOpen(false);
         setTimeout(() => setSuiModalOpen(true), 100);
+    };
+
+    const handleInitiaConnect = () => {
+        wagmiDisconnect(); // disconnect EVM wallet so it doesn't override INIT sync
+        setPreferredNetwork('INIT');
+        setOpen(false);
+        setTimeout(() => openInitiaConnect(), 100);
     };
 
     const handleStarknetConnect = async () => {
@@ -268,6 +285,56 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Sui Wallet, BlueMove, etc.</p>
                             </div>
                             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                        </button>
+
+                        {/* Initia Option */}
+                        <button
+                            onClick={handleInitiaConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/initia.png"
+                                alt="Initia"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
+                                }}
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Initia</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-red-500/20 text-red-400 font-bold uppercase tracking-wider">INIT</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Initia Wallet (InterwovenKit)</p>
+                            </div>
+                            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-red-400 transition-colors" />
+                        </button>
+
+                        {/* 0G Mainnet Option */}
+                        <button
+                            onClick={handleZGConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/0g.png"
+                                alt="0G"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
+                                }}
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">0G Mainnet</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-wider">0G</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, any EVM wallet</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-emerald-400 transition-colors" />
                         </button>
 
                         {/* Solana Option */}

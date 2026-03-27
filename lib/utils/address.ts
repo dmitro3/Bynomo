@@ -26,6 +26,9 @@ export const isValidAddress = async (address: string): Promise<boolean> => {
     // 6. NEAR - Named account IDs
     if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+\.(near|testnet)$/.test(address)) return true;
 
+    // 8. Initia (INIT) - Bech32 init1 prefix
+    if (/^init1[a-z0-9]{38}$/.test(address)) return true;
+
     // 7. Solana (SOL) - Base58 string
     try {
         const { PublicKey } = await import('@solana/web3.js');

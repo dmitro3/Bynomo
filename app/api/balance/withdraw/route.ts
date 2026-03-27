@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase/client';
 import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 import { transferSOMNIAFromTreasury } from '@/lib/somnia/backend-client';
 import { transferOCTFromTreasury } from '@/lib/onechain/backend-client';
+import { transferZGFromTreasury } from '@/lib/zg/backend-client';
+import { transferINITFromTreasury } from '@/lib/initia/backend-client';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 
@@ -60,7 +62,8 @@ export async function POST(request: NextRequest) {
       normalizedCurrency === 'PUSH' ||
       normalizedCurrency === 'PC' ||
       normalizedCurrency === 'SOMNIA' ||
-      normalizedCurrency === 'STT';
+      normalizedCurrency === 'STT' ||
+      normalizedCurrency === '0G';
 
     if (requiresIntentSignature) {
       if (!authorizationSignature || !signedAt) {
@@ -81,6 +84,7 @@ export async function POST(request: NextRequest) {
       const displayCurrency =
         normalizedCurrency === 'PC' ? 'PC' :
         normalizedCurrency === 'STT' ? 'STT' :
+        normalizedCurrency === '0G' ? '0G' :
         normalizedCurrency;
       const expectedMessage = `BYNOMO withdrawal authorization\naddress:${userAddress}\namount:${amount.toFixed(8)}\ncurrency:${displayCurrency}\nsignedAt:${signedAt}`;
       const recovered = ethers.verifyMessage(expectedMessage, authorizationSignature);
@@ -135,6 +139,8 @@ export async function POST(request: NextRequest) {
       PC:     Infinity,
       PUSH:   Infinity,
       OCT:    Infinity,
+      '0G':   Infinity,
+      INIT:   5,     // auto up to 5 INIT, manual above
     };
 
     const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
@@ -231,6 +237,10 @@ export async function POST(request: NextRequest) {
         withdrawTxHash = await transferSOMNIAFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'OCT') {
         withdrawTxHash = await transferOCTFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === '0G') {
+        withdrawTxHash = await transferZGFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === 'INIT') {
+        withdrawTxHash = await transferINITFromTreasury(userAddress, netWithdrawAmount);
       } else {
         throw new Error(`Unsupported currency for withdrawal: ${currency}`);
       }

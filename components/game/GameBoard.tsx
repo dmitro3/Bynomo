@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Key, ShieldCheck, Loader2, Wallet } from 'lucide-react';
 import { useSignAndExecuteTransaction, useCurrentAccount, useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
 import { useWalletClient, useDisconnect as useWagmiDisconnect } from 'wagmi';
+import { useInterwovenKit } from '@initia/interwovenkit-react';
 import { parseEther } from 'viem';
 import posthog from 'posthog-js';
 import { useSomniaReactivity } from '@/lib/hooks/useSomniaReactivity';
@@ -63,6 +64,7 @@ export const GameBoard: React.FC = () => {
   const { data: walletClient } = useWalletClient();
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
   const { mutate: disconnectSui } = useSuiDisconnect();
+  const { disconnect: disconnectInitia } = useInterwovenKit();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
@@ -78,9 +80,10 @@ export const GameBoard: React.FC = () => {
   const [accessInput, setAccessInput] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
   const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
 
   // Connection status
@@ -233,6 +236,21 @@ export const GameBoard: React.FC = () => {
         const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
         await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
         console.log("Somnia Blitz payment tx:", hash);
+      } else if (network === 'ZG') {
+        if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
+        const { getZGConfig } = await import('@/lib/zg/config');
+        const zgConfig = getZGConfig();
+        if (!zgConfig.treasuryAddress) throw new Error('0G treasury not configured');
+        toast.info(`Confirming ${blitzEntryFee} 0G Blitz Entry...`);
+        const hash = await walletClient.sendTransaction({
+          to: getAddress(zgConfig.treasuryAddress as string),
+          value: parseEther(blitzEntryFee.toString()),
+        });
+        toast.info('Waiting for on-chain confirmation...');
+        const { waitForTransactionReceipt } = await import('@wagmi/core');
+        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+        await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
+        console.log("0G Blitz payment tx:", hash);
       } else if (network === 'OCT') {
         if (!suiAccount) throw new Error('Sui-compatible wallet not connected');
         const { buildOCTDepositTransaction } = await import('@/lib/onechain/client');
@@ -768,7 +786,21 @@ export const GameBoard: React.FC = () => {
                       {/* Address Card */}
                       <div className="bg-black/30 rounded-xl p-3 border border-white/5">
                         <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1">Wallet Address</p>
-                        <p className="text-white font-mono text-sm">{formatAddress(address)}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-white font-mono text-sm truncate">{formatAddress(address)}</p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(address);
+                              toast.success('Address copied!');
+                            }}
+                            className="shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+                            title="Copy full address"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Wallet Balance Display */}
@@ -804,8 +836,9 @@ export const GameBoard: React.FC = () => {
                       <button
                         onClick={() => {
                           const s = useStore.getState();
-                          if (s.network === 'PUSH' || s.network === 'BNB' || s.network === 'SOMNIA') wagmiDisconnect();
+                          if (s.network === 'PUSH' || s.network === 'BNB' || s.network === 'SOMNIA' || s.network === 'ZG') wagmiDisconnect();
                           else if (s.network === 'SUI' || s.network === 'OCT') disconnectSui();
+                          else if (s.network === 'INIT') disconnectInitia();
                           s.setPreferredNetwork(null);
                           s.disconnect();
                         }}
@@ -911,7 +944,29 @@ export const GameBoard: React.FC = () => {
                   <div className="w-1.5 h-1.5 bg-[#00ff88] rounded-full shadow-[0_0_8px_#00ff88]" />
                   <span className="text-[10px] text-white/40 font-black uppercase tracking-widest">Connected</span>
                 </div>
-                <span className="text-[10px] text-white/20 font-mono">{formatAddress(address)}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-white/20 font-mono">{formatAddress(address)}</span>
+                  <button
+                    onClick={() => {
+                      if (!address) return;
+                      navigator.clipboard.writeText(address);
+                      setAddressCopied(true);
+                      setTimeout(() => setAddressCopied(false), 2000);
+                    }}
+                    className="text-white/20 hover:text-white/60 transition-colors"
+                    title="Copy address"
+                  >
+                    {addressCopied ? (
+                      <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>

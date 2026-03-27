@@ -16,8 +16,9 @@ import { buildDepositTransaction as buildSuiDepositTransaction } from '@/lib/sui
 
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
-import { useWalletClient } from 'wagmi';
+import { useWalletClient, useAccount } from 'wagmi';
 import { parseEther } from 'viem';
+import { useInterwovenKit } from '@initia/interwovenkit-react';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -48,13 +49,17 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   // wagmi wallet client — already authorized, no eth_requestAccounts needed
   const { data: walletClient } = useWalletClient();
+  const { connector } = useAccount();
+
+  // Initia / InterwovenKit
+  const { requestTxBlock: requestInitiaTx } = useInterwovenKit();
 
   const { depositFunds, network, walletBalance, refreshWalletBalance, address } = useOverflowStore();
   const toast = useToast();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : network === 'OCT' ? 'OneChain' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : network === 'OCT' ? 'OneChain' : network === 'ZG' ? '0G Mainnet' : network === 'INIT' ? 'Initia Mainnet' : 'BNB Chain';
 
   // Quick select amounts
   const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
@@ -259,6 +264,48 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
         await waitForTransactionReceipt(wagmiCfg, { hash: somniaHash as `0x${string}`, timeout: 60_000 });
         txHash = somniaHash;
+      } else if (network === 'ZG') {
+        const { getZGConfig } = await import('@/lib/zg/config');
+        const zgConfig = getZGConfig();
+        if (!zgConfig.treasuryAddress) throw new Error('0G treasury address not configured');
+        if (!connector) throw new Error('Wallet not connected. Please reconnect.');
+
+        // Get the provider from the current wagmi connector (avoids window.ethereum pointing to wrong wallet)
+        const connectorProvider = await connector.getProvider() as any;
+        const zgChainIdHex = '0x' + (16661).toString(16);
+
+        // Ensure wallet is on 0G Mainnet — add if needed
+        try {
+          await connectorProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: zgChainIdHex }] });
+        } catch (switchErr: any) {
+          if (switchErr.code === 4902 || switchErr.code === -32603) {
+            await connectorProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: zgChainIdHex,
+                chainName: '0G Mainnet',
+                nativeCurrency: { name: '0G Token', symbol: '0G', decimals: 18 },
+                rpcUrls: ['https://evmrpc.0g.ai'],
+                blockExplorerUrls: ['https://chainscan.0g.ai'],
+              }],
+            });
+          } else if (switchErr.code !== 4001) {
+            // 4001 = user rejected switch (already on 0G or cancelled) — continue anyway
+            throw switchErr;
+          }
+        }
+
+        toast.info('Please confirm the transaction in your wallet...');
+        const { ethers: ethersLib } = await import('ethers');
+        const provider = new ethersLib.BrowserProvider(connectorProvider);
+        const signer = await provider.getSigner();
+        const tx = await signer.sendTransaction({
+          to: zgConfig.treasuryAddress as string,
+          value: ethersLib.parseEther(depositAmount.toString()),
+        });
+        toast.info('Transaction submitted. Waiting for on-chain confirmation...');
+        const receipt = await tx.wait();
+        txHash = receipt!.hash;
       } else if (network === 'OCT') {
         if (!suiAccount) throw new Error('Sui-compatible wallet not connected');
         const { buildOCTDepositTransaction } = await import('@/lib/onechain/client');
@@ -266,6 +313,12 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         const tx = await buildOCTDepositTransaction(depositAmount, address);
         const result = await signAndExecuteSui({ transaction: tx as any });
         txHash = result.digest;
+      } else if (network === 'INIT') {
+        const { buildInitiaDepositTxRequest } = await import('@/lib/initia/client');
+        const txRequest = buildInitiaDepositTxRequest(address, depositAmount);
+        toast.info('Please confirm the transaction in your Initia wallet...');
+        const result = await requestInitiaTx(txRequest);
+        txHash = result.transactionHash;
       } else {
         // BNB (EVM) — support both wagmi wallets (MetaMask) and Privy embedded wallets.
         const bnbConfig = getBNBConfig();
@@ -346,6 +399,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
             {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}
+            {network === 'ZG' && <img src="/logos/0g.png" alt="0G" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png'; }} />}
             {network === 'OCT' && <img src="/logos/onechain.png" alt="OCT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {currencySymbol === 'BYNOMO' ? <img src="/overflowlogo.png" alt="BYNOMO" className="w-5 h-5" /> : (network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />)}
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}

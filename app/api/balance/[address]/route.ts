@@ -39,6 +39,9 @@ export async function GET(
     } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
       // Check if it's a valid Tezos address
       isValid = true;
+    } else if (/^init1[a-z0-9]{38}$/.test(address)) {
+      // Initia (INIT) bech32 address
+      isValid = true;
     } else {
       // Check if it's a valid Solana address
       try {
@@ -50,7 +53,6 @@ export async function GET(
         if (/^G[A-Z2-7]{55}$/.test(address)) {
           isValid = true;
         } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+\.(near|testnet)$/.test(address as string)) {
-          // Check if it's a valid NEAR address
           isValid = true;
         } else {
           isValid = false;

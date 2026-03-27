@@ -48,7 +48,8 @@ export function getPlatformFeeWalletAddress(normalizedCurrency: string): string 
     normalizedCurrency === 'PC' ||
     normalizedCurrency === 'SOMNIA' ||
     normalizedCurrency === 'STT' ||
-    normalizedCurrency === 'OCT'
+    normalizedCurrency === 'OCT' ||
+    normalizedCurrency === '0G'
   ) {
     return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM');
   }
@@ -104,6 +105,11 @@ export async function collectPlatformFeeFromTreasury(
   if (normalizedCurrency === 'OCT') {
     const { transferOCTFromTreasury } = await import('@/lib/onechain/backend-client');
     return transferOCTFromTreasury(feeWallet, feeAmount);
+  }
+
+  if (normalizedCurrency === '0G') {
+    const { transferZGFromTreasury } = await import('@/lib/zg/backend-client');
+    return transferZGFromTreasury(feeWallet, feeAmount);
   }
 
   if (normalizedCurrency === 'SOL') {

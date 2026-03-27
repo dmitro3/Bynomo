@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { useWalletClient } from 'wagmi';
+import { useWalletClient, useAccount } from 'wagmi';
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const { wallets } = useWallets();
   const { authenticated } = usePrivy();
   const { data: walletClient } = useWalletClient();
+  const { connector } = useAccount();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
   const userTier = useOverflowStore(state => state.userTier);
@@ -45,7 +46,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 network === 'PUSH' ? 'PC' :
                   network === 'SOMNIA' ? 'STT' :
                     network === 'OCT' ? 'OCT' :
-                      'BNB';
+                      network === 'ZG' ? '0G' :
+                        network === 'INIT' ? 'INIT' :
+                          'BNB';
 
   const networkName =
     network === 'SUI' ? 'Sui Network' :
@@ -57,7 +60,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 network === 'PUSH' ? 'Push Chain' :
                   network === 'SOMNIA' ? 'Somnia Testnet' :
                     network === 'OCT' ? 'OneChain' :
-                      'BNB Chain';
+                      network === 'ZG' ? '0G Mainnet' :
+                        network === 'INIT' ? 'Initia Mainnet' :
+                          'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -125,15 +130,21 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
       let signature: string | undefined;
       let signedAt: number | undefined;
-      const isEvmLike = network === 'BNB' || network === 'PUSH' || network === 'SOMNIA';
+      const isEvmLike = network === 'BNB' || network === 'PUSH' || network === 'SOMNIA' || network === 'ZG';
 
       if (isEvmLike) {
         signedAt = Date.now();
         const message = `BYNOMO withdrawal authorization\naddress:${address}\namount:${withdrawAmount.toFixed(8)}\ncurrency:${currencySymbol}\nsignedAt:${signedAt}`;
 
         if (walletClient) {
-          // MetaMask / any wagmi-connected wallet (works for BNB, PUSH, SOMNIA)
+          // MetaMask / any wagmi-connected wallet (works for BNB, PUSH, SOMNIA, ZG)
           signature = await walletClient.signMessage({ account: address as `0x${string}`, message });
+        } else if (connector && network === 'ZG') {
+          // Fallback: use wagmi connector provider for 0G signing
+          const connectorProvider = await connector.getProvider() as any;
+          const ethersModule = await import('ethers');
+          const signer = await new ethersModule.ethers.BrowserProvider(connectorProvider).getSigner();
+          signature = await signer.signMessage(message);
         } else if (authenticated) {
           // Privy embedded wallet fallback (BNB only)
           const wallet = wallets.find((w) => w.address.toLowerCase() === address.toLowerCase());
@@ -198,12 +209,14 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
             {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}
+            {network === 'ZG' && <img src="/logos/0g.png" alt="0G" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png'; }} />}
             {currencySymbol === 'BYNOMO' ? <img src="/overflowlogo.png" alt="BYNOMO" className="w-5 h-5" /> : (network === 'SOL' && <img src="/logos/solana-sol-logo.png" alt="SOL" className="w-5 h-5" />)}
             {network === 'XLM' && <img src="/logos/stellar-xlm-logo.png" alt="XLM" className="w-5 h-5" />}
             {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
             {network === 'OCT' && <img src="/logos/onechain.png" alt="OCT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+            {network === 'INIT' && <img src="/logos/initia.png" alt="INIT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

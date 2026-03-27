@@ -16,6 +16,27 @@ export const pushChainDonut = defineChain({
     testnet: true,
 });
 
+export const zgMainnet = defineChain({
+    id: Number(process.env.NEXT_PUBLIC_ZG_MAINNET_CHAIN_ID) || 16661,
+    name: process.env.NEXT_PUBLIC_ZG_MAINNET_NAME || '0G Mainnet',
+    nativeCurrency: {
+        name: '0G Token',
+        symbol: process.env.NEXT_PUBLIC_ZG_MAINNET_CURRENCY_SYMBOL || '0G',
+        decimals: 18,
+    },
+    rpcUrls: {
+        default: {
+            http: [process.env.NEXT_PUBLIC_ZG_MAINNET_RPC || 'https://evmrpc.0g.ai'],
+        },
+    },
+    blockExplorers: {
+        default: {
+            name: '0G Explorer',
+            url: process.env.NEXT_PUBLIC_ZG_MAINNET_EXPLORER || 'https://chainscan.0g.ai',
+        },
+    },
+});
+
 export const somniaTestnet = defineChain({
     id: Number(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_ID) || 50312,
     name: process.env.NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_NAME || 'Somnia Testnet',
@@ -41,11 +62,12 @@ export const somniaTestnet = defineChain({
 
 export const config = createConfig(
     getDefaultConfig({
-        chains: [somniaTestnet, bsc, pushChainDonut],
+        chains: [bsc, somniaTestnet, pushChainDonut, zgMainnet],
         transports: {
             [somniaTestnet.id]: http(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_RPC || 'https://dream-rpc.somnia.network'),
             [bsc.id]: http(),
             [pushChainDonut.id]: http('https://evm.donut.rpc.push.org'),
+            [zgMainnet.id]: http(process.env.NEXT_PUBLIC_ZG_MAINNET_RPC || 'https://evmrpc.0g.ai'),
         },
 
         // Required API Keys

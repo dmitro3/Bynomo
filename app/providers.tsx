@@ -6,9 +6,9 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { formatUnits } from 'viem';
-import { WagmiProvider, useAccount, useBalance } from 'wagmi';
+import { WagmiProvider, useAccount, useBalance, useSwitchChain } from 'wagmi';
 import { ConnectKitProvider } from 'connectkit';
-import { config as wagmiConfig, pushChainDonut, somniaTestnet } from '@/lib/bnb/wagmi';
+import { config as wagmiConfig, pushChainDonut, somniaTestnet, zgMainnet } from '@/lib/bnb/wagmi';
 import { bsc } from 'wagmi/chains';
 
 // Solana Imports
@@ -20,6 +20,10 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 import { createNetworkConfig, SuiClientProvider, WalletProvider, useCurrentAccount, useSuiClientContext } from '@mysten/dapp-kit';
 import { getFullnodeUrl } from '@mysten/sui/client';
 import '@mysten/dapp-kit/dist/index.css';
+
+// Initia / InterwovenKit Imports
+import { InterwovenKitProvider, MAINNET as INITIA_MAINNET, injectStyles as injectInitiaStyles, useInterwovenKit } from '@initia/interwovenkit-react';
+import interwovenKitStyles from '@initia/interwovenkit-react/styles.js';
 
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
@@ -34,6 +38,8 @@ function WalletSync() {
   const suiAccount = useCurrentAccount();
   const { selectNetwork: selectSuiNetwork } = useSuiClientContext();
   const { address: wagmiAddress, isConnected: wagmiConnected, chainId: wagmiChainId } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const { address: initiaAddress, isConnected: initiaConnected } = useInterwovenKit();
 
   // Fetch PC balance via wagmi (reliable, uses already-established connection)
   const { data: pushBalanceData } = useBalance({
@@ -49,6 +55,12 @@ function WalletSync() {
     query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id },
   });
 
+  // Fetch 0G balance via wagmi (0G Mainnet)
+  const { data: zgBalanceData } = useBalance({
+    address: wagmiAddress,
+    chainId: zgMainnet.id,
+    query: { enabled: wagmiConnected && !!wagmiAddress && wagmiChainId === zgMainnet.id },
+  });
 
   const {
     address,
@@ -65,20 +77,27 @@ function WalletSync() {
 
   // Sync Push Chain PC balance directly into the store whenever wagmi reports it
   useEffect(() => {
-    if (wagmiChainId === pushChainDonut.id && pushBalanceData) {
+    if (wagmiChainId === pushChainDonut.id && pushBalanceData && storeNetwork === 'PUSH') {
       const formatted = formatUnits(pushBalanceData.value, pushBalanceData.decimals);
       useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
     }
-  }, [pushBalanceData, wagmiChainId]);
+  }, [pushBalanceData, wagmiChainId, storeNetwork]);
 
   // Sync Somnia STT balance into the store whenever wagmi reports it
   useEffect(() => {
-    if (wagmiChainId === somniaTestnet.id && somniaBalanceData) {
+    if (wagmiChainId === somniaTestnet.id && somniaBalanceData && storeNetwork === 'SOMNIA') {
       const formatted = formatUnits(somniaBalanceData.value, somniaBalanceData.decimals);
       useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
     }
-  }, [somniaBalanceData, wagmiChainId]);
+  }, [somniaBalanceData, wagmiChainId, storeNetwork]);
 
+  // Sync 0G balance into the store whenever wagmi reports it
+  useEffect(() => {
+    if (wagmiChainId === zgMainnet.id && zgBalanceData && storeNetwork === 'ZG') {
+      const formatted = formatUnits(zgBalanceData.value, zgBalanceData.decimals);
+      useOverflowStore.setState({ walletBalance: Number.parseFloat(formatted) });
+    }
+  }, [zgBalanceData, wagmiChainId, storeNetwork]);
 
   // Switch Sui client network based on preferredNetwork
   useEffect(() => {
@@ -127,31 +146,6 @@ function WalletSync() {
       return;
     }
 
-    // EVM auto-detection (authoritative from active chain).
-    // This prevents Somnia/Push connections from being mislabeled as BNB
-    // when preferredNetwork is stale in localStorage.
-    if (wagmiConnected && wagmiAddress) {
-      const evmNetwork =
-        wagmiChainId === somniaTestnet.id
-          ? 'SOMNIA'
-          : wagmiChainId === pushChainDonut.id
-            ? 'PUSH'
-            : wagmiChainId === bsc.id
-              ? 'BNB'
-              : null;
-
-      if (evmNetwork) {
-        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== evmNetwork) {
-          setAddress(wagmiAddress);
-          setIsConnected(true);
-          setNetwork(evmNetwork);
-          refreshWalletBalance();
-          fetchProfile(wagmiAddress);
-        }
-        return;
-      }
-    }
-
     // 1. Solana
     if (solanaConnected && solanaPublicKey && preferredNetwork === 'SOL') {
       const addr = solanaPublicKey.toBase58();
@@ -189,6 +183,18 @@ function WalletSync() {
       return;
     }
 
+    // 2c. Initia (INIT) — InterwovenKit
+    if (initiaConnected && initiaAddress && preferredNetwork === 'INIT') {
+      if (address !== initiaAddress || !storeIsConnected || storeNetwork !== 'INIT') {
+        setAddress(initiaAddress);
+        setIsConnected(true);
+        setNetwork('INIT');
+        refreshWalletBalance();
+        fetchProfile(initiaAddress);
+      }
+      return;
+    }
+
     // 3. Push Chain (via wagmi/ConnectKit on chainId 42101)
     if (preferredNetwork === 'PUSH') {
       if (wagmiConnected && wagmiAddress && wagmiChainId === pushChainDonut.id) {
@@ -218,14 +224,41 @@ function WalletSync() {
         }
         return;
       }
+      // Wallet connected but on wrong chain — auto-switch to Somnia
+      if (wagmiConnected && wagmiAddress && wagmiChainId !== somniaTestnet.id) {
+        switchChain({ chainId: somniaTestnet.id });
+        return;
+      }
       // Still waiting for user to switch network — keep existing state
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'SOMNIA') return;
       return;
     }
 
+    // 4b. 0G Mainnet (via wagmi/ConnectKit)
+    if (preferredNetwork === 'ZG') {
+      if (wagmiConnected && wagmiAddress && wagmiChainId === zgMainnet.id) {
+        if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'ZG') {
+          setAddress(wagmiAddress);
+          setIsConnected(true);
+          setNetwork('ZG');
+          refreshWalletBalance();
+          fetchProfile(wagmiAddress);
+        }
+        return;
+      }
+      // Wallet connected but on wrong chain — auto-switch to 0G
+      if (wagmiConnected && wagmiAddress && wagmiChainId !== zgMainnet.id) {
+        switchChain({ chainId: zgMainnet.id });
+        return;
+      }
+      // Still waiting for user to switch network — keep existing state
+      if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'ZG') return;
+      return;
+    }
+
     // 6. BNB (Wagmi or Privy)
     if (preferredNetwork === 'BNB') {
-      if (wagmiConnected && wagmiAddress) {
+      if (wagmiConnected && wagmiAddress && wagmiChainId === bsc.id) {
         if (address !== wagmiAddress || !storeIsConnected || storeNetwork !== 'BNB') {
           setAddress(wagmiAddress);
           setIsConnected(true);
@@ -233,6 +266,11 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
+        return;
+      }
+      // Wallet connected but on wrong chain — auto-switch to BSC
+      if (wagmiConnected && wagmiAddress && wagmiChainId !== bsc.id) {
+        switchChain({ chainId: bsc.id });
         return;
       }
       if (privyReady && authenticated && privyWallets[0]) {
@@ -291,7 +329,9 @@ function WalletSync() {
     const hasSTRK = state.network === 'STRK' && !!state.address;
     const hasPUSH = wagmiConnected && !!wagmiAddress && wagmiChainId === pushChainDonut.id;
     const hasSOMNIA = wagmiConnected && !!wagmiAddress && wagmiChainId === somniaTestnet.id;
+    const hasZG = wagmiConnected && !!wagmiAddress && wagmiChainId === zgMainnet.id;
     const hasOCT = preferredNetwork === 'OCT' && !!suiAccount?.address;
+    const hasINIT = preferredNetwork === 'INIT' && initiaConnected && !!initiaAddress;
 
     let shouldClear = false;
     if (isDemoMode) {
@@ -304,9 +344,11 @@ function WalletSync() {
       else if (preferredNetwork === 'XTZ' && !hasTezos) shouldClear = true;
       else if (preferredNetwork === 'NEAR' && !hasNEAR) shouldClear = true;
       else if (preferredNetwork === 'STRK' && !hasSTRK) shouldClear = true;
-      else if (String(preferredNetwork) === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
+      else if ((preferredNetwork as string) === 'SOMNIA' && !hasSOMNIA) shouldClear = true;
+      else if ((preferredNetwork as string) === 'ZG' && !hasZG) shouldClear = true;
       else if (preferredNetwork === 'OCT' && !hasOCT) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA && !hasOCT) shouldClear = true;
+      else if (preferredNetwork === 'INIT' && !hasINIT) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA && !hasZG && !hasOCT && !hasINIT) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {
@@ -319,9 +361,11 @@ function WalletSync() {
     solanaConnected, solanaPublicKey,
     suiAccount,
     wagmiAddress, wagmiConnected, wagmiChainId,
+    initiaAddress, initiaConnected,
     preferredNetwork, address, accountType,
     storeIsConnected, storeNetwork,
-    setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile
+    setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile,
+    switchChain
   ]);
 
   return null;
@@ -346,6 +390,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     } catch (e) {
       return "https://solana-rpc.publicnode.com";
     }
+  }, []);
+
+  useEffect(() => {
+    injectInitiaStyles(interwovenKitStyles);
   }, []);
 
   useEffect(() => {
@@ -418,8 +466,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 accentColor: '#A855F7',
                 showWalletLoginFirst: true,
               },
-              supportedChains: [somniaTestnet, bsc, pushChainDonut],
-              defaultChain: somniaTestnet,
+              supportedChains: [bsc, somniaTestnet, pushChainDonut, zgMainnet],
+              defaultChain: bsc,
               embeddedWallets: {
                 createOnLogin: 'users-without-wallets',
               },
@@ -430,11 +478,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <WalletModalProvider>
                   <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
                     <WalletProvider autoConnect>
-                      <WalletSync />
-                      <ReferralSync />
-                      {children}
-                      <WalletConnectModal />
-                      <ToastProvider />
+                      <InterwovenKitProvider {...INITIA_MAINNET}>
+                        <WalletSync />
+                        <ReferralSync />
+                        {children}
+                        <WalletConnectModal />
+                        <ToastProvider />
+                      </InterwovenKitProvider>
                     </WalletProvider>
                   </SuiClientProvider>
                 </WalletModalProvider>

@@ -4,12 +4,14 @@ import { useOverflowStore } from '@/lib/store';
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
 import { useDisconnect as useWagmiDisconnect } from 'wagmi';
+import { useInterwovenKit } from '@initia/interwovenkit-react';
 
 export const WalletConnect: React.FC = () => {
   const { logout: logoutPrivy, authenticated, user, ready } = usePrivy();
   const { disconnect: disconnectSolana, connected: solanaConnected } = useSolanaWallet();
   const { mutate: disconnectSui } = useSuiDisconnect();
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
+  const { disconnect: disconnectInitia } = useInterwovenKit();
 
   const { network, address, setConnectModalOpen, disconnect: disconnectStore, setPreferredNetwork } = useOverflowStore();
 
@@ -33,8 +35,12 @@ export const WalletConnect: React.FC = () => {
       wagmiDisconnect();
     } else if (network === 'SOMNIA') {
       wagmiDisconnect();
+    } else if (network === 'ZG') {
+      wagmiDisconnect();
     } else if (network === 'OCT') {
       disconnectSui();
+    } else if (network === 'INIT') {
+      disconnectInitia();
     }
     // XTZ and NEAR don't need special SDK disconnect
 
@@ -49,7 +55,9 @@ export const WalletConnect: React.FC = () => {
       case 'SUI': return '/logos/sui-logo.png';
       case 'BNB': return '/logos/bnb-bnb-logo.png';
       case 'SOMNIA': return '/logos/somnia.jpg';
+      case 'ZG': return '/logos/0g.png';
       case 'OCT': return '/logos/onechain.png';
+      case 'INIT': return '/logos/initia.png';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
       case 'XTZ': return '/logos/tezos-xtz-logo.png';
       case 'NEAR': return '/logos/near.png';
@@ -65,7 +73,9 @@ export const WalletConnect: React.FC = () => {
       case 'SUI': return 'SUI';
       case 'BNB': return 'BNB';
       case 'SOMNIA': return 'SOMNIA';
+      case 'ZG': return '0G';
       case 'OCT': return 'OCT';
+      case 'INIT': return 'INIT';
       case 'XLM': return 'XLM';
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';

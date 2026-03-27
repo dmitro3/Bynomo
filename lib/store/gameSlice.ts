@@ -385,7 +385,13 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       // Get current network and selected currency from store
       const network = (get() as any).network || 'BNB';
       const selectedCurrency = (get() as any).selectedCurrency;
-      let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network;
+      let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency
+        : network === 'PUSH' ? 'PC'
+        : network === 'SOMNIA' ? 'STT'
+        : network === 'ZG' ? '0G'
+        : network === 'OCT' ? 'OCT'
+        : network === 'INIT' ? 'INIT'
+        : network;
 
       // Handle special address-based currency overrides
       if (userAddress && (userAddress.endsWith('.near') || userAddress.endsWith('.testnet'))) {
