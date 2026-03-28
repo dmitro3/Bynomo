@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { ethers } from 'ethers';
+import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 
 export async function GET(
   request: NextRequest,
@@ -78,10 +79,12 @@ export async function GET(
     // Handle database errors
     if (error) {
       if (error.code === 'PGRST116') {
+        const globallyBanned = await isWalletGloballyBanned(supabase, address);
         return NextResponse.json({
           balance: 0,
           updatedAt: null,
-          tier: 'free'
+          tier: 'free',
+          globallyBanned,
         });
       }
 
@@ -110,11 +113,14 @@ export async function GET(
       console.warn('Could not fetch user_tier, defaulting to free:', e);
     }
 
+    const globallyBanned = await isWalletGloballyBanned(supabase, address);
+
     // Return balance and updated_at timestamp
     return NextResponse.json({
       balance: parseFloat(data.balance),
       updatedAt: data.updated_at,
-      tier: userTier
+      tier: userTier,
+      globallyBanned,
     });
   } catch (error) {
     // Handle unexpected errors

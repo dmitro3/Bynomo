@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { ethers } from 'ethers';
+import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 
 interface PayoutRequest {
   userAddress: string;
@@ -40,6 +41,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Invalid wallet address format' },
         { status: 400 }
+      );
+    }
+
+    if (await isWalletGloballyBanned(supabase, userAddress)) {
+      return NextResponse.json(
+        { error: 'This wallet is banned from the platform.' },
+        { status: 403 }
       );
     }
 

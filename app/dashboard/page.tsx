@@ -75,6 +75,12 @@ interface BetHistory {
     created_at: string;
 }
 
+interface BannedWalletRow {
+    wallet_address: string;
+    reason: string | null;
+    created_at: string;
+}
+
 export default function AdminDashboard() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
@@ -83,6 +89,9 @@ export default function AdminDashboard() {
     const [marketTokens, setMarketTokens] = useState<MarketToken[]>([]);
     const [gameHistory, setGameHistory] = useState<BetHistory[]>([]);
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
+    const [bannedWallets, setBannedWallets] = useState<BannedWalletRow[]>([]);
+    const [banAddressInput, setBanAddressInput] = useState('');
+    const [banReasonInput, setBanReasonInput] = useState('');
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     // Default to Waitlist so collected emails are visible immediately.
@@ -160,13 +169,14 @@ export default function AdminDashboard() {
         setLoading(true);
         setWaitlistError(null);
         try {
-            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes] = await Promise.all([
                 fetch('/api/admin/stats'),
                 fetch('/api/admin/users'),
                 fetch('/api/admin/transactions'),
                 fetch('/api/admin/currencies'),
                 fetch('/api/admin/game-history'),
                 fetch('/api/admin/danger-zone'),
+                fetch('/api/admin/banned-wallets'),
                 fetch('/api/admin/waitlist'),
                 fetch('/api/admin/access-codes'),
                 fetch('/api/admin/withdrawal-requests/pending')
@@ -191,6 +201,10 @@ export default function AdminDashboard() {
             if (dangerRes.ok) {
                 const data = await dangerRes.json();
                 setSuspiciousUsers(data.suspiciousUsers || []);
+            }
+            if (bannedRes.ok) {
+                const data = await bannedRes.json();
+                setBannedWallets(data.bans || []);
             }
             if (waitlistRes.ok) {
                 const data = await waitlistRes.json();
@@ -231,6 +245,43 @@ export default function AdminDashboard() {
             }
         } catch (error) {
             console.error('Failed to generate codes:', error);
+        }
+    };
+
+    const addGlobalBan = async () => {
+        const addr = banAddressInput.trim();
+        if (!addr) return;
+        try {
+            const res = await fetch('/api/admin/banned-wallets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress: addr,
+                    reason: banReasonInput.trim() || 'Banned by administrator',
+                }),
+            });
+            if (res.ok) {
+                setBanAddressInput('');
+                setBanReasonInput('');
+                fetchData();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err?.error || 'Failed to add ban');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const removeGlobalBan = async (walletAddress: string) => {
+        try {
+            const res = await fetch(
+                `/api/admin/banned-wallets?walletAddress=${encodeURIComponent(walletAddress)}`,
+                { method: 'DELETE' }
+            );
+            if (res.ok) fetchData();
+        } catch (e) {
+            console.error(e);
         }
     };
 
@@ -633,7 +684,75 @@ export default function AdminDashboard() {
                                 )}
 
                                 {activeTab === 'danger' && (
-                                    <Table key="danger">
+                                    <div key="danger" className="space-y-10">
+                                    <div className="p-8 bg-rose-500/5 border border-rose-500/20 rounded-[2rem] space-y-4">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-400/80">Global wallet ban list</p>
+                                        <p className="text-[11px] text-white/40 leading-relaxed max-w-2xl">
+                                            Blocks deposits, bets, payouts, and withdrawals for an address across every currency. EVM addresses are matched case-insensitively; Solana and other non-EVM addresses must match exactly.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+                                            <div className="flex-1 space-y-1">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Wallet address</label>
+                                                <input
+                                                    value={banAddressInput}
+                                                    onChange={e => setBanAddressInput(e.target.value)}
+                                                    placeholder="0x… or Solana base58…"
+                                                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm font-mono placeholder:text-white/20"
+                                                />
+                                            </div>
+                                            <div className="flex-[2] space-y-1">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Reason (optional)</label>
+                                                <input
+                                                    value={banReasonInput}
+                                                    onChange={e => setBanReasonInput(e.target.value)}
+                                                    placeholder="e.g. manipulation / abuse"
+                                                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm placeholder:text-white/20"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={addGlobalBan}
+                                                className="px-6 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all"
+                                            >
+                                                Ban wallet
+                                            </button>
+                                        </div>
+                                        <Table>
+                                            <THead labels={['Address', 'Reason', 'Added', '']} />
+                                            <tbody>
+                                                {loading ? (
+                                                    <tr><td colSpan={4} className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest animate-pulse text-white/20">Loading…</td></tr>
+                                                ) : bannedWallets.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={4} className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest text-white/15">
+                                                            No global bans yet
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    bannedWallets.map(b => (
+                                                        <tr key={b.wallet_address} className="border-b border-white/5">
+                                                            <td className="px-4 py-4 font-mono text-xs text-white break-all">{b.wallet_address}</td>
+                                                            <td className="px-4 py-4 text-white/50 text-xs max-w-xs">{b.reason || '—'}</td>
+                                                            <td className="px-4 py-4 text-white/30 text-[10px] font-mono whitespace-nowrap">
+                                                                {new Date(b.created_at).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeGlobalBan(b.wallet_address)}
+                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-bold text-white/70 uppercase"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+
+                                    <Table key="danger-table">
                                         <THead labels={['Node Identity', 'Max Streak', 'Pattern', 'Current Status', 'Operations']} />
                                         <tbody>
                                             {loading ? <LoadingRow /> : suspiciousUsers.map(u => (
@@ -699,6 +818,7 @@ export default function AdminDashboard() {
                                             )}
                                         </tbody>
                                     </Table>
+                                    </div>
                                 )}
 
                                 {activeTab === 'waitlist' && (

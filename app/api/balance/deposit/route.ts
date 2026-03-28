@@ -17,6 +17,7 @@ import { getPushConfig } from '@/lib/push/config';
 import { getSomniaConfig } from '@/lib/somnia/config';
 import { getZGConfig } from '@/lib/zg/config';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
+import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 
 interface DepositRequest {
   userAddress: string;
@@ -142,6 +143,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Invalid wallet address format (BNB, Solana, Sui, Starknet, Stellar, Tezos or NEAR required)' },
         { status: 400 }
+      );
+    }
+
+    if (await isWalletGloballyBanned(supabase, userAddress)) {
+      return NextResponse.json(
+        { error: 'This wallet is banned from the platform.' },
+        { status: 403 }
       );
     }
 

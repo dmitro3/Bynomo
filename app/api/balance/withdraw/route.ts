@@ -7,6 +7,7 @@ import { transferZGFromTreasury } from '@/lib/zg/backend-client';
 import { transferINITFromTreasury } from '@/lib/initia/backend-client';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
+import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 
 interface WithdrawRequest {
   userAddress: string;
@@ -46,6 +47,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Invalid wallet address format' },
         { status: 400 }
+      );
+    }
+
+    if (await isWalletGloballyBanned(supabase, userAddress)) {
+      return NextResponse.json(
+        { error: 'This wallet is banned from the platform.' },
+        { status: 403 }
       );
     }
 
