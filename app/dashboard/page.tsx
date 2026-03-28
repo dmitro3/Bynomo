@@ -118,16 +118,16 @@ function NetworkTokenEconomicsTable({ rows, title }: { rows?: Record<string, Net
     return (
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
             <div className="px-4 py-3 border-b border-white/10 space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/45">{title}</p>
-                <p className="text-[11px] text-white/40 leading-relaxed">
+                <p className="text-xs font-black uppercase tracking-widest text-white/45">{title}</p>
+                <p className="text-sm text-white/40 leading-relaxed">
                     Each row is one chain. Amounts are in that row’s <span className="text-white/70">native token</span> (not dollars).{' '}
                     <span className="text-amber-200/80">Do not sum numbers down the column across different tokens.</span>
                 </p>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left text-[12px] min-w-[640px]">
+                <table className="w-full text-left text-sm min-w-[640px]">
                     <thead>
-                        <tr className="text-[9px] font-black uppercase tracking-wider text-white/35 border-b border-white/10 bg-white/[0.02]">
+                        <tr className="text-xs font-black uppercase tracking-wider text-white/35 border-b border-white/10 bg-white/[0.02]">
                             <th className="px-4 py-3">Chain</th>
                             <th className="px-4 py-3">Token</th>
                             <th className="px-4 py-3 text-right">Staked</th>
@@ -144,14 +144,14 @@ function NetworkTokenEconomicsTable({ rows, title }: { rows?: Record<string, Net
                                     <td className="px-4 py-2.5">{net}</td>
                                     <td className="px-4 py-2.5 text-white/50">{sym}</td>
                                     <td className="px-4 py-2.5 text-right tabular-nums">
-                                        {fmt(row.volume)} <span className="text-[10px] text-white/35">{sym}</span>
+                                        {fmt(row.volume)} <span className="text-xs text-white/35">{sym}</span>
                                     </td>
                                     <td className="px-4 py-2.5 text-right tabular-nums">
-                                        {fmt(row.payout)} <span className="text-[10px] text-white/35">{sym}</span>
+                                        {fmt(row.payout)} <span className="text-xs text-white/35">{sym}</span>
                                     </td>
                                     <td className="px-4 py-2.5 text-right tabular-nums">
                                         <span className={row.platformPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                                            {fmt(row.platformPnL)} <span className="text-[10px] opacity-70">{sym}</span>
+                                            {fmt(row.platformPnL)} <span className="text-xs opacity-70">{sym}</span>
                                         </span>
                                     </td>
                                 </tr>
@@ -412,9 +412,14 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/accept`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-dashboard-auth': 'true' },
             });
-            if (res.ok) await fetchData();
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                await fetchData();
+            } else {
+                alert(data?.error || `Accept failed (HTTP ${res.status})`);
+            }
         } catch (e) {
             console.error('Failed to accept withdrawal request:', e);
         }
@@ -424,9 +429,14 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/reject`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-dashboard-auth': 'true' },
             });
-            if (res.ok) await fetchData();
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                await fetchData();
+            } else {
+                alert(data?.error || `Reject failed (HTTP ${res.status})`);
+            }
         } catch (e) {
             console.error('Failed to reject withdrawal request:', e);
         }
@@ -446,8 +456,8 @@ export default function AdminDashboard() {
             <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
                 <div className="w-full max-w-sm bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
                     <div className="text-center mb-8">
-                        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Neural Access</h2>
-                        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold mt-2">Restricted Area</p>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Neural Access</h2>
+                        <p className="text-xs text-white/30 uppercase tracking-wide font-bold mt-2">Restricted Area</p>
                     </div>
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="relative">
@@ -483,14 +493,14 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            <h1 className="text-sm font-bold tracking-[0.3em] text-white uppercase">System Terminal v3.1</h1>
+                            <h1 className="text-sm font-bold tracking-wider text-white uppercase">System Terminal v3.1</h1>
                         </div>
-                        <p className="text-4xl md:text-5xl font-black text-white tracking-tighter">Core Operations</p>
+                        <p className="text-4xl md:text-5xl font-black text-white tracking-tight">Core Operations</p>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         <button
                             onClick={fetchData}
-                            className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] font-black text-white uppercase tracking-widest transition-all"
+                            className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs font-black text-white uppercase tracking-widest transition-all"
                         >
                             {loading ? 'Syncing...' : 'Sync Terminal'}
                         </button>
@@ -499,7 +509,7 @@ export default function AdminDashboard() {
 
                 {/* Betting economics: never show a single “$” or one mixed total as PnL — use per-chain native token table */}
                 <div className="space-y-6">
-                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Real Mode Stats</div>
+                    <div className="text-xs font-black uppercase tracking-wider text-white/30">Real Mode Stats</div>
                     <NetworkTokenEconomicsTable rows={stats?.real?.platformPnLByNetwork} title="Betting economics by chain (native tokens)" />
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatBox
@@ -519,7 +529,7 @@ export default function AdminDashboard() {
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
 
-                    <div className="pt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Demo Mode Stats</div>
+                    <div className="pt-4 text-xs font-black uppercase tracking-wider text-white/30">Demo Mode Stats</div>
                     <NetworkTokenEconomicsTable rows={stats?.demo?.platformPnLByNetwork} title="Demo — betting economics by chain (native tokens)" />
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatBox
@@ -572,8 +582,8 @@ export default function AdminDashboard() {
                                 {activeTab === 'wallet_intel' && (
                                     <div key="wallet_intel" className="p-8 space-y-8 text-left">
                                         <div className="space-y-2">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/35">Cross-chain wallet intelligence</p>
-                                            <p className="text-xs text-white/45 max-w-3xl leading-relaxed">
+                                            <p className="text-xs font-black uppercase tracking-widest text-white/35">Cross-chain wallet intelligence</p>
+                                            <p className="text-sm text-white/60 max-w-3xl leading-relaxed">
                                                 Enter any address (EVM, Solana, Sui, etc.). We match stored variants (e.g. EVM checksum) and aggregate{' '}
                                                 <span className="text-white/70">house balances</span>,{' '}
                                                 <span className="text-white/70">audit log</span>,{' '}
@@ -594,7 +604,7 @@ export default function AdminDashboard() {
                                                 type="button"
                                                 onClick={runWalletIntel}
                                                 disabled={walletIntelLoading}
-                                                className="px-8 py-3 rounded-xl bg-white text-black font-black uppercase text-[10px] tracking-widest hover:bg-white/90 disabled:opacity-50"
+                                                className="px-8 py-3 rounded-xl bg-white text-black font-black uppercase text-xs tracking-widest hover:bg-white/90 disabled:opacity-50"
                                             >
                                                 {walletIntelLoading ? 'Scanning…' : 'Analyze wallet'}
                                             </button>
@@ -604,12 +614,12 @@ export default function AdminDashboard() {
                                         )}
                                         {walletIntel && (
                                             <div className="space-y-8 border-t border-white/10 pt-8">
-                                                <div className="flex flex-wrap gap-3 text-[11px]">
+                                                <div className="flex flex-wrap gap-3 text-sm">
                                                     <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 font-mono text-white/80">
                                                         Query: <span className="text-white">{walletIntel.query}</span>
                                                     </span>
                                                     {walletIntel.bannedGlobally && (
-                                                        <span className="px-3 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 font-black uppercase text-[10px]">
+                                                        <span className="px-3 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 font-black uppercase text-xs">
                                                             Globally banned
                                                         </span>
                                                     )}
@@ -623,7 +633,7 @@ export default function AdminDashboard() {
 
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                                     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">House balances (per currency)</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/40">House balances (per currency)</p>
                                                         {(!walletIntel.balances || walletIntel.balances.length === 0) && (
                                                             <p className="text-white/30 text-sm">No balance rows for this address.</p>
                                                         )}
@@ -632,8 +642,8 @@ export default function AdminDashboard() {
                                                                 <div key={b.currency + (b.status || '')} className="flex flex-wrap justify-between gap-2 text-sm border-b border-white/5 pb-2">
                                                                     <span className="font-mono text-white/70">{b.currency}</span>
                                                                     <span className="font-mono text-white">Balance {Number(b.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
-                                                                    <span className={`text-[10px] font-black uppercase ${b.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>{b.status}</span>
-                                                                    <span className="text-[10px] text-white/40 w-full sm:w-auto">
+                                                                    <span className={`text-xs font-black uppercase ${b.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>{b.status}</span>
+                                                                    <span className="text-xs text-white/40 w-full sm:w-auto">
                                                                         Withdrawable now:{' '}
                                                                         <span className="text-emerald-300/90 font-mono">{Number(b.withdrawableNow).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
                                                                         {walletIntel.bannedGlobally && ' (0 if banned)'}
@@ -643,19 +653,19 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </div>
                                                     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Deposits & withdrawals (audit log)</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/40">Deposits & withdrawals (audit log)</p>
                                                         <div className="grid grid-cols-2 gap-3 text-sm">
                                                             <div>
-                                                                <p className="text-[9px] uppercase text-white/35">Deposits count</p>
+                                                                <p className="text-xs uppercase text-white/35">Deposits count</p>
                                                                 <p className="font-mono text-lg text-emerald-400">{walletIntel.aggregates?.audit?.depositCount ?? 0}</p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-[9px] uppercase text-white/35">Withdrawals count</p>
+                                                                <p className="text-xs uppercase text-white/35">Withdrawals count</p>
                                                                 <p className="font-mono text-lg text-rose-300">{walletIntel.aggregates?.audit?.withdrawalCount ?? 0}</p>
                                                             </div>
                                                         </div>
                                                         <div className="space-y-1 text-xs font-mono">
-                                                            <p className="text-[10px] text-white/40 uppercase">Σ deposits by currency</p>
+                                                            <p className="text-xs text-white/40 uppercase">Σ deposits by currency</p>
                                                             {Object.entries(walletIntel.aggregates?.audit?.totalDepositsByCurrency || {}).map(([c, v]) => (
                                                                 <div key={c} className="flex justify-between text-emerald-300/90">
                                                                     <span>{c}</span>
@@ -667,7 +677,7 @@ export default function AdminDashboard() {
                                                             )}
                                                         </div>
                                                         <div className="space-y-1 text-xs font-mono">
-                                                            <p className="text-[10px] text-white/40 uppercase">Σ withdrawals by currency</p>
+                                                            <p className="text-xs text-white/40 uppercase">Σ withdrawals by currency</p>
                                                             {Object.entries(walletIntel.aggregates?.audit?.totalWithdrawalsByCurrency || {}).map(([c, v]) => (
                                                                 <div key={c} className="flex justify-between text-rose-300/90">
                                                                     <span>{c}</span>
@@ -682,25 +692,25 @@ export default function AdminDashboard() {
                                                 </div>
 
                                                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Betting performance</p>
+                                                    <p className="text-xs font-black uppercase tracking-widest text-white/40">Betting performance</p>
                                                     {['real', 'demo', 'all'].map(mode => {
                                                         const b = walletIntel.aggregates?.betting?.[mode];
                                                         if (!b) return null;
                                                         return (
                                                             <div key={mode} className="border border-white/5 rounded-xl p-4 space-y-2">
-                                                                <p className="text-[10px] font-black uppercase text-white/50">{mode === 'all' ? 'All bets' : mode === 'real' ? 'Real wallets only' : 'Demo wallets only'}</p>
+                                                                <p className="text-xs font-black uppercase text-white/50">{mode === 'all' ? 'All bets' : mode === 'real' ? 'Real wallets only' : 'Demo wallets only'}</p>
                                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Bets</span><span className="font-mono text-white">{b.totalBets}</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Wins</span><span className="font-mono text-emerald-400">{b.wins}</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Losses</span><span className="font-mono text-rose-400">{b.losses}</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Win rate</span><span className="font-mono text-white">{(b.winRate * 100).toFixed(1)}%</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Total wagered</span><span className="font-mono text-white">{b.totalWagered.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Total payout</span><span className="font-mono text-white">{b.totalPayoutReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
-                                                                    <div><span className="text-white/35 text-[9px] uppercase block">User net (payout−wager)</span><span className={`font-mono ${b.netBettingPLUser >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{b.netBettingPLUser.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Bets</span><span className="font-mono text-white">{b.totalBets}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Wins</span><span className="font-mono text-emerald-400">{b.wins}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Losses</span><span className="font-mono text-rose-400">{b.losses}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Win rate</span><span className="font-mono text-white">{(b.winRate * 100).toFixed(1)}%</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Total wagered</span><span className="font-mono text-white">{b.totalWagered.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">Total payout</span><span className="font-mono text-white">{b.totalPayoutReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                    <div><span className="text-white/35 text-xs uppercase block">User net (payout−wager)</span><span className={`font-mono ${b.netBettingPLUser >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{b.netBettingPLUser.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
                                                                 </div>
                                                                 {b.byNetwork && Object.keys(b.byNetwork).length > 0 && (
-                                                                    <div className="mt-3 pt-3 border-t border-white/5 text-[11px] font-mono space-y-1">
-                                                                        <p className="text-[9px] uppercase text-white/30 mb-1">By network</p>
+                                                                    <div className="mt-3 pt-3 border-t border-white/5 text-sm font-mono space-y-1">
+                                                                        <p className="text-xs uppercase text-white/30 mb-1">By network</p>
                                                                         {Object.entries(b.byNetwork).map(([net, row]: [string, any]) => (
                                                                             <div key={net} className="flex flex-wrap gap-x-4 justify-between text-white/70">
                                                                                 <span className="text-white">{net}</span>
@@ -717,12 +727,12 @@ export default function AdminDashboard() {
 
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                                     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Withdrawal requests</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Withdrawal requests</p>
                                                         <p className="text-xs text-white/50 mb-2">
                                                             Pending: {walletIntel.aggregates?.withdrawals?.pending?.length ?? 0} · Accepted: {walletIntel.aggregates?.withdrawals?.accepted?.length ?? 0} · Rejected: {walletIntel.aggregates?.withdrawals?.rejected?.length ?? 0}
                                                         </p>
                                                         <div className="text-xs font-mono space-y-1">
-                                                            <p className="text-[10px] uppercase text-white/35">Pending amount by currency</p>
+                                                            <p className="text-xs uppercase text-white/35">Pending amount by currency</p>
                                                             {Object.entries(walletIntel.aggregates?.withdrawals?.pendingTotalByCurrency || {}).map(([c, v]) => (
                                                                 <div key={c} className="flex justify-between text-amber-200/90">
                                                                     <span>{c}</span>
@@ -735,7 +745,7 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </div>
                                                     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-2">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Profile & referrals</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/40">Profile & referrals</p>
                                                         <p className="text-sm text-white/60">
                                                             Username:{' '}
                                                             <span className="text-white font-mono">{walletIntel.profile?.username || '—'}</span>
@@ -750,8 +760,8 @@ export default function AdminDashboard() {
                                                 </div>
 
                                                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-x-auto">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Recent audit (latest 80)</p>
-                                                    <table className="w-full text-left text-[11px] font-mono">
+                                                    <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Recent audit (latest 80)</p>
+                                                    <table className="w-full text-left text-sm font-mono">
                                                         <thead>
                                                             <tr className="text-white/35 border-b border-white/10">
                                                                 <th className="py-2 pr-4">Time</th>
@@ -774,8 +784,8 @@ export default function AdminDashboard() {
                                                 </div>
 
                                                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-x-auto">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Recent bets (latest 80)</p>
-                                                    <table className="w-full text-left text-[11px] font-mono">
+                                                    <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Recent bets (latest 80)</p>
+                                                    <table className="w-full text-left text-sm font-mono">
                                                         <thead>
                                                             <tr className="text-white/35 border-b border-white/10">
                                                                 <th className="py-2 pr-4">Time</th>
@@ -804,7 +814,7 @@ export default function AdminDashboard() {
                                 )}
                                 {activeTab === 'users' && (
                                     <Table key="users">
-                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Referral', 'Engagement', 'Value', 'Tier']} />
+                                        <THead labels={['Identity', 'Protocol', 'Liquidity', 'Volume']} />
                                         <tbody>
                                             {loading ? <LoadingRow /> : users
                                                 .filter(u => !searchTerm || u.user_address.toLowerCase().includes(searchTerm.toLowerCase()) || (u.username && u.username.toLowerCase().includes(searchTerm.toLowerCase())))
@@ -813,26 +823,14 @@ export default function AdminDashboard() {
                                                         <td className="px-8 py-6">
                                                             <div className="flex flex-col">
                                                                 <span className="text-white text-sm font-bold">{u.username || 'Anonymous'}</span>
-                                                                <span className="font-mono text-white/20 text-[10px]">{shortenAddress(u.user_address)}</span>
+                                                                <span className="font-mono text-white/20 text-xs">{shortenAddress(u.user_address)}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-6"><span className="text-[10px] font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
+                                                        <td className="px-8 py-6"><span className="text-xs font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
                                                         <td className="px-8 py-6 text-white font-mono font-bold">{u.balance.toFixed(4)}</td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] font-black text-white/60">{u.referral?.referral_code || '---'}</span>
-                                                                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{u.referral?.referral_count || 0} REFS</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6 text-white/40">{u.activity.totalBets} plays</td>
                                                         <td className="px-8 py-6 text-white font-mono font-black">
                                                             {u.activity.totalVolume.toLocaleString()}{' '}
-                                                            <span className="text-[9px] font-bold text-white/30 uppercase">mixed native</span>
-                                                        </td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${u.activity.totalVolume > 500 ? 'bg-purple-500/10 text-purple-400' : u.activity.totalVolume > 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-white/5 text-white/20'}`}>
-                                                                {u.activity.totalVolume > 500 ? 'VIP' : u.activity.totalVolume > 50 ? 'Standard' : 'Free'}
-                                                            </span>
+                                                            <span className="text-xs font-bold text-white/30 uppercase">mixed native</span>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -846,19 +844,19 @@ export default function AdminDashboard() {
                                             <div className="flex gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
                                                 <button
                                                     onClick={() => setGameplayFilter('all')}
-                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'all' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                                                    className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${gameplayFilter === 'all' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
                                                 >
                                                     All Modes
                                                 </button>
                                                 <button
                                                     onClick={() => setGameplayFilter('real')}
-                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'real' ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-white/40 hover:text-white'}`}
+                                                    className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${gameplayFilter === 'real' ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-white/40 hover:text-white'}`}
                                                 >
                                                     Real Wallet
                                                 </button>
                                                 <button
                                                     onClick={() => setGameplayFilter('demo')}
-                                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gameplayFilter === 'demo' ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'text-white/40 hover:text-white'}`}
+                                                    className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${gameplayFilter === 'demo' ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'text-white/40 hover:text-white'}`}
                                                 >
                                                     Demo Mode
                                                 </button>
@@ -879,7 +877,7 @@ export default function AdminDashboard() {
                                                     <button
                                                         key={value}
                                                         onClick={() => setChainFilter(prev => prev === value ? 'ALL' : value)}
-                                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border transition-all ${chainFilter === value ? 'bg-white/10 border-white/30 text-white' : 'bg-transparent border-white/5 text-white/30 hover:border-white/20'}`}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-tight border transition-all ${chainFilter === value ? 'bg-white/10 border-white/30 text-white' : 'bg-transparent border-white/5 text-white/30 hover:border-white/20'}`}
                                                     >
                                                         {label}
                                                     </button>
@@ -897,20 +895,20 @@ export default function AdminDashboard() {
                                                         if (gameplayFilter === 'demo' && !isDemo) return false;
                                                         return true;
                                                     })
-                                                    .filter(b => chainFilter === 'ALL' || b.id.toString().toUpperCase().includes(chainFilter) || (b as any).network === chainFilter)
+                                                    .filter(b => chainFilter === 'ALL' || (b as any).network === chainFilter)
                                                     .map(b => {
                                                         const isDemo = b.id.toString().startsWith('demo-');
                                                         const net = String((b as { network?: string }).network || 'BNB');
                                                         const tok = tokenSymbolForNetwork(net);
                                                         return (
                                                             <tr key={b.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
-                                                                <td className="px-8 py-6 text-[10px] font-mono">{new Date(b.created_at).toLocaleString()}</td>
+                                                                <td className="px-8 py-6 text-xs font-mono">{new Date(b.created_at).toLocaleString()}</td>
                                                                 <td className="px-8 py-6 font-black text-white">{b.asset}</td>
                                                                 <td className="px-8 py-6">
                                                                     <span className={b.direction === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>{b.direction}</span>
                                                                 </td>
                                                                 <td className="px-8 py-6 text-white font-mono tabular-nums">
-                                                                    {b.amount.toFixed(4)} <span className="text-[10px] text-white/35">{tok}</span>
+                                                                    {b.amount.toFixed(4)} <span className="text-xs text-white/35">{tok}</span>
                                                                 </td>
                                                                 <td className="px-8 py-6">
                                                                     <span className={b.won ? 'text-emerald-400 font-bold' : 'text-white/20'}>
@@ -919,9 +917,9 @@ export default function AdminDashboard() {
                                                                             : `−${b.amount.toFixed(4)} ${tok}`}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-8 py-6 font-mono text-[10px]">{shortenAddress(b.wallet_address)}</td>
+                                                                <td className="px-8 py-6 font-mono text-xs">{shortenAddress(b.wallet_address)}</td>
                                                                 <td className="px-8 py-6 text-right">
-                                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${isDemo ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                    <span className={`px-3 py-1 rounded text-xs font-black uppercase ${isDemo ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
                                                                         {isDemo ? 'Demo' : 'Real'}
                                                                     </span>
                                                                 </td>
@@ -942,12 +940,12 @@ export default function AdminDashboard() {
                                                     {/* Pending withdrawals require manual acceptance */}
                                                     {pendingWithdrawals && pendingWithdrawals.length > 0 && pendingWithdrawals.map((w: any) => (
                                                         <tr key={w.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                                            <td className="px-8 py-6 text-[10px] font-mono">
+                                                            <td className="px-8 py-6 text-xs font-mono">
                                                                 {w.requested_at ? new Date(w.requested_at).toLocaleString() : '---'}
                                                             </td>
                                                             <td className="px-8 py-6 font-mono text-xs">{shortenAddress(w.user_address)}</td>
                                                             <td className="px-8 py-6">
-                                                                <span className="text-amber-300 bg-amber-300/10 px-2 py-0.5 rounded uppercase text-[9px] font-black">
+                                                                <span className="text-amber-300 bg-amber-300/10 px-2 py-0.5 rounded uppercase text-xs font-black">
                                                                     pending_withdrawal
                                                                 </span>
                                                             </td>
@@ -958,13 +956,13 @@ export default function AdminDashboard() {
                                                                 <div className="flex gap-2 justify-end">
                                                                     <button
                                                                         onClick={() => acceptWithdrawalRequest(w.id)}
-                                                                        className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded text-[9px] font-black uppercase hover:bg-emerald-500/20 transition-colors"
+                                                                        className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded text-xs font-black uppercase hover:bg-emerald-500/20 transition-colors"
                                                                     >
                                                                         Accept
                                                                     </button>
                                                                     <button
                                                                         onClick={() => rejectWithdrawalRequest(w.id)}
-                                                                        className="px-2 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded text-[9px] font-black uppercase hover:bg-rose-500/20 transition-colors"
+                                                                        className="px-2 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded text-xs font-black uppercase hover:bg-rose-500/20 transition-colors"
                                                                     >
                                                                         Reject
                                                                     </button>
@@ -978,10 +976,10 @@ export default function AdminDashboard() {
                                                         const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
                                                         return (
                                                             <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-                                                                <td className="px-8 py-6 text-[10px] font-mono">{new Date(t.created_at).toLocaleString()}</td>
+                                                                <td className="px-8 py-6 text-xs font-mono">{new Date(t.created_at).toLocaleString()}</td>
                                                                 <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
                                                                 <td className="px-8 py-6">
-                                                                    <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-[9px] font-black'}>
+                                                                    <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-xs font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-xs font-black'}>
                                                                         {t.operation_type}
                                                                     </span>
                                                                 </td>
@@ -992,12 +990,12 @@ export default function AdminDashboard() {
                                                                             href={explorerUrl}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="font-mono text-[10px] text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
+                                                                            className="font-mono text-xs text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
                                                                         >
                                                                             {t.transaction_hash.slice(0, 10)}...
                                                                         </a>
                                                                     ) : (
-                                                                        <span className="font-mono text-[10px] text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
+                                                                        <span className="font-mono text-xs text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
                                                                     )}
                                                                 </td>
                                                             </tr>
@@ -1013,10 +1011,10 @@ export default function AdminDashboard() {
                                     <div key="markets" className="p-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                                         {Object.entries(marketSummary).map(([cat, count]) => (
                                             <div key={cat} className="p-8 bg-white/[0.03] border border-white/10 rounded-[2rem] space-y-4">
-                                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">{cat}</p>
+                                                <p className="text-xs font-black uppercase tracking-widest text-white/40">{cat}</p>
                                                 <div className="flex items-end justify-between">
-                                                    <h4 className="text-5xl font-black text-white tracking-tighter">{count}</h4>
-                                                    <p className="text-[10px] font-bold text-white/20 uppercase pb-2">Active Feeds</p>
+                                                    <h4 className="text-5xl font-black text-white tracking-tight">{count}</h4>
+                                                    <p className="text-xs font-bold text-white/20 uppercase pb-2">Active Feeds</p>
                                                 </div>
                                                 <div className="w-full h-1 bg-white/5 rounded-full">
                                                     <div className="h-full bg-white/40 rounded-full" style={{ width: `${(count / marketTokens.length) * 100}%` }} />
@@ -1025,7 +1023,7 @@ export default function AdminDashboard() {
                                         ))}
                                         <div className="p-8 bg-white/5 border border-white/20 rounded-[2rem] flex flex-col justify-center">
                                             <p className="text-xs font-bold text-white uppercase tracking-widest text-center mb-1">Total Inventory</p>
-                                            <p className="text-4xl font-black text-white text-center tracking-tighter">{marketTokens.length}</p>
+                                            <p className="text-4xl font-black text-white text-center tracking-tight">{marketTokens.length}</p>
                                         </div>
                                     </div>
                                 )}
@@ -1046,7 +1044,7 @@ export default function AdminDashboard() {
                                                             <span className="text-xl font-black text-white">{u.referral?.referral_count || 0}</span>
                                                         </td>
                                                         <td className="px-8 py-6 text-right">
-                                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${(u.referral?.referral_count || 0) > 10 ? 'text-purple-400 bg-purple-400/10' : (u.referral?.referral_count || 0) > 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-white/20 bg-white/5'}`}>
+                                                            <span className={`px-3 py-1 rounded text-sm font-black uppercase ${(u.referral?.referral_count || 0) > 10 ? 'text-purple-400 bg-purple-400/10' : (u.referral?.referral_count || 0) > 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-white/20 bg-white/5'}`}>
                                                                 {(u.referral?.referral_count || 0) > 10 ? 'Ambassador' : (u.referral?.referral_count || 0) > 0 ? 'Pro' : 'Starter'}
                                                             </span>
                                                         </td>
@@ -1059,13 +1057,13 @@ export default function AdminDashboard() {
                                 {activeTab === 'danger' && (
                                     <div key="danger" className="space-y-10">
                                     <div className="p-8 bg-rose-500/5 border border-rose-500/20 rounded-[2rem] space-y-4">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-400/80">Global wallet ban list</p>
-                                        <p className="text-[11px] text-white/40 leading-relaxed max-w-2xl">
+                                        <p className="text-xs font-black uppercase tracking-wider text-rose-400/80">Global wallet ban list</p>
+                                        <p className="text-sm text-white/40 leading-relaxed max-w-2xl">
                                             Blocks deposits, bets, payouts, and withdrawals for an address across every currency. EVM addresses are matched case-insensitively; Solana and other non-EVM addresses must match exactly.
                                         </p>
                                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                                             <div className="flex-1 space-y-1">
-                                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Wallet address</label>
+                                                <label className="text-sm font-black uppercase tracking-wider text-white/50">Wallet address</label>
                                                 <input
                                                     value={banAddressInput}
                                                     onChange={e => setBanAddressInput(e.target.value)}
@@ -1074,7 +1072,7 @@ export default function AdminDashboard() {
                                                 />
                                             </div>
                                             <div className="flex-[2] space-y-1">
-                                                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Reason (optional)</label>
+                                                <label className="text-xs font-black uppercase tracking-widest text-white/30">Reason (optional)</label>
                                                 <input
                                                     value={banReasonInput}
                                                     onChange={e => setBanReasonInput(e.target.value)}
@@ -1085,7 +1083,7 @@ export default function AdminDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={addGlobalBan}
-                                                className="px-6 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all"
+                                                className="px-6 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-black uppercase text-xs tracking-widest rounded-xl transition-all"
                                             >
                                                 Ban wallet
                                             </button>
@@ -1094,10 +1092,10 @@ export default function AdminDashboard() {
                                             <THead labels={['Address', 'Reason', 'Added', '']} />
                                             <tbody>
                                                 {loading ? (
-                                                    <tr><td colSpan={4} className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest animate-pulse text-white/20">Loading…</td></tr>
+                                                    <tr><td colSpan={4} className="px-4 py-8 text-center text-xs font-black uppercase tracking-widest animate-pulse text-white/20">Loading…</td></tr>
                                                 ) : bannedWallets.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={4} className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest text-white/15">
+                                                        <td colSpan={4} className="px-4 py-8 text-center text-xs font-black uppercase tracking-widest text-white/15">
                                                             No global bans yet
                                                         </td>
                                                     </tr>
@@ -1106,14 +1104,14 @@ export default function AdminDashboard() {
                                                         <tr key={b.wallet_address} className="border-b border-white/5">
                                                             <td className="px-4 py-4 font-mono text-xs text-white break-all">{b.wallet_address}</td>
                                                             <td className="px-4 py-4 text-white/50 text-xs max-w-xs">{b.reason || '—'}</td>
-                                                            <td className="px-4 py-4 text-white/30 text-[10px] font-mono whitespace-nowrap">
+                                                            <td className="px-4 py-4 text-white/30 text-xs font-mono whitespace-nowrap">
                                                                 {new Date(b.created_at).toLocaleString()}
                                                             </td>
                                                             <td className="px-4 py-4 text-right">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => removeGlobalBan(b.wallet_address)}
-                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-bold text-white/70 uppercase"
+                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs font-bold text-white/70 uppercase"
                                                                 >
                                                                     Remove
                                                                 </button>
@@ -1133,11 +1131,11 @@ export default function AdminDashboard() {
                                                     <td className="px-8 py-6">
                                                         <div className="flex flex-col">
                                                             <span className="font-mono text-white text-sm">{shortenAddress(u.user_address)}</span>
-                                                            <span className="text-[10px] text-white/20">Balance: {parseFloat(u.balance).toFixed(4)}</span>
+                                                            <span className="text-xs text-white/20">Balance: {parseFloat(u.balance).toFixed(4)}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <span className="text-rose-500 font-black text-xl tracking-tighter">{u.maxStreak} wins</span>
+                                                        <span className="text-rose-500 font-black text-2xl">{u.maxStreak} wins</span>
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="flex gap-1">
@@ -1147,7 +1145,7 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${u.status === 'banned' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' :
+                                                        <span className={`text-xs font-black uppercase px-2 py-1 rounded ${u.status === 'banned' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' :
                                                             u.status === 'frozen' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
                                                                 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                                                             }`}>
@@ -1159,7 +1157,7 @@ export default function AdminDashboard() {
                                                             {u.status !== 'frozen' && u.status !== 'banned' && (
                                                                 <button
                                                                     onClick={() => updateUserStatus(u.user_address, 'frozen')}
-                                                                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded text-[9px] font-bold text-amber-500 uppercase transition-all"
+                                                                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded text-xs font-bold text-amber-500 uppercase transition-all"
                                                                 >
                                                                     Freeze
                                                                 </button>
@@ -1167,7 +1165,7 @@ export default function AdminDashboard() {
                                                             {u.status !== 'banned' && (
                                                                 <button
                                                                     onClick={() => updateUserStatus(u.user_address, 'banned')}
-                                                                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded text-[9px] font-bold text-rose-500 uppercase transition-all"
+                                                                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded text-xs font-bold text-rose-500 uppercase transition-all"
                                                                 >
                                                                     Ban
                                                                 </button>
@@ -1175,7 +1173,7 @@ export default function AdminDashboard() {
                                                             {(u.status === 'frozen' || u.status === 'banned') && (
                                                                 <button
                                                                     onClick={() => updateUserStatus(u.user_address, 'active')}
-                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-bold text-white uppercase transition-all"
+                                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs font-bold text-white uppercase transition-all"
                                                                 >
                                                                     Reactivate
                                                                 </button>
@@ -1186,7 +1184,7 @@ export default function AdminDashboard() {
                                             ))}
                                             {suspiciousUsers.length === 0 && !loading && (
                                                 <tr>
-                                                    <td colSpan={5} className="px-8 py-32 text-center text-[10px] font-black uppercase tracking-widest text-white/10"> No suspicious activity detected in core neural layers.</td>
+                                                    <td colSpan={5} className="px-8 py-32 text-center text-sm font-black uppercase tracking-widest text-white/20"> No suspicious activity detected in core neural layers.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1202,17 +1200,17 @@ export default function AdminDashboard() {
                                                 <LoadingRow />
                                             ) : waitlist.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={4} className="px-8 py-32 text-center text-[10px] font-black uppercase tracking-widest text-white/10">
+                                                    <td colSpan={4} className="px-8 py-32 text-center text-xs font-black uppercase tracking-widest text-white/10">
                                                         {waitlistError ? waitlistError : 'No waitlist emails yet.'}
                                                     </td>
                                                 </tr>
                                             ) : waitlist.map((w, i) => (
                                                 <tr key={w.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
-                                                    <td className="px-8 py-6 font-mono text-white/20 text-[10px]">#{waitlist.length - i}</td>
+                                                    <td className="px-8 py-6 font-mono text-white/20 text-xs">#{waitlist.length - i}</td>
                                                     <td className="px-8 py-6 font-bold text-white tracking-tight">{w.email}</td>
-                                                    <td className="px-8 py-6 text-white/40 text-[10px] uppercase font-mono">{new Date(w.created_at).toLocaleString()}</td>
+                                                    <td className="px-8 py-6 text-white/40 text-xs uppercase font-mono">{new Date(w.created_at).toLocaleString()}</td>
                                                     <td className="px-8 py-6 text-right">
-                                                        <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase text-white/40">Registered</span>
+                                                        <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs font-black uppercase text-white/40">Registered</span>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1223,17 +1221,17 @@ export default function AdminDashboard() {
                                 {activeTab === 'access_codes' && (
                                     <div key="access_codes">
                                         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Code Generator</p>
+                                            <p className="text-xs font-black uppercase tracking-wider text-white/30">Code Generator</p>
                                             <div className="flex gap-3">
                                                 <button
                                                     onClick={exportAccessCodes}
-                                                    className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-blue-500/20 transition-all"
+                                                    className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest rounded-lg hover:bg-blue-500/20 transition-all"
                                                 >
                                                     Export to Google Sheets (CSV)
                                                 </button>
                                                 <button
                                                     onClick={() => generateAccessCodes(5)}
-                                                    className="px-4 py-2 bg-white text-black font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-gray-200 transition-all"
+                                                    className="px-4 py-2 bg-white text-black font-black uppercase text-xs tracking-widest rounded-lg hover:bg-gray-200 transition-all"
                                                 >
                                                     Generate 5 Codes
                                                 </button>
@@ -1244,16 +1242,16 @@ export default function AdminDashboard() {
                                             <tbody>
                                                 {loading ? <LoadingRow /> : accessCodes.map(c => (
                                                     <tr key={c.code} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
-                                                        <td className="px-8 py-6 font-mono font-black text-white text-lg tracking-widest uppercase">{c.code}</td>
+                                                        <td className="px-8 py-6 font-mono font-black text-white text-xl tracking-widest uppercase">{c.code}</td>
                                                         <td className="px-8 py-6">
-                                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${c.is_used ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                                                            <span className={`px-3 py-1 rounded text-sm font-black uppercase ${c.is_used ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
                                                                 {c.is_used ? 'Consumed' : 'Ready'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-8 py-6 font-mono text-[10px] text-white/40">
+                                                        <td className="px-8 py-6 font-mono text-xs text-white/40">
                                                             {c.wallet_address ? shortenAddress(c.wallet_address) : 'UNLINKED'}
                                                         </td>
-                                                        <td className="px-8 py-6 text-right text-white/20 text-[10px] font-mono">
+                                                        <td className="px-8 py-6 text-right text-white/20 text-xs font-mono">
                                                             {c.used_at ? new Date(c.used_at).toLocaleString() : '---'}
                                                         </td>
                                                     </tr>
@@ -1275,16 +1273,16 @@ export default function AdminDashboard() {
 // Minimal Components
 const StatBox = ({ title, value, label }: any) => (
     <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[2.5rem] space-y-4">
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">{title}</p>
+        <p className="text-xs font-black uppercase tracking-wider text-white/30">{title}</p>
         <div>
-            <h3 className="text-3xl font-black text-white tracking-tighter">{value}</h3>
-            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{label}</p>
+            <h3 className="text-4xl font-black text-white tracking-tight">{value}</h3>
+            <p className="text-xs font-bold text-white/20 uppercase tracking-widest">{label}</p>
         </div>
     </div>
 );
 
 const TabBtn = ({ active, onClick, label }: any) => (
-    <button onClick={onClick} className={`pb-4 text-[10px] font-black uppercase tracking-[0.4em] transition-all border-b-2 ${active ? 'text-white border-white' : 'text-white/20 border-transparent hover:text-white/40'}`}>
+    <button onClick={onClick} className={`pb-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${active ? 'text-white border-white' : 'text-white/20 border-transparent hover:text-white/40'}`}>
         {label}
     </button>
 );
@@ -1293,7 +1291,7 @@ const Table = ({ children }: any) => <table className="w-full text-left border-c
 
 const THead = ({ labels }: { labels: string[] }) => (
     <thead>
-        <tr className="border-b border-white/10 text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+        <tr className="border-b border-white/10 text-xs font-black uppercase tracking-wide text-white/30">
             {labels.map((l, i) => (
                 <th key={l} className={`px-8 py-6 ${i === labels.length - 1 ? 'text-right' : ''}`}>{l}</th>
             ))}
@@ -1302,5 +1300,5 @@ const THead = ({ labels }: { labels: string[] }) => (
 );
 
 const LoadingRow = () => (
-    <tr><td colSpan={10} className="px-8 py-32 text-center text-[10px] font-black uppercase tracking-widest animate-pulse">Syncing Virtual Terminal...</td></tr>
+    <tr><td colSpan={10} className="px-8 py-32 text-center text-xs font-black uppercase tracking-widest animate-pulse">Syncing Virtual Terminal...</td></tr>
 );

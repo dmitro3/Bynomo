@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 // GET all access codes
 export async function GET(request: NextRequest) {

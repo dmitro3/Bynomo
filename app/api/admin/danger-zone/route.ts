@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 export async function GET(request: NextRequest) {
     try {
-        // Fetch all bet history to calculate streaks
-        // In a real app with many bets, this should be an aggregation or more optimized
+        // Fetch real-mode bet history only to calculate win streaks
         const { data: allBets, error: betError } = await supabase
             .from('bet_history')
-            .select('wallet_address, won, created_at')
+            .select('id, wallet_address, won, created_at')
             .order('created_at', { ascending: false });
 
         if (betError) throw betError;
 
-        // Group bets by user
+        // Group real bets by user — exclude demo-mode entries
         const userBets: Record<string, boolean[]> = {};
-        allBets?.forEach(b => {
+        (allBets ?? [])
+            .filter((b: any) => !isDemoBetHistoryRow(b))
+            .forEach((b: any) => {
             if (!userBets[b.wallet_address]) {
                 userBets[b.wallet_address] = [];
             }

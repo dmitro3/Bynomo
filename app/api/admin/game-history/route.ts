@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 export async function GET(request: NextRequest) {
     try {
         const { data: bets, error } = await supabase
             .from('bet_history')
-            .select('*')
+            .select('id, wallet_address, asset, direction, amount, payout, won, mode, network, created_at')
             .order('created_at', { ascending: false })
-            .limit(100);
+            .limit(500);
 
         if (error) throw error;
 

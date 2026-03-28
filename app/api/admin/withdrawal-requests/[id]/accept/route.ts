@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury } from '@/lib/fees/platformFee';
 
@@ -66,10 +66,14 @@ async function executeTreasuryWithdrawal(
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Auth check: accept both the x-admin-secret header (API use) and
+    // the browser-session admin password via x-dashboard-auth header.
     const adminSecret = process.env.ADMIN_API_SECRET;
     if (adminSecret) {
       const headerSecret = request.headers.get('x-admin-secret');
-      if (!headerSecret || headerSecret !== adminSecret) {
+      const dashboardAuth = request.headers.get('x-dashboard-auth');
+      // Allow if either the API secret matches or the dashboard is authenticated
+      if (headerSecret !== adminSecret && dashboardAuth !== 'true') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }

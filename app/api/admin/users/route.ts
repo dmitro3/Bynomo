@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 export async function GET(request: NextRequest) {
     try {
@@ -11,16 +12,18 @@ export async function GET(request: NextRequest) {
 
         if (balanceError) throw balanceError;
 
-        // Fetch bet counts per user
+        // Fetch bet counts per user (real-mode only — exclude demo-* ids)
         const { data: betCounts, error: betError } = await supabase
             .from('bet_history')
-            .select('wallet_address, amount, payout, won');
+            .select('id, wallet_address, amount, payout, won');
 
         if (betError) throw betError;
 
-        // Aggregate bet data by wallet address
+        // Aggregate bet data by wallet address — real bets only
         const userActivity: Record<string, { totalBets: number, totalVolume: number, wins: number }> = {};
-        betCounts?.forEach(b => {
+        (betCounts ?? [])
+            .filter((b: any) => !isDemoBetHistoryRow(b))
+            .forEach((b: any) => {
             if (!userActivity[b.wallet_address]) {
                 userActivity[b.wallet_address] = { totalBets: 0, totalVolume: 0, wins: 0 };
             }
