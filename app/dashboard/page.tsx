@@ -94,25 +94,71 @@ function fmtPnL(n: number | undefined | null) {
     return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
-function PnLByNetworkBreakdown({ rows }: { rows?: Record<string, NetworkPnLRow> }) {
-    if (!rows || Object.keys(rows).length === 0) return null;
+/** Native token ticker for bet_history.network — not USD. */
+function tokenSymbolForNetwork(net: string): string {
+    const u = net.trim().toUpperCase();
+    if (u === 'SOMNIA' || u === 'STT') return 'STT';
+    if (u === 'PUSH' || u === 'PC') return 'PC';
+    if (u === 'BSC') return 'BNB';
+    if (u === '0G' || u === 'ZG') return '0G';
+    return u || '?';
+}
+
+function NetworkTokenEconomicsTable({ rows, title }: { rows?: Record<string, NetworkPnLRow>; title: string }) {
+    if (!rows || Object.keys(rows).length === 0) {
+        return (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-6 text-sm text-white/30">
+                No per-chain betting data yet.
+            </div>
+        );
+    }
     const sorted = Object.entries(rows).sort(
         (a, b) => Math.abs(b[1].platformPnL) - Math.abs(a[1].platformPnL),
     );
     return (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-[11px] text-white/65">
-            <p className="text-[9px] font-black uppercase tracking-widest text-white/35 mb-2">
-                House edge by network (native units — not USD)
-            </p>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
-                {sorted.map(([net, row]) => (
-                    <span key={net}>
-                        <span className="text-white/85">{net}</span>{' '}
-                        <span className={row.platformPnL >= 0 ? 'text-emerald-400/90' : 'text-rose-400/90'}>
-                            {row.platformPnL.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                        </span>
-                    </span>
-                ))}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10 space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/45">{title}</p>
+                <p className="text-[11px] text-white/40 leading-relaxed">
+                    Each row is one chain. Amounts are in that row’s <span className="text-white/70">native token</span> (not dollars).{' '}
+                    <span className="text-amber-200/80">Do not sum numbers down the column across different tokens.</span>
+                </p>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-[12px] min-w-[640px]">
+                    <thead>
+                        <tr className="text-[9px] font-black uppercase tracking-wider text-white/35 border-b border-white/10 bg-white/[0.02]">
+                            <th className="px-4 py-3">Chain</th>
+                            <th className="px-4 py-3">Token</th>
+                            <th className="px-4 py-3 text-right">Staked</th>
+                            <th className="px-4 py-3 text-right">Paid to players</th>
+                            <th className="px-4 py-3 text-right">Net (house)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {sorted.map(([net, row]) => {
+                            const sym = tokenSymbolForNetwork(net);
+                            const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+                            return (
+                                <tr key={net} className="border-b border-white/5 font-mono text-white/85">
+                                    <td className="px-4 py-2.5">{net}</td>
+                                    <td className="px-4 py-2.5 text-white/50">{sym}</td>
+                                    <td className="px-4 py-2.5 text-right tabular-nums">
+                                        {fmt(row.volume)} <span className="text-[10px] text-white/35">{sym}</span>
+                                    </td>
+                                    <td className="px-4 py-2.5 text-right tabular-nums">
+                                        {fmt(row.payout)} <span className="text-[10px] text-white/35">{sym}</span>
+                                    </td>
+                                    <td className="px-4 py-2.5 text-right tabular-nums">
+                                        <span className={row.platformPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                            {fmt(row.platformPnL)} <span className="text-[10px] opacity-70">{sym}</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
@@ -451,27 +497,47 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Metrics — platformPnL is Σ(stake)−Σ(payout), not % and not USD; mixed chains only comparable per-network below */}
+                {/* Betting economics: never show a single “$” or one mixed total as PnL — use per-chain native token table */}
                 <div className="space-y-6">
                     <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Real Mode Stats</div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <StatBox title="House edge (all chains)" value={fmtPnL(stats?.real?.platformPnL)} label="Σ stake − Σ payout · not USD" />
-                        <StatBox title="Staked volume (all chains)" value={fmtPnL(stats?.real?.totalVolume)} label={`${stats?.real?.totalBets || 0} Total Bets`} />
+                    <NetworkTokenEconomicsTable rows={stats?.real?.platformPnLByNetwork} title="Betting economics by chain (native tokens)" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatBox
+                            title="Total bets (real)"
+                            value={(stats?.real?.totalBets ?? 0).toLocaleString()}
+                            label="Settled bets in history"
+                        />
+                        <StatBox
+                            title="Σ staked (mixed)"
+                            value={fmtPnL(stats?.real?.totalVolume)}
+                            label="Raw sum of stake amounts — mixed tokens, not one currency"
+                        />
                         <StatBox title="Registered Nodes" value={stats?.real?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
                         <StatBox title="Total Referrals" value={(stats?.real?.totalReferrals ?? 0).toString()} label="Network Growth" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
-                    <PnLByNetworkBreakdown rows={stats?.real?.platformPnLByNetwork} />
 
                     <div className="pt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Demo Mode Stats</div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <StatBox title="House edge (all chains)" value={fmtPnL(stats?.demo?.platformPnL)} label="Σ stake − Σ payout · not USD" />
-                        <StatBox title="Staked volume (all chains)" value={fmtPnL(stats?.demo?.totalVolume)} label={`${stats?.demo?.totalBets || 0} Total Bets`} />
+                    <NetworkTokenEconomicsTable rows={stats?.demo?.platformPnLByNetwork} title="Demo — betting economics by chain (native tokens)" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatBox
+                            title="Total bets (demo)"
+                            value={(stats?.demo?.totalBets ?? 0).toLocaleString()}
+                            label="Settled bets in history"
+                        />
+                        <StatBox
+                            title="Σ staked (mixed)"
+                            value={fmtPnL(stats?.demo?.totalVolume)}
+                            label="Raw sum of stake amounts — mixed tokens"
+                        />
                         <StatBox title="Registered Nodes" value={stats?.demo?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
                         <StatBox title="Total Referrals" value={(stats?.demo?.totalReferrals ?? 0).toString()} label="Network Growth" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
-                    <PnLByNetworkBreakdown rows={stats?.demo?.platformPnLByNetwork} />
                 </div>
 
                 {/* Navigation & Search */}
@@ -759,7 +825,10 @@ export default function AdminDashboard() {
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6 text-white/40">{u.activity.totalBets} plays</td>
-                                                        <td className="px-8 py-6 text-white font-mono font-black">${u.activity.totalVolume.toLocaleString()}</td>
+                                                        <td className="px-8 py-6 text-white font-mono font-black">
+                                                            {u.activity.totalVolume.toLocaleString()}{' '}
+                                                            <span className="text-[9px] font-bold text-white/30 uppercase">mixed native</span>
+                                                        </td>
                                                         <td className="px-8 py-6 text-right">
                                                             <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${u.activity.totalVolume > 500 ? 'bg-purple-500/10 text-purple-400' : u.activity.totalVolume > 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-white/5 text-white/20'}`}>
                                                                 {u.activity.totalVolume > 500 ? 'VIP' : u.activity.totalVolume > 50 ? 'Standard' : 'Free'}
@@ -819,7 +888,7 @@ export default function AdminDashboard() {
                                         </div>
 
                                         <Table>
-                                            <THead labels={['Time', 'Asset', 'Direction', 'Wager', 'Outcome', 'Node', 'Account']} />
+                                            <THead labels={['Time', 'Asset', 'Direction', 'Wager (native)', 'Outcome (native)', 'Node', 'Account']} />
                                             <tbody>
                                                 {loading ? <LoadingRow /> : gameHistory
                                                     .filter(b => {
@@ -831,6 +900,8 @@ export default function AdminDashboard() {
                                                     .filter(b => chainFilter === 'ALL' || b.id.toString().toUpperCase().includes(chainFilter) || (b as any).network === chainFilter)
                                                     .map(b => {
                                                         const isDemo = b.id.toString().startsWith('demo-');
+                                                        const net = String((b as { network?: string }).network || 'BNB');
+                                                        const tok = tokenSymbolForNetwork(net);
                                                         return (
                                                             <tr key={b.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
                                                                 <td className="px-8 py-6 text-[10px] font-mono">{new Date(b.created_at).toLocaleString()}</td>
@@ -838,10 +909,14 @@ export default function AdminDashboard() {
                                                                 <td className="px-8 py-6">
                                                                     <span className={b.direction === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>{b.direction}</span>
                                                                 </td>
-                                                                <td className="px-8 py-6 text-white font-mono">${b.amount.toFixed(2)}</td>
+                                                                <td className="px-8 py-6 text-white font-mono tabular-nums">
+                                                                    {b.amount.toFixed(4)} <span className="text-[10px] text-white/35">{tok}</span>
+                                                                </td>
                                                                 <td className="px-8 py-6">
                                                                     <span className={b.won ? 'text-emerald-400 font-bold' : 'text-white/20'}>
-                                                                        {b.won ? `+$${b.payout.toFixed(2)}` : '-$' + b.amount.toFixed(2)}
+                                                                        {b.won
+                                                                            ? `+${b.payout.toFixed(4)} ${tok}`
+                                                                            : `−${b.amount.toFixed(4)} ${tok}`}
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-8 py-6 font-mono text-[10px]">{shortenAddress(b.wallet_address)}</td>
