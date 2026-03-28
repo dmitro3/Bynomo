@@ -7,14 +7,21 @@ export async function GET(request: NextRequest) {
         // Demo bets are stored with demo wallets (wallet_address starts with 0xdemo / 0xDEMO).
         const { data: betRows } = await supabase
             .from('bet_history')
-            .select('wallet_address, amount, payout, won, network');
+            .select('id, wallet_address, amount, payout, won, network');
 
         const bets = betRows ?? [];
         const isDemoWallet = (walletAddress: string | null | undefined) =>
             !!walletAddress && walletAddress.toLowerCase().startsWith('0xdemo');
+        /** Demo play uses bet ids like "demo-<timestamp>" while still using the user's real wallet. */
+        const isDemoBetId = (id: string | null | undefined) =>
+            !!id && String(id).toLowerCase().startsWith('demo-');
 
-        const demoBets = bets.filter(b => isDemoWallet((b as any).wallet_address));
-        const realBets = bets.filter(b => !isDemoWallet((b as any).wallet_address));
+        const demoBets = bets.filter(
+            b => isDemoWallet((b as any).wallet_address) || isDemoBetId((b as any).id)
+        );
+        const realBets = bets.filter(
+            b => !isDemoWallet((b as any).wallet_address) && !isDemoBetId((b as any).id)
+        );
 
         const sum = (rows: any[], field: string) => rows.reduce((acc, r) => acc + Number(r[field] ?? 0), 0);
 

@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
 import { supabase } from '@/lib/supabase/client';
 
 type LeaderboardRow = {
@@ -33,7 +34,7 @@ async function fetchLeaderboardFromSupabase(
   // Fetch raw bet history
   let query = supabase
     .from('bet_history')
-    .select('wallet_address, amount, payout, won, network, asset, created_at');
+    .select('id, wallet_address, amount, payout, won, network, asset, created_at');
 
   if (opts?.network && opts.network !== 'ALL') {
     query = query.eq('network', opts.network);
@@ -65,7 +66,10 @@ async function fetchLeaderboardFromSupabase(
     networks: Record<string, number>;
   }> = {};
 
-  (data || []).forEach((row: any) => {
+  /** Public leaderboard: real balance-backed play only (not demo mode / demo-* bet ids). */
+  const realRows = (data || []).filter((row: any) => !isDemoBetHistoryRow(row));
+
+  realRows.forEach((row: any) => {
     const addr = row.wallet_address;
     const net = row.network || 'BNB';
     if (!walletStats[addr]) {

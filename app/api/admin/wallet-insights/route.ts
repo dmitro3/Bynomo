@@ -9,6 +9,20 @@ import {
 const AUDIT_CAP = 15_000;
 const BETS_CAP = 25_000;
 
+/** Supabase/PostgREST errors are often plain objects, not `Error` — avoid showing generic "Unknown error". */
+function messageFromUnknown(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object' && 'message' in e) {
+    const m = (e as { message: unknown }).message;
+    if (typeof m === 'string' && m.length > 0) return m;
+  }
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
 function addTo(map: Record<string, number>, currency: string, n: number) {
   const c = currency || 'UNKNOWN';
   map[c] = (map[c] ?? 0) + n;
@@ -257,7 +271,7 @@ export async function GET(request: NextRequest) {
       withdrawalHistory: wdRows,
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
+    const msg = messageFromUnknown(e);
     console.error('[wallet-insights]', e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

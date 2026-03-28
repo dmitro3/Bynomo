@@ -713,8 +713,10 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         });
       }
 
-      // Save to Supabase for persistent history & leaderboard (non-blocking)
-      if (address) {
+      // Save to Supabase for persistent history & leaderboard (non-blocking).
+      // Demo-mode bets must not be written: they use the user's real address but ids like "demo-*"
+      // and would inflate "real" admin economics if mixed with balance-backed play.
+      if (address && accountType === 'real') {
         fetch('/api/bets/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

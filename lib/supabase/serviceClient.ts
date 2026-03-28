@@ -7,9 +7,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/** Trimmed — stray newlines/spaces in Vercel env values are a common cause of "Invalid API key". */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY?.trim();
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+/** True when a non-empty service role key is configured (admin routes should use this in production). */
+export const isSupabaseServiceRoleConfigured = Boolean(supabaseServiceKey);
 
 if (!supabaseUrl) {
   throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL');
@@ -30,4 +34,14 @@ export const supabaseService = createClient(supabaseUrl, supabaseServiceKey || (
     persistSession: false,
   },
 });
+
+/**
+ * PostgREST returns "Invalid API key" when the JWT does not match the project or is corrupted.
+ * Append operator-facing steps (Vercel + Supabase dashboard).
+ */
+export function appendSupabaseServiceKeyHint(message: string): string {
+  const m = message || '';
+  if (!/invalid api key|jwt|malformed|not valid/i.test(m)) return m;
+  return `${m} — Fix: Vercel → Project → Settings → Environment Variables: set SUPABASE_SERVICE_KEY to the service_role secret from Supabase → Project Settings → API (same project as NEXT_PUBLIC_SUPABASE_URL). It must be the long JWT starting with "eyJ", not the anon key. Redeploy after saving.`;
+}
 
