@@ -132,10 +132,17 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     // Default to Waitlist so collected emails are visible immediately.
-    const [activeTab, setActiveTab] = useState<'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'>('waitlist');
+    const [activeTab, setActiveTab] = useState<
+        'wallet_intel' | 'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'
+    >('wallet_intel');
     const [waitlist, setWaitlist] = useState<any[]>([]);
     const [waitlistError, setWaitlistError] = useState<string | null>(null);
     const [accessCodes, setAccessCodes] = useState<any[]>([]);
+
+    const [walletIntelQuery, setWalletIntelQuery] = useState('');
+    const [walletIntel, setWalletIntel] = useState<any | null>(null);
+    const [walletIntelLoading, setWalletIntelLoading] = useState(false);
+    const [walletIntelError, setWalletIntelError] = useState<string | null>(null);
 
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
@@ -153,6 +160,24 @@ export default function AdminDashboard() {
             case 'XLM': return `https://stellar.expert/explorer/public/tx/${hash}`;
             case 'STRK': return `https://starkscan.co/tx/${hash}`;
             default: return null;
+        }
+    };
+
+    const runWalletIntel = async () => {
+        const q = walletIntelQuery.trim();
+        if (!q) return;
+        setWalletIntelLoading(true);
+        setWalletIntelError(null);
+        try {
+            const res = await fetch(`/api/admin/wallet-insights?address=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Lookup failed');
+            setWalletIntel(data);
+        } catch (e: unknown) {
+            setWalletIntelError(e instanceof Error ? e.message : 'Lookup failed');
+            setWalletIntel(null);
+        } finally {
+            setWalletIntelLoading(false);
         }
     };
 
@@ -453,6 +478,7 @@ export default function AdminDashboard() {
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-6">
                         <div className="flex flex-wrap gap-8">
+                            <TabBtn active={activeTab === 'wallet_intel'} onClick={() => setActiveTab('wallet_intel')} label="Wallet Intel" />
                             <TabBtn active={activeTab === 'users'} onClick={() => setActiveTab('users')} label="Ledger" />
                             <TabBtn active={activeTab === 'gameplay'} onClick={() => setActiveTab('gameplay')} label="Gameplay" />
                             <TabBtn active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Financials" />
@@ -477,6 +503,239 @@ export default function AdminDashboard() {
                     <div className="bg-white/[0.01] border border-white/5 rounded-[2.5rem] overflow-hidden">
                         <div className="overflow-x-auto">
                             <AnimatePresence mode="wait">
+                                {activeTab === 'wallet_intel' && (
+                                    <div key="wallet_intel" className="p-8 space-y-8 text-left">
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/35">Cross-chain wallet intelligence</p>
+                                            <p className="text-xs text-white/45 max-w-3xl leading-relaxed">
+                                                Enter any address (EVM, Solana, Sui, etc.). We match stored variants (e.g. EVM checksum) and aggregate{' '}
+                                                <span className="text-white/70">house balances</span>,{' '}
+                                                <span className="text-white/70">audit log</span>,{' '}
+                                                <span className="text-white/70">bets</span>, and{' '}
+                                                <span className="text-white/70">withdrawal requests</span>.
+                                                Amounts are <span className="text-amber-200/90">native units per currency</span>, not USD.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-4xl">
+                                            <input
+                                                value={walletIntelQuery}
+                                                onChange={e => setWalletIntelQuery(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && runWalletIntel()}
+                                                placeholder="e.g. Csx2cq3q7GeV79hFUuRR4Pa2T6JUBoC2UjWGbkVqQ4t4 or 0x…"
+                                                className="flex-1 px-5 py-3 rounded-xl bg-black/50 border border-white/10 text-white text-sm font-mono placeholder:text-white/25"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={runWalletIntel}
+                                                disabled={walletIntelLoading}
+                                                className="px-8 py-3 rounded-xl bg-white text-black font-black uppercase text-[10px] tracking-widest hover:bg-white/90 disabled:opacity-50"
+                                            >
+                                                {walletIntelLoading ? 'Scanning…' : 'Analyze wallet'}
+                                            </button>
+                                        </div>
+                                        {walletIntelError && (
+                                            <p className="text-sm text-rose-400 font-mono">{walletIntelError}</p>
+                                        )}
+                                        {walletIntel && (
+                                            <div className="space-y-8 border-t border-white/10 pt-8">
+                                                <div className="flex flex-wrap gap-3 text-[11px]">
+                                                    <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 font-mono text-white/80">
+                                                        Query: <span className="text-white">{walletIntel.query}</span>
+                                                    </span>
+                                                    {walletIntel.bannedGlobally && (
+                                                        <span className="px-3 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 font-black uppercase text-[10px]">
+                                                            Globally banned
+                                                        </span>
+                                                    )}
+                                                    {walletIntel.aggregates?.audit?.auditTruncated && (
+                                                        <span className="text-amber-400/90">Audit log truncated (cap {walletIntel.aggregates.audit.cappedAt})</span>
+                                                    )}
+                                                    {walletIntel.aggregates?.betting?.betsTruncated && (
+                                                        <span className="text-amber-400/90">Bets truncated (cap {walletIntel.aggregates.betting.betsCappedAt})</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">House balances (per currency)</p>
+                                                        {(!walletIntel.balances || walletIntel.balances.length === 0) && (
+                                                            <p className="text-white/30 text-sm">No balance rows for this address.</p>
+                                                        )}
+                                                        <div className="space-y-2">
+                                                            {walletIntel.balances?.map((b: any) => (
+                                                                <div key={b.currency + (b.status || '')} className="flex flex-wrap justify-between gap-2 text-sm border-b border-white/5 pb-2">
+                                                                    <span className="font-mono text-white/70">{b.currency}</span>
+                                                                    <span className="font-mono text-white">Balance {Number(b.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+                                                                    <span className={`text-[10px] font-black uppercase ${b.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>{b.status}</span>
+                                                                    <span className="text-[10px] text-white/40 w-full sm:w-auto">
+                                                                        Withdrawable now:{' '}
+                                                                        <span className="text-emerald-300/90 font-mono">{Number(b.withdrawableNow).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+                                                                        {walletIntel.bannedGlobally && ' (0 if banned)'}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Deposits & withdrawals (audit log)</p>
+                                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                                            <div>
+                                                                <p className="text-[9px] uppercase text-white/35">Deposits count</p>
+                                                                <p className="font-mono text-lg text-emerald-400">{walletIntel.aggregates?.audit?.depositCount ?? 0}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] uppercase text-white/35">Withdrawals count</p>
+                                                                <p className="font-mono text-lg text-rose-300">{walletIntel.aggregates?.audit?.withdrawalCount ?? 0}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-1 text-xs font-mono">
+                                                            <p className="text-[10px] text-white/40 uppercase">Σ deposits by currency</p>
+                                                            {Object.entries(walletIntel.aggregates?.audit?.totalDepositsByCurrency || {}).map(([c, v]) => (
+                                                                <div key={c} className="flex justify-between text-emerald-300/90">
+                                                                    <span>{c}</span>
+                                                                    <span>+{Number(v).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+                                                                </div>
+                                                            ))}
+                                                            {Object.keys(walletIntel.aggregates?.audit?.totalDepositsByCurrency || {}).length === 0 && (
+                                                                <span className="text-white/25">—</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1 text-xs font-mono">
+                                                            <p className="text-[10px] text-white/40 uppercase">Σ withdrawals by currency</p>
+                                                            {Object.entries(walletIntel.aggregates?.audit?.totalWithdrawalsByCurrency || {}).map(([c, v]) => (
+                                                                <div key={c} className="flex justify-between text-rose-300/90">
+                                                                    <span>{c}</span>
+                                                                    <span>-{Number(v).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+                                                                </div>
+                                                            ))}
+                                                            {Object.keys(walletIntel.aggregates?.audit?.totalWithdrawalsByCurrency || {}).length === 0 && (
+                                                                <span className="text-white/25">—</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Betting performance</p>
+                                                    {['real', 'demo', 'all'].map(mode => {
+                                                        const b = walletIntel.aggregates?.betting?.[mode];
+                                                        if (!b) return null;
+                                                        return (
+                                                            <div key={mode} className="border border-white/5 rounded-xl p-4 space-y-2">
+                                                                <p className="text-[10px] font-black uppercase text-white/50">{mode === 'all' ? 'All bets' : mode === 'real' ? 'Real wallets only' : 'Demo wallets only'}</p>
+                                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Bets</span><span className="font-mono text-white">{b.totalBets}</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Wins</span><span className="font-mono text-emerald-400">{b.wins}</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Losses</span><span className="font-mono text-rose-400">{b.losses}</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Win rate</span><span className="font-mono text-white">{(b.winRate * 100).toFixed(1)}%</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Total wagered</span><span className="font-mono text-white">{b.totalWagered.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">Total payout</span><span className="font-mono text-white">{b.totalPayoutReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                    <div><span className="text-white/35 text-[9px] uppercase block">User net (payout−wager)</span><span className={`font-mono ${b.netBettingPLUser >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{b.netBettingPLUser.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span></div>
+                                                                </div>
+                                                                {b.byNetwork && Object.keys(b.byNetwork).length > 0 && (
+                                                                    <div className="mt-3 pt-3 border-t border-white/5 text-[11px] font-mono space-y-1">
+                                                                        <p className="text-[9px] uppercase text-white/30 mb-1">By network</p>
+                                                                        {Object.entries(b.byNetwork).map(([net, row]: [string, any]) => (
+                                                                            <div key={net} className="flex flex-wrap gap-x-4 justify-between text-white/70">
+                                                                                <span className="text-white">{net}</span>
+                                                                                <span>net {Number(row.net).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                                                                                <span className="text-white/40">{row.bets} bets · {row.wins}W/{row.losses}L</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Withdrawal requests</p>
+                                                        <p className="text-xs text-white/50 mb-2">
+                                                            Pending: {walletIntel.aggregates?.withdrawals?.pending?.length ?? 0} · Accepted: {walletIntel.aggregates?.withdrawals?.accepted?.length ?? 0} · Rejected: {walletIntel.aggregates?.withdrawals?.rejected?.length ?? 0}
+                                                        </p>
+                                                        <div className="text-xs font-mono space-y-1">
+                                                            <p className="text-[10px] uppercase text-white/35">Pending amount by currency</p>
+                                                            {Object.entries(walletIntel.aggregates?.withdrawals?.pendingTotalByCurrency || {}).map(([c, v]) => (
+                                                                <div key={c} className="flex justify-between text-amber-200/90">
+                                                                    <span>{c}</span>
+                                                                    <span>{Number(v).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+                                                                </div>
+                                                            ))}
+                                                            {Object.keys(walletIntel.aggregates?.withdrawals?.pendingTotalByCurrency || {}).length === 0 && (
+                                                                <span className="text-white/25">No pending withdrawals</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-2">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Profile & referrals</p>
+                                                        <p className="text-sm text-white/60">
+                                                            Username:{' '}
+                                                            <span className="text-white font-mono">{walletIntel.profile?.username || '—'}</span>
+                                                        </p>
+                                                        {walletIntel.referral && (
+                                                            <p className="text-xs text-white/50 font-mono">
+                                                                Code {walletIntel.referral.referral_code} · {walletIntel.referral.referral_count} referrals
+                                                                {walletIntel.referral.referred_by ? ` · referred by ${walletIntel.referral.referred_by}` : ''}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-x-auto">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Recent audit (latest 80)</p>
+                                                    <table className="w-full text-left text-[11px] font-mono">
+                                                        <thead>
+                                                            <tr className="text-white/35 border-b border-white/10">
+                                                                <th className="py-2 pr-4">Time</th>
+                                                                <th className="py-2 pr-4">Type</th>
+                                                                <th className="py-2 pr-4">CCY</th>
+                                                                <th className="py-2 pr-4">Amount</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {walletIntel.recentAudit?.map((r: any) => (
+                                                                <tr key={r.id} className="border-b border-white/5 text-white/70">
+                                                                    <td className="py-2 pr-4 whitespace-nowrap">{r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</td>
+                                                                    <td className="py-2 pr-4">{r.operation_type}</td>
+                                                                    <td className="py-2 pr-4">{r.currency}</td>
+                                                                    <td className="py-2 pr-4">{Number(r.amount).toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-x-auto">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Recent bets (latest 80)</p>
+                                                    <table className="w-full text-left text-[11px] font-mono">
+                                                        <thead>
+                                                            <tr className="text-white/35 border-b border-white/10">
+                                                                <th className="py-2 pr-4">Time</th>
+                                                                <th className="py-2 pr-4">Asset</th>
+                                                                <th className="py-2 pr-4">Net</th>
+                                                                <th className="py-2 pr-4">Won</th>
+                                                                <th className="py-2 pr-4">Network</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {walletIntel.recentBets?.map((r: any) => (
+                                                                <tr key={r.id} className="border-b border-white/5 text-white/70">
+                                                                    <td className="py-2 pr-4 whitespace-nowrap">{r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</td>
+                                                                    <td className="py-2 pr-4">{r.asset}</td>
+                                                                    <td className="py-2 pr-4">{(Number(r.payout) - Number(r.amount)).toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+                                                                    <td className="py-2 pr-4">{r.won ? 'yes' : 'no'}</td>
+                                                                    <td className="py-2 pr-4">{r.network}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {activeTab === 'users' && (
                                     <Table key="users">
                                         <THead labels={['Identity', 'Protocol', 'Liquidity', 'Referral', 'Engagement', 'Value', 'Tier']} />
