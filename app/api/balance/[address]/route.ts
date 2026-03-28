@@ -79,7 +79,7 @@ export async function GET(
     // Handle database errors
     if (error) {
       if (error.code === 'PGRST116') {
-        const globallyBanned = await isWalletGloballyBanned(supabase, address);
+        const globallyBanned = await isWalletGloballyBanned(address);
         return NextResponse.json({
           balance: 0,
           updatedAt: null,
@@ -113,7 +113,7 @@ export async function GET(
       console.warn('Could not fetch user_tier, defaulting to free:', e);
     }
 
-    const globallyBanned = await isWalletGloballyBanned(supabase, address);
+    const globallyBanned = await isWalletGloballyBanned(address);
 
     // Return balance and updated_at timestamp
     return NextResponse.json({

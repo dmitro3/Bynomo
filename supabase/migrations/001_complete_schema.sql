@@ -94,6 +94,8 @@ CREATE INDEX IF NOT EXISTS idx_bh_won_payout     ON public.bet_history(won, payo
 
 -- Allow public read (leaderboard) and insert (server-side)
 ALTER TABLE public.bet_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON public.bet_history;
+DROP POLICY IF EXISTS "public_insert" ON public.bet_history;
 CREATE POLICY "public_read"   ON public.bet_history FOR SELECT USING (true);
 CREATE POLICY "public_insert" ON public.bet_history FOR INSERT WITH CHECK (true);
 

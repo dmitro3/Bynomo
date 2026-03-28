@@ -8,10 +8,18 @@ interface CurrencyStat {
     userCount: number;
 }
 
+interface NetworkPnLRow {
+    volume: number;
+    payout: number;
+    platformPnL: number;
+}
+
 interface ModeStats {
     totalVolume: number;
     totalBets: number;
     platformPnL: number;
+    /** House edge Σ(stake−payout) per `bet_history.network` in that chain's native units */
+    platformPnLByNetwork?: Record<string, NetworkPnLRow>;
     totalUsers: number;
     totalReferrals: number;
 }
@@ -79,6 +87,35 @@ interface BannedWalletRow {
     wallet_address: string;
     reason: string | null;
     created_at: string;
+}
+
+function fmtPnL(n: number | undefined | null) {
+    if (n === undefined || n === null || !Number.isFinite(n)) return '0';
+    return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+function PnLByNetworkBreakdown({ rows }: { rows?: Record<string, NetworkPnLRow> }) {
+    if (!rows || Object.keys(rows).length === 0) return null;
+    const sorted = Object.entries(rows).sort(
+        (a, b) => Math.abs(b[1].platformPnL) - Math.abs(a[1].platformPnL),
+    );
+    return (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-[11px] text-white/65">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/35 mb-2">
+                House edge by network (native units — not USD)
+            </p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
+                {sorted.map(([net, row]) => (
+                    <span key={net}>
+                        <span className="text-white/85">{net}</span>{' '}
+                        <span className={row.platformPnL >= 0 ? 'text-emerald-400/90' : 'text-rose-400/90'}>
+                            {row.platformPnL.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        </span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
 }
 
 export default function AdminDashboard() {
@@ -389,25 +426,27 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Metrics */}
+                {/* Metrics — platformPnL is Σ(stake)−Σ(payout), not % and not USD; mixed chains only comparable per-network below */}
                 <div className="space-y-6">
                     <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Real Mode Stats</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <StatBox title="Platform Yield" value={`$${stats?.real?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
-                        <StatBox title="Market Volume" value={`$${stats?.real?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.real?.totalBets || 0} Total Bets`} />
+                        <StatBox title="House edge (all chains)" value={fmtPnL(stats?.real?.platformPnL)} label="Σ stake − Σ payout · not USD" />
+                        <StatBox title="Staked volume (all chains)" value={fmtPnL(stats?.real?.totalVolume)} label={`${stats?.real?.totalBets || 0} Total Bets`} />
                         <StatBox title="Registered Nodes" value={stats?.real?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
                         <StatBox title="Total Referrals" value={(stats?.real?.totalReferrals ?? 0).toString()} label="Network Growth" />
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
+                    <PnLByNetworkBreakdown rows={stats?.real?.platformPnLByNetwork} />
 
                     <div className="pt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Demo Mode Stats</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <StatBox title="Platform Yield" value={`$${stats?.demo?.platformPnL.toLocaleString() || '0'}`} label="Cumulative PnL" />
-                        <StatBox title="Market Volume" value={`$${stats?.demo?.totalVolume.toLocaleString() || '0'}`} label={`${stats?.demo?.totalBets || 0} Total Bets`} />
+                        <StatBox title="House edge (all chains)" value={fmtPnL(stats?.demo?.platformPnL)} label="Σ stake − Σ payout · not USD" />
+                        <StatBox title="Staked volume (all chains)" value={fmtPnL(stats?.demo?.totalVolume)} label={`${stats?.demo?.totalBets || 0} Total Bets`} />
                         <StatBox title="Registered Nodes" value={stats?.demo?.totalUsers.toString() || '0'} label="Unique Wallet Addresses" />
                         <StatBox title="Total Referrals" value={(stats?.demo?.totalReferrals ?? 0).toString()} label="Network Growth" />
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
+                    <PnLByNetworkBreakdown rows={stats?.demo?.platformPnLByNetwork} />
                 </div>
 
                 {/* Navigation & Search */}

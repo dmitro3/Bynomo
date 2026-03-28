@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (await isWalletGloballyBanned(supabase, userAddress)) {
+    if (await isWalletGloballyBanned(userAddress)) {
       return NextResponse.json(
         { error: 'This wallet is banned from the platform.' },
         { status: 403 }

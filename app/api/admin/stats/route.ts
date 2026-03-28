@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
         // Demo bets are stored with demo wallets (wallet_address starts with 0xdemo / 0xDEMO).
         const { data: betRows } = await supabase
             .from('bet_history')
-            .select('wallet_address, amount, payout, won');
+            .select('wallet_address, amount, payout, won, network');
 
         const bets = betRows ?? [];
         const isDemoWallet = (walletAddress: string | null | undefined) =>
@@ -17,15 +17,33 @@ export async function GET(request: NextRequest) {
         const realBets = bets.filter(b => !isDemoWallet((b as any).wallet_address));
 
         const sum = (rows: any[], field: string) => rows.reduce((acc, r) => acc + Number(r[field] ?? 0), 0);
+
+        /** Per-network stake, payout, and house PnL in that network's native units (not USD). */
+        const aggregateByNetwork = (rows: any[]) => {
+            const m: Record<string, { volume: number; payout: number; platformPnL: number }> = {};
+            for (const r of rows) {
+                const net = String((r as any).network ?? 'UNKNOWN').trim() || 'UNKNOWN';
+                if (!m[net]) m[net] = { volume: 0, payout: 0, platformPnL: 0 };
+                m[net].volume += Number((r as any).amount ?? 0);
+                m[net].payout += Number((r as any).payout ?? 0);
+            }
+            for (const k of Object.keys(m)) {
+                m[k].platformPnL = m[k].volume - m[k].payout;
+            }
+            return m;
+        };
+
         const demoTotalVolume = sum(demoBets, 'amount');
         const demoTotalPayout = sum(demoBets, 'payout');
         const demoTotalBets = demoBets.length;
         const demoPlatformPnL = demoTotalVolume - demoTotalPayout;
+        const demoPlatformPnLByNetwork = aggregateByNetwork(demoBets);
 
         const realTotalVolume = sum(realBets, 'amount');
         const realTotalPayout = sum(realBets, 'payout');
         const realTotalBets = realBets.length;
         const realPlatformPnL = realTotalVolume - realTotalPayout;
+        const realPlatformPnLByNetwork = aggregateByNetwork(realBets);
 
         const demoUniqueWallets = new Set(demoBets.map(b => (b as any).wallet_address).filter(Boolean));
         const realUniqueWallets = new Set(realBets.map(b => (b as any).wallet_address).filter(Boolean));
@@ -62,6 +80,8 @@ export async function GET(request: NextRequest) {
             totalVolume: demoTotalVolume,
             totalBets: demoTotalBets,
             platformPnL: demoPlatformPnL,
+            /** Native units per `network` — meaningful; top-level platformPnL mixes chains (informational only). */
+            platformPnLByNetwork: demoPlatformPnLByNetwork,
             totalUsers: demoUniqueWallets.size,
             totalReferrals: demoTotalReferrals,
         };
@@ -70,6 +90,7 @@ export async function GET(request: NextRequest) {
             totalVolume: realTotalVolume,
             totalBets: realTotalBets,
             platformPnL: realPlatformPnL,
+            platformPnLByNetwork: realPlatformPnLByNetwork,
             totalUsers: realUniqueWallets.size,
             totalReferrals: realTotalReferrals,
         };
