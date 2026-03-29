@@ -25,7 +25,7 @@ export default function LeaderboardPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [networkFilter, setNetworkFilter] = useState('ALL');
     const [assetFilter, setAssetFilter] = useState('ALL');
-    const [timeframe, setTimeframe] = useState('24');
+    const [timeframe, setTimeframe] = useState('720');
     const address = useStore((s) => s.address);
 
     const fetchLeaderboard = useCallback(async () => {

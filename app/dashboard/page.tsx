@@ -734,7 +734,7 @@ export default function AdminDashboard() {
 
                                                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
                                                     <p className="text-xs font-black uppercase tracking-widest text-white/40">Betting performance</p>
-                                                    {['real', 'demo', 'all'].map(mode => {
+                                                    {['real', 'demo'].map(mode => {
                                                         const b = walletIntel.aggregates?.betting?.[mode];
                                                         if (!b) return null;
                                                         return (
