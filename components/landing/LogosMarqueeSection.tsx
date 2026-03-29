@@ -34,7 +34,7 @@ const baseDexToolLogos: LogoItem[] = [
   { key: 'CoinMarketCap', src: '/logos/cmc.png', alt: 'CoinMarketCap' },
   { key: 'CoinGecko', src: '/logos/coingecko-logo.png', alt: 'CoinGecko' },
   { key: 'PancakeSwap', src: '/logos/pancakeswap-logo.png', alt: 'PancakeSwap' },
-  { key: 'Raydium', src: '/logos/raydium-logo.jpg', alt: 'Raydium' },
+  { key: 'Raydium', src: '/logos/Raydium.png', alt: 'Raydium' },
   { key: 'Dexscreener', src: '/logos/dexscreener.png', alt: 'Dexscreener' },
   { key: 'DexTools', src: '/logos/dextools.png', alt: 'DexTools' },
   { key: 'BirdEye', src: '/logos/birdeye.png', alt: 'Birdeye' },

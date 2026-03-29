@@ -270,9 +270,9 @@ export default function AdminDashboard() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.ok) {
-                    setIsAuthorized(true);
-                    localStorage.setItem('admin_authorized', 'true');
-                    fetchData();
+            setIsAuthorized(true);
+            localStorage.setItem('admin_authorized', 'true');
+            fetchData();
                     return;
                 }
             }
@@ -566,7 +566,7 @@ export default function AdminDashboard() {
                         <StatBox title="Total Referrals" value={(stats?.real?.totalReferrals ?? 0).toString()} label="Network Growth" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                    <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
                     </div>
 
                     <div className="pt-4 text-xs font-black uppercase tracking-wider text-white/30">Demo Mode Stats</div>
@@ -934,7 +934,7 @@ export default function AdminDashboard() {
                                                                     <td className="px-8 py-5">
                                                                         <div className="flex items-center gap-3">
                                                                             <span className="text-white/20 font-mono text-xs w-5">#{i + 1}</span>
-                                                                            <div className="flex flex-col">
+                                                            <div className="flex flex-col">
                                                                                 <span className="text-white text-sm font-bold">{p.username || 'Anonymous'}</span>
                                                                                 <a
                                                                                     href={getExplorerAddressUrl(p.user_address, p.currency)}
@@ -946,8 +946,8 @@ export default function AdminDashboard() {
                                                                                     {shortenAddress(p.user_address)} ↗
                                                                                 </a>
                                                                             </div>
-                                                                        </div>
-                                                                    </td>
+                                                            </div>
+                                                        </td>
                                                                     {/* Currency */}
                                                                     <td className="px-8 py-5">
                                                                         <span className="text-xs font-black border border-white/10 rounded px-2 py-1 uppercase">{p.currency}</span>
@@ -960,8 +960,8 @@ export default function AdminDashboard() {
                                                                     <td className="px-8 py-5">
                                                                         <span className={`font-mono text-sm font-bold ${p.current_balance > 0 ? 'text-amber-400' : 'text-white/20'}`}>
                                                                             {fmt(p.current_balance)}
-                                                                        </span>
-                                                                    </td>
+                                                            </span>
+                                                        </td>
                                                                     {/* Player net P&L */}
                                                                     <td className="px-8 py-5">
                                                                         <span className={`font-mono text-sm font-black ${isWinner ? 'text-emerald-400' : isLoser ? 'text-rose-400' : 'text-white/30'}`}>
@@ -975,10 +975,10 @@ export default function AdminDashboard() {
                                                                     </td>
                                                                     {/* Wagered */}
                                                                     <td className="px-8 py-5 font-mono text-white/50 text-sm">{fmt(p.total_wagered)}</td>
-                                                                </tr>
+                                                    </tr>
                                                             );
                                                         })}
-                                                    </tbody>
+                                        </tbody>
                                                 </table>
                                             </div>
                                         </div>
@@ -1120,34 +1120,34 @@ export default function AdminDashboard() {
 
                                                     {/* Existing deposits/withdrawals audit log */}
                                                     {transactions.map(t => {
-                                                        const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
-                                                        return (
-                                                            <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                                                const explorerUrl = getExplorerUrl(t.currency, t.transaction_hash);
+                                                return (
+                                                    <tr key={t.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
                                                                 <td className="px-8 py-6 text-xs font-mono">{new Date(t.created_at).toLocaleString()}</td>
-                                                                <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
-                                                                <td className="px-8 py-6">
+                                                        <td className="px-8 py-6 font-mono text-xs">{shortenAddress(t.user_address)}</td>
+                                                        <td className="px-8 py-6">
                                                                     <span className={t.operation_type === 'deposit' ? 'text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded uppercase text-xs font-black' : 'text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded uppercase text-xs font-black'}>
-                                                                        {t.operation_type}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
-                                                                <td className="px-8 py-6 text-right">
-                                                                    {explorerUrl ? (
-                                                                        <a
-                                                                            href={explorerUrl}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
+                                                                {t.operation_type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-white font-mono font-bold">{t.operation_type === 'deposit' ? '+' : '-'}{t.amount.toFixed(4)} {t.currency}</td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            {explorerUrl ? (
+                                                                <a
+                                                                    href={explorerUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
                                                                             className="font-mono text-xs text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30"
-                                                                        >
-                                                                            {t.transaction_hash.slice(0, 10)}...
-                                                                        </a>
-                                                                    ) : (
+                                                                >
+                                                                    {t.transaction_hash.slice(0, 10)}...
+                                                                </a>
+                                                            ) : (
                                                                         <span className="font-mono text-xs text-white/20">{t.transaction_hash || 'INTERNAL'}</span>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                                 </>
                                             )}
                                         </tbody>
