@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+
+const FREQUENCY_REVIEW_THRESHOLD = 10; // withdrawals before manual review kicks in
 import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 import { transferSOMNIAFromTreasury } from '@/lib/somnia/backend-client';
 import { transferOCTFromTreasury } from '@/lib/onechain/backend-client';
@@ -128,11 +130,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Insufficient house balance in ${currency}` }, { status: 400 });
     }
 
+    // ── Withdrawal-frequency guard ─────────────────────────────────────────
+    // Count ALL completed + pending withdrawals for this user across all chains.
+    // Completed ones are tracked in balance_audit_log (operation_type='withdrawal').
+    // Pending (not yet processed) ones are in withdrawal_requests with status='pending'.
+    // We intentionally count across ALL currencies/chains — abuse detection is global.
+    let withdrawalCount = 0;
+    if (accountType === 'real') {
+      const [auditCountRes, pendingCountRes] = await Promise.all([
+        supabase
+          .from('balance_audit_log')
+          .select('id', { count: 'exact', head: true })
+          .eq('operation_type', 'withdrawal')
+          .ilike('user_address', userAddress),
+        supabase
+          .from('withdrawal_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .ilike('user_address', userAddress),
+      ]);
+      withdrawalCount = (auditCountRes.count ?? 0) + (pendingCountRes.count ?? 0);
+    }
+    const triggersFrequencyReview = accountType === 'real' && withdrawalCount >= FREQUENCY_REVIEW_THRESHOLD;
+
     // Manual approval thresholds — amounts ABOVE these require admin review.
     // Below or equal to the threshold the withdrawal executes instantly.
     // Testnets (Somnia/Push) are always instant.
     const AUTO_THRESHOLDS: Record<string, number> = {
-      BNB:    0.08, // manual approval required only above 0.08 BNB
+      BNB:    0.08,
       SOL:    0.45,
       BYNOMO: 0.45,
       SUI:    45,
@@ -141,18 +166,19 @@ export async function POST(request: NextRequest) {
       XTZ:    150,
       NEAR:   40,
       STRK:   1500,
-      // Testnets — always instant
       STT:    Infinity,
       SOMNIA: Infinity,
       PC:     Infinity,
       PUSH:   Infinity,
       OCT:    Infinity,
       '0G':   Infinity,
-      INIT:   5,     // auto up to 5 INIT, manual above
+      INIT:   5,
     };
 
     const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
-    const requiresManualApproval = accountType === 'real' && amount > threshold;
+    // requiresManualApproval: either amount exceeds auto-threshold OR frequency guard triggered
+    const requiresManualApproval =
+      accountType === 'real' && (amount > threshold || triggersFrequencyReview);
 
     // 2. Apply tiered Treasury Fee (platform/protocol fee)
     const feeAmount = calculateFeeAmount(amount, userTier);
@@ -182,6 +208,8 @@ export async function POST(request: NextRequest) {
           signature: authorizationSignature || null,
           signed_at: signedAt || null,
           status: 'pending',
+          // Stamp the reason so the dashboard can distinguish frequency-flagged requests
+          decided_by: triggersFrequencyReview ? `FREQUENCY_REVIEW:count=${withdrawalCount + 1}` : null,
         })
         .select('*')
         .single();
@@ -195,6 +223,8 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         requestId: pendingRow.id,
         newBalance: userData.balance,
+        frequencyReview: triggersFrequencyReview,
+        withdrawalCount: withdrawalCount + 1,
       });
     }
 

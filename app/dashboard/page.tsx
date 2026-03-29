@@ -172,6 +172,7 @@ export default function AdminDashboard() {
     const [marketTokens, setMarketTokens] = useState<MarketToken[]>([]);
     const [gameHistory, setGameHistory] = useState<BetHistory[]>([]);
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
+    const [frequencyUsers, setFrequencyUsers] = useState<any[]>([]);
     const [bannedWallets, setBannedWallets] = useState<BannedWalletRow[]>([]);
     const [banAddressInput, setBanAddressInput] = useState('');
     const [banReasonInput, setBanReasonInput] = useState('');
@@ -179,8 +180,10 @@ export default function AdminDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     // Default to Waitlist so collected emails are visible immediately.
     const [activeTab, setActiveTab] = useState<
-        'wallet_intel' | 'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes'
+        'wallet_intel' | 'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes' | 'player_pnl'
     >('wallet_intel');
+    const [playerPnl, setPlayerPnl] = useState<any[]>([]);
+    const [pnlSort, setPnlSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'total_deposited', dir: 'desc' });
     const [waitlist, setWaitlist] = useState<any[]>([]);
     const [waitlistError, setWaitlistError] = useState<string | null>(null);
     const [accessCodes, setAccessCodes] = useState<any[]>([]);
@@ -256,14 +259,26 @@ export default function AdminDashboard() {
         }
     }, []);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (passwordInput === '1704') {
-            setIsAuthorized(true);
-            localStorage.setItem('admin_authorized', 'true');
-            fetchData();
-        } else {
+        try {
+            const res = await fetch('/api/admin/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: passwordInput }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.ok) {
+                    setIsAuthorized(true);
+                    localStorage.setItem('admin_authorized', 'true');
+                    fetchData();
+                    return;
+                }
+            }
             alert('Yanlış şifre!');
+        } catch {
+            alert('Auth check failed. Try again.');
         }
     };
 
@@ -277,7 +292,7 @@ export default function AdminDashboard() {
         setLoading(true);
         setWaitlistError(null);
         try {
-            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes, playerLedgerRes] = await Promise.all([
                 fetch('/api/admin/stats'),
                 fetch('/api/admin/users'),
                 fetch('/api/admin/transactions'),
@@ -287,7 +302,8 @@ export default function AdminDashboard() {
                 fetch('/api/admin/banned-wallets'),
                 fetch('/api/admin/waitlist'),
                 fetch('/api/admin/access-codes'),
-                fetch('/api/admin/withdrawal-requests/pending')
+                fetch('/api/admin/withdrawal-requests/pending'),
+                fetch('/api/admin/player-ledger'),
             ]);
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) {
@@ -309,6 +325,7 @@ export default function AdminDashboard() {
             if (dangerRes.ok) {
                 const data = await dangerRes.json();
                 setSuspiciousUsers(data.suspiciousUsers || []);
+                setFrequencyUsers(data.frequencyUsers || []);
             }
             if (bannedRes.ok) {
                 const data = await bannedRes.json();
@@ -333,6 +350,10 @@ export default function AdminDashboard() {
             if (pendingWithdrawalsRes.ok) {
                 const data = await pendingWithdrawalsRes.json();
                 setPendingWithdrawals(data.requests || []);
+            }
+            if (playerLedgerRes.ok) {
+                const data = await playerLedgerRes.json();
+                setPlayerPnl(data.players || []);
             }
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
@@ -484,6 +505,25 @@ export default function AdminDashboard() {
 
     const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : 'N/A';
 
+    const getExplorerAddressUrl = (address: string, currency: string): string => {
+        const c = (currency || '').toUpperCase();
+        const addr = encodeURIComponent(address);
+        switch (c) {
+            case 'BNB':   return `https://bscscan.com/address/${addr}`;
+            case 'SOL':   return `https://solscan.io/account/${addr}`;
+            case 'SUI':   return `https://suiscan.xyz/mainnet/account/${addr}`;
+            case 'XLM':   return `https://stellar.expert/explorer/public/account/${addr}`;
+            case 'NEAR':  return `https://nearblocks.io/address/${addr}`;
+            case 'STRK':  return `https://starkscan.co/contract/${addr}`;
+            case 'PUSH':  return `https://etherscan.io/address/${addr}`;
+            case 'STT':   return `${process.env.NEXT_PUBLIC_SOMNIA_TESTNET_EXPLORER || 'https://shannon-explorer.somnia.network'}/address/${addr}`;
+            case 'ONE':   return `${process.env.NEXT_PUBLIC_ONECHAIN_EXPLORER || 'https://explorer-testnet.onechain.one'}/address/${addr}`;
+            case 'ZG':    return `${process.env.NEXT_PUBLIC_ZG_MAINNET_EXPLORER || 'https://chainscan.0g.ai'}/address/${addr}`;
+            case 'INIT':  return `https://scan.initia.xyz/initiation-2/accounts/${addr}`;
+            default:      return `https://bscscan.com/address/${addr}`;
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#050505] text-[#a0a0a0] p-6 lg:p-12 font-sans selection:bg-white selection:text-black">
             <div className="max-w-[1400px] mx-auto space-y-12">
@@ -556,6 +596,7 @@ export default function AdminDashboard() {
                         <div className="flex flex-wrap gap-8">
                             <TabBtn active={activeTab === 'wallet_intel'} onClick={() => setActiveTab('wallet_intel')} label="Wallet Intel" />
                             <TabBtn active={activeTab === 'users'} onClick={() => setActiveTab('users')} label="Ledger" />
+                            <TabBtn active={activeTab === 'player_pnl'} onClick={() => setActiveTab('player_pnl')} label="Player P&L" />
                             <TabBtn active={activeTab === 'gameplay'} onClick={() => setActiveTab('gameplay')} label="Gameplay" />
                             <TabBtn active={activeTab === 'financial'} onClick={() => setActiveTab('financial')} label="Financials" />
                             <TabBtn active={activeTab === 'markets'} onClick={() => setActiveTab('markets')} label="Inventory" />
@@ -823,7 +864,15 @@ export default function AdminDashboard() {
                                                         <td className="px-8 py-6">
                                                             <div className="flex flex-col">
                                                                 <span className="text-white text-sm font-bold">{u.username || 'Anonymous'}</span>
-                                                                <span className="font-mono text-white/20 text-xs">{shortenAddress(u.user_address)}</span>
+                                                                <a
+                                                                    href={getExplorerAddressUrl(u.user_address, u.currency)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    title={u.user_address}
+                                                                    className="font-mono text-white/30 text-xs hover:text-white/70 hover:underline transition-colors"
+                                                                >
+                                                                    {shortenAddress(u.user_address)} ↗
+                                                                </a>
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6"><span className="text-xs font-black border border-white/10 rounded px-2 py-1 uppercase">{u.currency}</span></td>
@@ -838,9 +887,106 @@ export default function AdminDashboard() {
                                     </Table>
                                 )}
 
+                                {activeTab === 'player_pnl' && (() => {
+                                    const sortedPnl = [...playerPnl]
+                                        .filter(p => !searchTerm || p.user_address.toLowerCase().includes(searchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(searchTerm.toLowerCase())))
+                                        .sort((a, b) => {
+                                            const v = (x: any) => x[pnlSort.col] ?? 0;
+                                            return pnlSort.dir === 'desc' ? v(b) - v(a) : v(a) - v(b);
+                                        });
+                                    const SortTh = ({ col, label }: { col: string; label: string }) => (
+                                        <th
+                                            className="px-8 py-5 text-left text-xs font-black text-white/30 uppercase tracking-widest cursor-pointer hover:text-white/70 select-none transition-colors"
+                                            onClick={() => setPnlSort(s => s.col === col ? { col, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { col, dir: 'desc' })}
+                                        >
+                                            {label}{pnlSort.col === col ? (pnlSort.dir === 'desc' ? ' ↓' : ' ↑') : ' ↕'}
+                                        </th>
+                                    );
+                                    const fmt = (n: number, dec = 6) => n.toFixed(dec).replace(/\.?0+$/, '') || '0';
+                                    return (
+                                        <div key="player_pnl" className="space-y-4">
+                                            <div className="px-8 pt-6 pb-2 text-xs text-white/30 leading-relaxed">
+                                                Per-wallet financial summary across all currencies. <strong className="text-white/50">Deposited</strong> = on-chain top-ups. <strong className="text-white/50">Withdrawn</strong> = confirmed payouts. <strong className="text-white/50">Avail. Balance</strong> = funds sitting in the house they can still withdraw. <strong className="text-emerald-400/70">Player P&L</strong> = (Withdrawn + Avail. Balance) − Deposited; positive = user is net-up.
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-white/10">
+                                                            <th className="px-8 py-5 text-left text-xs font-black text-white/30 uppercase tracking-widest">Player</th>
+                                                            <th className="px-8 py-5 text-left text-xs font-black text-white/30 uppercase tracking-widest">Currency</th>
+                                                            <SortTh col="total_deposited" label="Deposited" />
+                                                            <SortTh col="total_withdrawn" label="Withdrawn" />
+                                                            <SortTh col="current_balance" label="Avail. Balance" />
+                                                            <SortTh col="net_pnl" label="Player P&L" />
+                                                            <SortTh col="total_bets" label="Bets" />
+                                                            <SortTh col="total_wagered" label="Wagered" />
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {loading ? <tr><td colSpan={8} className="px-8 py-10 text-center text-white/20 text-xs">Loading…</td></tr>
+                                                         : sortedPnl.length === 0 ? <tr><td colSpan={8} className="px-8 py-10 text-center text-white/20 text-xs">No player data yet.</td></tr>
+                                                         : sortedPnl.map((p, i) => {
+                                                            const isWinner = p.net_pnl > 0;
+                                                            const isLoser  = p.net_pnl < 0;
+                                                            return (
+                                                                <tr key={p.user_address + p.currency} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                                    {/* Rank + identity */}
+                                                                    <td className="px-8 py-5">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="text-white/20 font-mono text-xs w-5">#{i + 1}</span>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-white text-sm font-bold">{p.username || 'Anonymous'}</span>
+                                                                                <a
+                                                                                    href={getExplorerAddressUrl(p.user_address, p.currency)}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    title={p.user_address}
+                                                                                    className="font-mono text-white/30 text-xs hover:text-white/70 hover:underline transition-colors"
+                                                                                >
+                                                                                    {shortenAddress(p.user_address)} ↗
+                                                                                </a>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    {/* Currency */}
+                                                                    <td className="px-8 py-5">
+                                                                        <span className="text-xs font-black border border-white/10 rounded px-2 py-1 uppercase">{p.currency}</span>
+                                                                    </td>
+                                                                    {/* Deposited */}
+                                                                    <td className="px-8 py-5 font-mono text-white text-sm">{fmt(p.total_deposited)}</td>
+                                                                    {/* Withdrawn */}
+                                                                    <td className="px-8 py-5 font-mono text-white/70 text-sm">{fmt(p.total_withdrawn)}</td>
+                                                                    {/* Available balance — what they can still withdraw */}
+                                                                    <td className="px-8 py-5">
+                                                                        <span className={`font-mono text-sm font-bold ${p.current_balance > 0 ? 'text-amber-400' : 'text-white/20'}`}>
+                                                                            {fmt(p.current_balance)}
+                                                                        </span>
+                                                                    </td>
+                                                                    {/* Player net P&L */}
+                                                                    <td className="px-8 py-5">
+                                                                        <span className={`font-mono text-sm font-black ${isWinner ? 'text-emerald-400' : isLoser ? 'text-rose-400' : 'text-white/30'}`}>
+                                                                            {isWinner ? '+' : ''}{fmt(p.net_pnl)}
+                                                                        </span>
+                                                                    </td>
+                                                                    {/* Bets */}
+                                                                    <td className="px-8 py-5 font-mono text-white/50 text-sm">
+                                                                        {p.total_bets}
+                                                                        {p.total_bets > 0 && <span className="text-white/20 text-xs"> ({Math.round(p.total_wins / p.total_bets * 100)}% W)</span>}
+                                                                    </td>
+                                                                    {/* Wagered */}
+                                                                    <td className="px-8 py-5 font-mono text-white/50 text-sm">{fmt(p.total_wagered)}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 {activeTab === 'gameplay' && (
                                     <div key="gameplay" className="space-y-6">
-                                        <div className="p-6 border-b border-white/5 flex flex-wrap gap-6 items-center bg-white/[0.01]">
                                             <div className="flex gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
                                                 <button
                                                     onClick={() => setGameplayFilter('all')}
@@ -1056,6 +1202,139 @@ export default function AdminDashboard() {
 
                                 {activeTab === 'danger' && (
                                     <div key="danger" className="space-y-10">
+
+                                    {/* ── High-Frequency Withdrawal Review Queue ─────────── */}
+                                    {(frequencyUsers.length > 0 || !loading) && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 px-1">
+                                            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                            <span className="text-xs font-black uppercase tracking-widest text-amber-400">Manual Review Queue — High Withdrawal Frequency</span>
+                                            {frequencyUsers.length > 0 && (
+                                                <span className="px-2 py-0.5 rounded bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-black">{frequencyUsers.length}</span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-white/30 px-1 leading-relaxed">
+                                            Wallets with <strong className="text-white/50">{10}+ total withdrawals</strong> across any chain. From withdrawal #{10 + 1} onwards every request is queued for manual approval regardless of amount. Review each user's full financial profile before approving.
+                                        </p>
+                                        {loading ? (
+                                            <div className="px-8 py-10 text-center text-xs text-white/20 animate-pulse">Loading…</div>
+                                        ) : frequencyUsers.length === 0 ? (
+                                            <div className="px-8 py-8 text-center text-xs text-white/20 border border-white/5 rounded-2xl">No frequency-flagged wallets yet.</div>
+                                        ) : (
+                                        <div className="space-y-4">
+                                            {frequencyUsers.map(u => {
+                                                const isWinner = u.net_pnl > 0;
+                                                const fmt = (n: number) => n.toFixed(6).replace(/\.?0+$/, '') || '0';
+                                                return (
+                                                <div key={u.user_address} className="border border-amber-400/20 bg-amber-400/[0.03] rounded-2xl p-6 space-y-5">
+                                                    {/* Header row */}
+                                                    <div className="flex flex-wrap items-start justify-between gap-4">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <a
+                                                                    href={getExplorerAddressUrl(u.user_address, u.currencies?.[0] || 'BNB')}
+                                                                    target="_blank" rel="noopener noreferrer"
+                                                                    title={u.user_address}
+                                                                    className="font-mono text-white text-sm hover:underline hover:text-amber-300 transition-colors"
+                                                                >
+                                                                    {shortenAddress(u.user_address)} ↗
+                                                                </a>
+                                                                {u.has_frequency_flag && (
+                                                                    <span className="px-2 py-0.5 text-xs font-black uppercase rounded bg-amber-400/20 border border-amber-400/40 text-amber-300 tracking-wider">Frequency Flag</span>
+                                                                )}
+                                                                {u.currencies?.map((c: string) => (
+                                                                    <span key={c} className="px-2 py-0.5 text-xs font-black border border-white/10 rounded uppercase">{c}</span>
+                                                                ))}
+                                                            </div>
+                                                            <p className="text-xs text-white/30">Full wallet: <span className="font-mono">{u.user_address}</span></p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => { setBanAddressInput(u.user_address); setBanReasonInput('High-frequency withdrawal — automated flag'); }}
+                                                                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded text-xs font-bold text-rose-400 uppercase tracking-wide transition-all"
+                                                            >
+                                                                Pre-fill Ban
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Stats grid */}
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                                        {[
+                                                            { label: 'Total Withdrawals', value: u.total_withdrawals, color: 'text-amber-400', big: true },
+                                                            { label: 'Completed', value: u.completed_withdrawals, color: 'text-white' },
+                                                            { label: 'Pending Review', value: u.pending_withdrawals, color: u.pending_withdrawals > 0 ? 'text-amber-300' : 'text-white/30' },
+                                                            { label: 'Total Deposited', value: fmt(u.total_deposited), color: 'text-white' },
+                                                            { label: 'Total Withdrawn', value: fmt(u.total_withdrawn), color: 'text-white/70' },
+                                                            { label: 'Avail. Balance', value: fmt(u.total_available_balance), color: u.total_available_balance > 0 ? 'text-amber-300' : 'text-white/30' },
+                                                        ].map(s => (
+                                                            <div key={s.label} className="bg-black/30 border border-white/5 rounded-xl px-4 py-3 space-y-1">
+                                                                <p className="text-white/30 text-xs uppercase tracking-wider">{s.label}</p>
+                                                                <p className={`font-mono font-black ${s.color} ${(s as any).big ? 'text-xl' : 'text-sm'}`}>{s.value}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Player P&L */}
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-xs text-white/30 uppercase tracking-widest">Player P&L</span>
+                                                        <span className={`font-mono font-black text-lg ${isWinner ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                            {isWinner ? '+' : ''}{fmt(u.net_pnl)}
+                                                            <span className="text-xs ml-1 font-normal">{isWinner ? '(user is net-UP — house lost)' : '(user is net-DOWN — house won)'}</span>
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Pending withdrawal requests */}
+                                                    {u.pending_requests?.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-black uppercase tracking-widest text-white/40">Pending Withdrawal Requests ({u.pending_requests.length})</p>
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full">
+                                                                    <thead>
+                                                                        <tr className="border-b border-white/10">
+                                                                            {['ID', 'Currency', 'Amount', 'Requested', 'Flag', 'Actions'].map(h => (
+                                                                                <th key={h} className="px-4 py-2 text-left text-xs font-black text-white/30 uppercase tracking-wider">{h}</th>
+                                                                            ))}
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {u.pending_requests.map((r: any) => {
+                                                                            const isFreqFlag = typeof r.decided_by === 'string' && r.decided_by.startsWith('FREQUENCY_REVIEW');
+                                                                            return (
+                                                                                <tr key={r.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                                                                    <td className="px-4 py-3 font-mono text-xs text-white/50">#{r.id}</td>
+                                                                                    <td className="px-4 py-3"><span className="text-xs font-black border border-white/10 rounded px-2 py-0.5 uppercase">{r.currency}</span></td>
+                                                                                    <td className="px-4 py-3 font-mono text-white font-bold">{Number(r.amount).toFixed(6)}</td>
+                                                                                    <td className="px-4 py-3 text-xs text-white/30 font-mono">{r.requested_at ? new Date(r.requested_at).toLocaleString() : '—'}</td>
+                                                                                    <td className="px-4 py-3">
+                                                                                        {isFreqFlag
+                                                                                            ? <span className="text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded">FREQUENCY</span>
+                                                                                            : <span className="text-xs text-white/20">AMOUNT</span>
+                                                                                        }
+                                                                                    </td>
+                                                                                    <td className="px-4 py-3">
+                                                                                        <div className="flex gap-2">
+                                                                                            <button onClick={() => acceptWithdrawalRequest(r.id)} className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded text-xs font-bold text-emerald-400 uppercase transition-all">Accept</button>
+                                                                                            <button onClick={() => rejectWithdrawalRequest(r.id)} className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded text-xs font-bold text-rose-400 uppercase transition-all">Reject</button>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                );
+                                            })}
+                                        </div>
+                                        )}
+                                    </div>
+                                    )}
+
+                                    {/* ── Global ban list ───────────────────────────── */}
                                     <div className="p-8 bg-rose-500/5 border border-rose-500/20 rounded-[2rem] space-y-4">
                                         <p className="text-xs font-black uppercase tracking-wider text-rose-400/80">Global wallet ban list</p>
                                         <p className="text-sm text-white/40 leading-relaxed max-w-2xl">
@@ -1123,6 +1402,7 @@ export default function AdminDashboard() {
                                         </Table>
                                     </div>
 
+                                    {/* ── Win-streak suspicious users ───────────────── */}
                                     <Table key="danger-table">
                                         <THead labels={['Node Identity', 'Max Streak', 'Pattern', 'Current Status', 'Operations']} />
                                         <tbody>

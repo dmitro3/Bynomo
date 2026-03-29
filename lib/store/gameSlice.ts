@@ -128,7 +128,7 @@ const DEFAULT_TARGET_CELLS: TargetCell[] = [
  */
 export const createGameSlice: StateCreator<any> = (set, get) => ({
   // Initial state
-  gameMode: 'binomo', // Default to binomo mode
+  gameMode: 'box', // Default to box mode
   selectedAsset: 'BNB',
   currentPrice: 0,
   priceHistory: [],

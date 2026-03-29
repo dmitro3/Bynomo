@@ -166,9 +166,14 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
       const txHash = (result && (result as any).txHash) ? String((result as any).txHash) : 'PENDING';
       const status = result && (result as any).status;
+      const frequencyReview = result && (result as any).frequencyReview;
 
       if (status === 'pending') {
-        toast.success('Withdrawal request submitted. Awaiting manual approval.');
+        if (frequencyReview) {
+          toast.success('Your withdrawal request has been submitted for manual review due to high withdrawal frequency. An admin will process it shortly.');
+        } else {
+          toast.success('Withdrawal request submitted. Awaiting manual approval.');
+        }
         if (onSuccess) onSuccess(withdrawAmount, txHash);
       } else {
         console.log('Withdrawal successful:', txHash);
