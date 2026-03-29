@@ -197,11 +197,11 @@ export class PythPriceFeed {
     const results: Record<string, number> = {};
 
     try {
-      // 1. Pyth
+      // 1. Pyth — batch URL can be slow on mobile networks; 5s was aborting (canceled) and freezing UI on cache.
       const queryString = ids.map(id => `ids%5B%5D=${id}`).join('&');
       const response = await fetch(
         `${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`,
-        { signal: AbortSignal.timeout(5000) }
+        { signal: AbortSignal.timeout(25_000) }
       );
       if (response.ok) {
         const data = await response.json();
@@ -260,23 +260,31 @@ export const startMultiPythPriceFeed = (
   callback: (prices: Record<string, number>) => void
 ): (() => void) => {
   let isActive = true;
+  /** Prevents overlapping Hermes batch calls (stacked requests → timeouts / canceled rows on mobile). */
+  let inFlight = false;
 
   const run = async () => {
-    if (!isActive) return;
-    const prices = await PythPriceFeed.fetchAllPrices();
-    if (isActive) callback(prices);
+    if (!isActive || inFlight) return;
+    inFlight = true;
+    try {
+      const prices = await PythPriceFeed.fetchAllPrices();
+      if (isActive) callback(prices);
+    } catch {
+      // fetchAllPrices already falls back to cache
+    } finally {
+      inFlight = false;
+    }
   };
 
-  // Fetch immediately so we don't block initial UI for an extra interval tick.
-  run().catch(() => {
-    // fetchAllPrices already falls back to cache; ignore here.
-  });
-
+  void run();
   const intervalId = setInterval(() => {
-    run().catch(() => {});
+    void run();
   }, 1000);
 
-  return () => clearInterval(intervalId);
+  return () => {
+    isActive = false;
+    clearInterval(intervalId);
+  };
 };
 
 export const startPythPriceFeed = (

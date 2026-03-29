@@ -46,7 +46,7 @@ const baseDexToolLogos: LogoItem[] = [
   { key: 'RugCheck', src: '/logos/rugcheck.jpg', alt: 'RugCheck' },
   { key: 'PumpFun', src: '/logos/pumpfun-logo.png', alt: 'Pump.fun' },
   { key: 'Meteora', src: '/logos/meteora-logo.png', alt: 'Meteora' },
-  { key: 'Jupiter', src: '/logos/jupiter-logo.png', alt: 'Jupiter' },
+  { key: 'Jupiter', src: '/logos/jupiter.jpg', alt: 'Jupiter' },
 ];
 
 function MarqueeRow({

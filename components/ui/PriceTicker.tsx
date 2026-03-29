@@ -137,14 +137,35 @@ export const PriceTicker: React.FC = () => {
 
       <style jsx>{`
         .ticker-scroll-track {
+          will-change: transform;
+          -webkit-animation: ticker-run 55s linear infinite;
           animation: ticker-run 55s linear infinite;
         }
         .ticker-scroll-track:hover {
+          -webkit-animation-play-state: paused;
           animation-play-state: paused;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .ticker-scroll-track {
+            -webkit-animation: none;
+            animation: none;
+          }
+        }
+        @-webkit-keyframes ticker-run {
+          0% {
+            -webkit-transform: translate3d(0, 0, 0);
+          }
+          100% {
+            -webkit-transform: translate3d(-50%, 0, 0);
+          }
+        }
         @keyframes ticker-run {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-50%, 0, 0);
+          }
         }
       `}</style>
     </div>

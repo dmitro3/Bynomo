@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import GridScan from '@/components/ui/GridScan';
 import TrueFocus from '@/components/ui/TrueFocus';
-import HowItWorksDemo from './waitlist/HowItWorksDemo';
 import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
+import DemoVideoSection from '@/components/landing/DemoVideoSection';
 import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
 import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
 import { supabase } from '@/lib/supabase/client';
@@ -338,17 +338,17 @@ export default function WaitlistPage() {
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen opacity-50 block lg:hidden" />
             </section>
 
-            <section id="how-it-works" className="relative py-32 bg-[#02040a] overflow-hidden">
-                <div className="section-content relative z-10 max-w-[1400px] mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <div className="text-white/20 font-mono text-[10px] mb-4 uppercase tracking-[0.4em] flex items-center justify-center gap-3">
-                            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_purple]" />
+            <section id="how-it-works" className="relative py-16 sm:py-24 lg:py-32 bg-[#02040a] overflow-hidden">
+                <div className="section-content relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6">
+                    <div className="text-center mb-10 sm:mb-14 lg:mb-16 px-1">
+                        <div className="text-white/25 font-mono text-[9px] sm:text-[10px] mb-3 sm:mb-4 uppercase tracking-[0.2em] sm:tracking-[0.35em] flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_purple] shrink-0" />
                             How It Works
                         </div>
-                        <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white mb-6 uppercase" style={{ fontFamily: 'var(--font-orbitron)' }}>
+                        <h2 className="text-[1.65rem] leading-[1.05] min-[400px]:text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white mb-4 sm:mb-6 uppercase px-1" style={{ fontFamily: 'var(--font-orbitron)' }}>
                             How <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/20">Bynomo works</span>
                         </h2>
-                        <p className="text-white/30 max-w-2xl mx-auto text-sm font-bold uppercase tracking-widest leading-relaxed">
+                        <p className="text-white/35 max-w-2xl mx-auto text-[11px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-widest leading-relaxed px-2">
                             Connect, deposit, predict, and settle in a fast hybrid flow powered by oracle pricing and secure treasury rails.
                         </p>
                     </div>
@@ -362,6 +362,9 @@ export default function WaitlistPage() {
                     <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
                 </div>
             </section>
+
+            {/* PRODUCT DEMO — after how-it-works, before ecosystem */}
+            <DemoVideoSection />
 
             {/* CHAINS + DEX LOGOS SECTION */}
             <LogosMarqueeSection />

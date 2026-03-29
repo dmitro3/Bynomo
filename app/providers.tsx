@@ -377,7 +377,6 @@ const { networkConfig } = createNetworkConfig({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const initialized = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [queryClient] = useState(() => new QueryClient());
 
@@ -397,8 +396,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    let cancelled = false;
+    let stopPriceFeed: (() => void) | undefined;
 
     const initializeApp = async () => {
       try {
@@ -406,6 +405,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const { initWalletKit } = await import('@/lib/stellar/wallet-kit');
         await initWalletKit().catch(console.error);
         await loadTargetCells().catch(console.error);
+
+        if (cancelled) return;
 
         // Seed a faster default asset for the chart.
         // We try a small set in parallel and pick the first one that returns a valid price.
@@ -424,6 +425,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             })
           );
 
+          if (cancelled) return;
+
           store.setSelectedAsset(seeded.asset);
           // Seed at least 2 points so LiveChart can render quickly.
           store.updatePrice(seeded.price, seeded.asset);
@@ -432,16 +435,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
           // Non-fatal: we'll still start the global feed and show the default BNB chart.
         }
 
-        const stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
+        if (cancelled) return;
+
+        stopPriceFeed = startGlobalPriceFeed(updateAllPrices);
+        if (cancelled) {
+          stopPriceFeed();
+          stopPriceFeed = undefined;
+          return;
+        }
         setIsReady(true);
-        return () => { if (stopPriceFeed) stopPriceFeed(); };
       } catch (error) {
         console.error('Error initializing app:', error);
-        setIsReady(true);
+        if (!cancelled) setIsReady(true);
       }
     };
 
-    initializeApp();
+    void initializeApp();
+
+    return () => {
+      cancelled = true;
+      stopPriceFeed?.();
+    };
   }, []);
 
   if (!isReady) {
