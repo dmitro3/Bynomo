@@ -987,6 +987,7 @@ export default function AdminDashboard() {
 
                                 {activeTab === 'gameplay' && (
                                     <div key="gameplay" className="space-y-6">
+                                        <div className="p-6 border-b border-white/5 flex flex-wrap gap-6 items-center bg-white/[0.01]">
                                             <div className="flex gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
                                                 <button
                                                     onClick={() => setGameplayFilter('all')}
