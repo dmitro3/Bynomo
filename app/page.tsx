@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import GridScan from '@/components/ui/GridScan';
@@ -100,18 +100,27 @@ export default function WaitlistPage() {
     const [activeIdx, setActiveIdx] = useState(0);
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
+    const containerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
+            if (containerRef.current) {
+                setScrolled(containerRef.current.scrollTop > 20);
+            }
         };
-        window.addEventListener('scroll', handleScroll);
+        const currentContainer = containerRef.current;
+        if (currentContainer) {
+            currentContainer.addEventListener('scroll', handleScroll);
+        }
 
         const interval = setInterval(() => {
             setActiveIdx(prev => (prev + 1) % testimonials.length);
         }, 5000);
 
         return () => {
-            window.removeEventListener('scroll', handleScroll);
+            if (currentContainer) {
+                currentContainer.removeEventListener('scroll', handleScroll);
+            }
             clearInterval(interval);
         };
     }, []);
@@ -146,11 +155,13 @@ export default function WaitlistPage() {
     const isExpanded = isHovered || email.length > 0;
 
     const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (containerRef.current) {
+            containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
     return (
-        <main className="landing-layout selection:bg-purple-500/30">
+        <div ref={containerRef} className="landing-layout h-full overflow-y-auto scroll-smooth selection:bg-purple-500/30">
 
             {/* ── Announcement Banner ─────────────────────────────────────── */}
             <div className="relative z-50 w-full overflow-hidden h-14 flex items-center"
@@ -488,6 +499,6 @@ export default function WaitlistPage() {
                     </div>
                 </div>
             </footer>
-        </main>
+        </div>
     );
 }

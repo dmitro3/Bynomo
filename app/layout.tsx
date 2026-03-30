@@ -84,12 +84,12 @@ export default function RootLayout({
         </Script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-[#02040a] text-white min-h-screen flex flex-col overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-[#02040a] text-white h-screen overflow-hidden flex flex-col`}
       >
         <PostHogProvider>
           <Providers>
             <Header />
-            <main className="flex-1 relative overflow-x-hidden">
+            <main className="flex-1 relative flex flex-col min-h-0 min-w-0">
               {children}
             </main>
           </Providers>
