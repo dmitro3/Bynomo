@@ -50,6 +50,12 @@ export type AssetType = keyof typeof PRICE_FEED_IDS | keyof typeof CUSTOM_TOKENS
 // Pyth Hermes API endpoint (public, free to use)
 const HERMES_ENDPOINT = 'https://hermes.pyth.network';
 
+/** Hermes returns feed ids as lowercase hex without 0x; normalize for matching. */
+function normalizeFeedId(id: string | undefined): string {
+  if (!id || typeof id !== 'string') return '';
+  return id.trim().replace(/^0x/i, '').toLowerCase();
+}
+
 // Cache the last successful multi-asset snapshot so the UI can render even if Hermes is slow.
 let lastAllPricesCache: Record<string, number> = {};
 const PRICE_CACHE_STORAGE_KEY = 'bynomo_last_price_cache_v1';
@@ -192,27 +198,46 @@ export class PythPriceFeed {
   }
 
   static async fetchAllPrices(): Promise<Record<string, number>> {
-    const ids = Object.values(PRICE_FEED_IDS).map(id => id.startsWith('0x') ? id : `0x${id}`);
+    const ids = Object.values(PRICE_FEED_IDS).map(id => (id.startsWith('0x') ? id : `0x${id}`));
     const symbols = Object.keys(PRICE_FEED_IDS) as string[];
+    const idByNormalized = new Map<string, string>();
+    symbols.forEach((s) => {
+      idByNormalized.set(normalizeFeedId((PRICE_FEED_IDS as Record<string, string>)[s]), s);
+    });
     const results: Record<string, number> = {};
 
+    const parseHermesParsed = (parsed: any[]) => {
+      parsed.forEach((feed: any) => {
+        const sym = idByNormalized.get(normalizeFeedId(feed?.id));
+        if (!sym || !feed?.price) return;
+        const expo = Number(feed.price.expo);
+        const px = Number(feed.price.price) * Math.pow(10, Number.isFinite(expo) ? expo : -8);
+        if (Number.isFinite(px) && px > 0) results[sym] = px;
+      });
+    };
+
     try {
-      // 1. Pyth — batch URL can be slow on mobile networks; 5s was aborting (canceled) and freezing UI on cache.
-      const queryString = ids.map(id => `ids%5B%5D=${id}`).join('&');
-      const response = await fetch(
-        `${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`,
-        { signal: AbortSignal.timeout(25_000) }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.parsed) {
-          data.parsed.forEach((feed: any) => {
-            const sym = symbols.find(s => (PRICE_FEED_IDS as any)[s].replace('0x', '') === feed.id);
-            if (sym) {
-              results[sym] = Number(feed.price.price) * Math.pow(10, feed.price.expo);
-            }
+      // Chunk requests: very long query strings occasionally fail on slow / strict proxies.
+      const chunkSize = 14;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize));
+      }
+      const chunkResponses = await Promise.allSettled(
+        chunks.map((chunk) => {
+          const queryString = chunk.map((id) => `ids%5B%5D=${encodeURIComponent(id)}`).join('&');
+          return fetch(`${HERMES_ENDPOINT}/v2/updates/price/latest?${queryString}`, {
+            // Keep each batch fast; don't let one slow request freeze the whole price loop.
+            signal: AbortSignal.timeout(6_000),
           });
-        }
+        })
+      );
+      for (const settled of chunkResponses) {
+        if (settled.status !== 'fulfilled') continue;
+        const response = settled.value;
+        if (!response.ok) continue;
+        const data = await response.json();
+        if (data.parsed?.length) parseHermesParsed(data.parsed);
       }
 
       // 2. BYNOMO (DexScreener)

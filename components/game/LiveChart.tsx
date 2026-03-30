@@ -355,9 +355,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
   // Configuration - Responsive + Timeframe
   const isMobile = dimensions.width < 640;
-  const isPhone = dimensions.width < 480;
-  /** More of the chart width shows past ticks on small screens (was 0.35 — felt too cramped). */
-  const historyWidthRatio = isPhone ? 0.44 : isMobile ? 0.40 : 0.5;
+  const historyWidthRatio = isMobile ? 0.35 : 0.50;
   const targetColWidthPx = isMobile ? 100 : 250;
   const gridInterval = ((gameMode === 'box' || gameMode === 'draw') ? timeframeSeconds : 30) * 1000; // ms per column
   const pixelsPerSecond = (gameMode === 'box' || gameMode === 'draw')
@@ -383,29 +381,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   0.0020 // Default
     );
 
-    /**
-     * Vertical “zoom”: smaller multiplier = tighter Y-band = real feed moves read as visible motion.
-     * The old `mobileZoomFactor: 5` multiplied rangePercent and *widened* the band on mobile,
-     * which crushed almost all movement into a flat line.
-     */
-    const yRangeTightness =
-      dimensions.width < 480 ? 0.58 :
-        dimensions.width < 640 ? 0.66 :
-          dimensions.width < 900 ? 0.82 :
-            1.0;
-    let rangePercent = ((gameMode === 'box' || gameMode === 'draw') ? baseRange * 0.8 : baseRange) * yRangeTightness;
-
-    // If recent ticks span a real range, widen band just enough so they stay on-screen (lerp can lag)
-    const tail = priceHistory.slice(-100);
-    if (tail.length >= 2 && currentPrice > 0) {
-      const lo = Math.min(...tail.map(p => p.price), currentPrice);
-      const hi = Math.max(...tail.map(p => p.price), currentPrice);
-      const halfSpanFrac = (hi - lo) / (2 * currentPrice);
-      if (halfSpanFrac > 1e-12) {
-        rangePercent = Math.max(rangePercent, halfSpanFrac * 1.18);
-        rangePercent = Math.min(rangePercent, baseRange * 6);
-      }
-    }
+    const mobileZoomFactor = isMobile ? 5.0 : 1.0;
+    const rangePercent = ((gameMode === 'box' || gameMode === 'draw') ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
 
     const targetMin = currentPrice * (1 - rangePercent);
     const targetMax = currentPrice * (1 + rangePercent);
@@ -414,8 +391,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     if (!yDomain.current.initialized) {
       yDomain.current = { min: targetMin, max: targetMax, initialized: true };
     } else {
-      // Faster tracking on narrow screens so the axis keeps up with the feed
-      const lerpFactor = dimensions.width < 640 ? 0.14 : 0.05;
+      // Smoothing factor (lower = smoother, higher = faster tracking)
+      const lerpFactor = 0.05;
       yDomain.current.min = yDomain.current.min + (targetMin - yDomain.current.min) * lerpFactor;
       yDomain.current.max = yDomain.current.max + (targetMax - yDomain.current.max) * lerpFactor;
     }
@@ -435,7 +412,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     };
 
     return { yScale, xScale, tipX, minY, maxY };
-  }, [dimensions, priceHistory, currentPrice, now, selectedAsset, gameMode, timeframeSeconds]);
+  }, [dimensions, priceHistory, currentPrice, now, selectedAsset]);
 
   const scalesRef = useRef(scales);
   const currentPriceRef = useRef(currentPrice);
@@ -651,8 +628,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const lineGenerator = d3Shape.line<{ timestamp: number, price: number }>()
       .x((d) => scales.xScale(d.timestamp))
       .y((d) => scales.yScale(d.price))
-      // Linear = honest tick-to-tick path; monotone smoothing hid volatility on tight mobile bands
-      .curve(d3Shape.curveLinear);
+      .curve(d3Shape.curveCatmullRom.alpha(0.35));
 
     return lineGenerator(pointsToRender) || '';
   }, [scales, priceHistory, currentPrice, now]);

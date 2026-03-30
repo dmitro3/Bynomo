@@ -1,39 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import GridScan from '@/components/ui/GridScan';
-import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
 import DemoVideoSection from '@/components/landing/DemoVideoSection';
 import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
 import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
-import { supabase } from '@/lib/supabase/client';
 import './waitlist/waitlist.css';
-
-const steps = [
-    {
-        id: "01",
-        title: "Hybrid Custody",
-        desc: "Solana-speed performance with non-custodial security. BYNOMO connects your wallet to a high-speed house balance for instant execution without gas lag."
-    },
-    {
-        id: "02",
-        title: "Multi-Asset Feed",
-        desc: "Trade more than just crypto. Predict millisecond movements on Bitcoin, Solana, Gold, and Tech giants like NVDA and TSLA via Pyth Fixed Oracles."
-    },
-    {
-        id: "03",
-        title: "Blitz Protocol",
-        desc: "Activate high-frequency Blitz Rounds. Experience amplified multipliers up to 10x and 30-second settlement windows for maximum capital efficiency."
-    },
-    {
-        id: "04",
-        title: "Tiered Autonomy",
-        desc: "Climb from Standard to VIP. Unlock exclusive indicators, lower fee brackets, and priority treasury withdrawals as an early decentralized trader."
-    }
-];
 
 const testimonials = [
     {
@@ -92,10 +67,6 @@ const faqs = [
 ];
 
 export default function WaitlistPage() {
-    const [email, setEmail] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeIdx, setActiveIdx] = useState(0);
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -125,35 +96,6 @@ export default function WaitlistPage() {
         };
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email || isSubmitting) return;
-        setIsSubmitting(true);
-        try {
-            const { error } = await supabase
-                .from('waitlist')
-                .insert([{ email }]);
-
-            if (error) {
-                if (error.code === '23505') { // Unique violation
-                    setIsSubmitted(true); // Already on the list
-                } else {
-                    console.error('Waitlist submission error:', error);
-                    // Standard toast already exists in the app? Let's check.
-                    // For now, let's keep it simple as the original code was also simple.
-                }
-            } else {
-                setIsSubmitted(true);
-            }
-        } catch (error) {
-            console.error('Waitlist submission error:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const isExpanded = isHovered || email.length > 0;
-
     const scrollToTop = () => {
         if (containerRef.current) {
             containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -161,7 +103,7 @@ export default function WaitlistPage() {
     };
 
     return (
-        <div ref={containerRef} className="landing-layout h-full overflow-y-auto scroll-smooth selection:bg-purple-500/30">
+        <div ref={containerRef} className="landing-layout h-full overflow-y-auto overflow-x-hidden scroll-smooth selection:bg-purple-500/30">
 
             {/* ── Announcement Banner ─────────────────────────────────────── */}
             <div className="relative z-50 w-full overflow-hidden h-14 flex items-center"
@@ -245,8 +187,8 @@ export default function WaitlistPage() {
 
 
             {/* HERO SECTION */}
-            <section id="hero-top" className="min-h-screen flex flex-col justify-center relative overflow-hidden px-4 md:px-20">
-                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-24">
+            <section id="hero-top" className="min-h-screen flex flex-col justify-center relative overflow-hidden px-4 sm:px-6 lg:px-20">
+                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-10 sm:gap-12 lg:gap-24">
 
                     {/* LEFT SIDE: Big Brand Name */}
                     <div className="flex flex-col justify-center select-none mix-blend-difference">
@@ -263,7 +205,7 @@ export default function WaitlistPage() {
                                     }
                                 }
                             }}
-                            className="flex"
+                            className="flex flex-nowrap"
                         >
                             {Array.from("BYNOMO").map((letter, index) => (
                                 <motion.h1
@@ -281,7 +223,7 @@ export default function WaitlistPage() {
                                             }
                                         }
                                     }}
-                                    className="text-[14vw] lg:text-[10rem] font-black leading-[0.8] lg:leading-[0.8] tracking-tighter text-white"
+                                    className="text-[14vw] lg:text-[10rem] font-black leading-[0.8] tracking-tighter text-white"
                                     style={{ fontFamily: 'var(--font-orbitron)' }}
                                 >
                                     {letter}
@@ -290,57 +232,37 @@ export default function WaitlistPage() {
                         </motion.div>
                     </div>
 
-                    {/* RIGHT SIDE: Tagline & Form */}
+                    {/* RIGHT SIDE: Tagline & live CTA (waitlist removed) */}
                     <motion.div
                         initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
                         animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex flex-col justify-center items-start lg:pl-4 z-10 -mt-8 lg:mt-0"
+                        className="flex flex-col justify-center items-start lg:pl-4 z-10 -mt-8 lg:mt-0 gap-6 lg:gap-8"
                     >
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-                            className="text-2xl lg:text-5xl font-bold text-white mb-6 lg:mb-8 tracking-tight"
+                            className="text-2xl lg:text-5xl font-bold text-white tracking-tight"
                         >
                             Predict the next tick.
                         </motion.h2>
-
-                        <div className="w-full max-w-md">
-                            {!isSubmitted ? (
-                                <form onSubmit={handleSubmit} className="w-full">
-                                    <div
-                                        className={`relative flex items-center bg-white/5 border border-white/10 rounded-full p-1.5 transition-all duration-300 ${isHovered || email ? 'bg-white/10 border-white/20' : ''}`}
-                                        onMouseEnter={() => setIsHovered(true)}
-                                        onMouseLeave={() => setIsHovered(false)}
-                                    >
-                                        <input
-                                            type="email"
-                                            placeholder="Enter your email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                            className="bg-transparent border-none outline-none text-white px-4 lg:px-6 py-2.5 lg:py-3 w-full placeholder:text-white/30 font-medium text-sm lg:text-base"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="px-6 lg:px-8 py-2.5 lg:py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider text-[10px] lg:text-sm hover:bg-gray-200 transition-colors shrink-0"
-                                        >
-                                            {isSubmitting ? '...' : 'Join'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="p-4 lg:p-6 rounded-3xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium flex items-center gap-3 text-sm lg:text-base"
-                                >
-                                    <span className="text-lg lg:text-xl">✨</span> You're on the list.
-                                </motion.div>
-                            )}
-                        </div>
+                        <p className="text-sm lg:text-base text-white/45 font-medium max-w-md leading-relaxed">
+                            BYNOMO is live — connect your wallet, fund your house balance, and trade multi-asset charts with oracle-backed prices.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black rounded-full font-black uppercase tracking-widest text-xs sm:text-sm hover:bg-gray-200 transition-colors shadow-[0_20px_50px_-15px_rgba(255,255,255,0.25)]"
+                            aria-label="Scroll to product demo video"
+                        >
+                            Check demo
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
                     </motion.div>
 
                 </div>

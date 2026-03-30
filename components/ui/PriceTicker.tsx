@@ -47,6 +47,10 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 function fmt(price: number, key: string): string {
   if (key === 'JPY')   return price.toFixed(4);
+  // High-priced majors: show extra decimals so sub‑$1 Hermes moves are visible (2dp looked “frozen”).
+  if (['BTC', 'ETH', 'BNB'].includes(key) && price >= 1000) {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  }
   if (price >= 10000)  return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (price >= 1000)   return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (price >= 1)      return price.toFixed(4);

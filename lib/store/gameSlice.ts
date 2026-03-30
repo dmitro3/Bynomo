@@ -515,16 +515,16 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     const now = Date.now();
 
     // VOLATILITY AMPLIFICATION ENGINE
-    // For stable assets (Forex/Stocks), we amplify the real Pyth delta to make them "game-ready"
+    // Increased across all assets so chart motion is more pronounced.
     const getVolatilityMultiplier = (a: AssetType) => {
-      // Forex pairs (Moderate boost for stability)
-      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 8.0;
-      // Stocks (Maintain at 8x)
-      if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 8.0;
-      // Metals (Reduce to 2.5x for smoother movement)
-      if (['GOLD', 'SILVER'].includes(a)) return 2.5;
-      // Crypto (Natural volatility, no boost)
-      return 1.0;
+      // Forex pairs
+      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 12.0;
+      // Stocks
+      if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 12.0;
+      // Metals
+      if (['GOLD', 'SILVER'].includes(a)) return 4.0;
+      // Crypto
+      return 2.0;
     };
 
     const multiplier = getVolatilityMultiplier(currentSelectedAsset);
@@ -534,9 +534,9 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     // Calculate amplified delta
     let amplifiedDelta = rawDelta * multiplier;
 
-    // Add micro-jitter (0.0001% - 0.0003%) to make price "vibrate" even when Pyth is slow
+    // Add stronger micro-jitter so feeds never look visually stuck between oracle updates.
     const jitterSign = Math.random() > 0.5 ? 1 : -1;
-    const jitterAmount = price * (0.00001 + Math.random() * 0.00002) * jitterSign;
+    const jitterAmount = price * (0.000025 + Math.random() * 0.00005) * jitterSign;
     amplifiedDelta += jitterAmount;
 
     // The new price to be used in the game state
