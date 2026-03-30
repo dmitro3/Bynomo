@@ -338,7 +338,7 @@ export default function WaitlistPage() {
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen opacity-50 block lg:hidden" />
             </section>
 
-            <section id="how-it-works" className="relative py-16 sm:py-24 lg:py-32 bg-[#02040a] overflow-hidden">
+            <section id="how-it-works" className="relative py-16 sm:py-24 lg:py-32 bg-[#02040a] overflow-visible">
                 <div className="section-content relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6">
                     <div className="text-center mb-10 sm:mb-14 lg:mb-16 px-1">
                         <div className="text-white/25 font-mono text-[9px] sm:text-[10px] mb-3 sm:mb-4 uppercase tracking-[0.2em] sm:tracking-[0.35em] flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
