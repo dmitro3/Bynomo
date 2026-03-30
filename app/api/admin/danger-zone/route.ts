@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 const FREQUENCY_REVIEW_THRESHOLD = 10;
 
 export async function GET(_request: NextRequest) {
+    const deny = requireAdminAuth(_request);
+    if (deny) return deny;
     try {
         // ── 1. Suspicious win-streak detection ────────────────────────────────
         const { data: allBets, error: betError } = await supabase

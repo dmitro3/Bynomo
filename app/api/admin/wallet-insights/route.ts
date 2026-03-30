@@ -5,6 +5,7 @@ import {
   isDemoWalletAddress,
   walletAddressSearchVariants,
 } from '@/lib/admin/walletAddressVariants';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 const AUDIT_CAP = 15_000;
 const BETS_CAP = 25_000;
@@ -29,6 +30,8 @@ function addTo(map: Record<string, number>, currency: string, n: number) {
 }
 
 export async function GET(request: NextRequest) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   try {
     const { searchParams } = new URL(request.url);
     const raw = searchParams.get('address') || '';

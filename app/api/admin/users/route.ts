@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(request: NextRequest) {
+    const deny = requireAdminAuth(request);
+    if (deny) return deny;
     try {
         // Fetch all user balances
         const { data: balances, error: balanceError } = await supabase

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(_request: NextRequest) {
+    const deny = requireAdminAuth(_request);
+    if (deny) return deny;
     try {
         // All deposit / withdrawal events grouped by (user_address, currency)
         const { data: auditRows, error: auditErr } = await supabase

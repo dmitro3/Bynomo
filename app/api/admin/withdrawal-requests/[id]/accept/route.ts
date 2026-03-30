@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury } from '@/lib/fees/platformFee';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 async function executeTreasuryWithdrawal(
   userAddress: string,
@@ -65,19 +66,9 @@ async function executeTreasuryWithdrawal(
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   try {
-    // Auth check: accept both the x-admin-secret header (API use) and
-    // the browser-session admin password via x-dashboard-auth header.
-    const adminSecret = process.env.ADMIN_API_SECRET;
-    if (adminSecret) {
-      const headerSecret = request.headers.get('x-admin-secret');
-      const dashboardAuth = request.headers.get('x-dashboard-auth');
-      // Allow if either the API secret matches or the dashboard is authenticated
-      if (headerSecret !== adminSecret && dashboardAuth !== 'true') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
-
     const { id: rawId } = await params;
     const id = Number(rawId);
     if (!Number.isFinite(id)) {

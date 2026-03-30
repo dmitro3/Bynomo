@@ -5,6 +5,7 @@ import {
   supabaseService,
 } from '@/lib/supabase/serviceClient';
 import { normalizeWalletForBanKey } from '@/lib/bans/walletBan';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 const isProdDeployment =
   process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
@@ -43,7 +44,9 @@ function missingTableHint() {
   return ' Run supabase/migrations/002_banned_wallets.sql (or full 001_complete_schema.sql) on your Supabase project.';
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   const block = requireServiceRoleInProduction();
   if (block) return block;
   try {
@@ -67,6 +70,8 @@ function isMissingTableMessage(msg: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   const block = requireServiceRoleInProduction();
   if (block) return block;
   try {
@@ -98,6 +103,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   const block = requireServiceRoleInProduction();
   if (block) return block;
   try {

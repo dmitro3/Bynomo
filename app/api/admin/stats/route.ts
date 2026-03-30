@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(request: NextRequest) {
+    const deny = requireAdminAuth(request);
+    if (deny) return deny;
     try {
         // 1. Aggregate bet history by demo vs real.
         // Demo bets are stored with demo wallets (wallet_address starts with 0xdemo / 0xDEMO).

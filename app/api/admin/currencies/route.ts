@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PRICE_FEED_IDS } from '@/lib/utils/priceFeed';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(request: NextRequest) {
+    const deny = requireAdminAuth(request);
+    if (deny) return deny;
     try {
         const cryptoTokens = ['BTC', 'ETH', 'SOL', 'SUI', 'TRX', 'XRP', 'DOGE', 'ADA', 'BCH', 'BNB', 'XLM', 'XTZ', 'NEAR'];
         const stockTokens = ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'];

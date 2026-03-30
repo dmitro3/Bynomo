@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(_request: NextRequest) {
+  const deny = requireAdminAuth(_request);
+  if (deny) return deny;
   try {
     const { data, error } = await supabase
       .from('withdrawal_requests')

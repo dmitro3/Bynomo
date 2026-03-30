@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(request: NextRequest) {
+    const deny = requireAdminAuth(request);
+    if (deny) return deny;
     try {
         // Fetch recent deposits and withdrawals from audit log
         const { data: transactions, error } = await supabase

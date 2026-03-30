@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { WaitlistEntry } from '@/lib/supabase/client';
 import { supabaseService } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function GET(request: NextRequest) {
+    const deny = requireAdminAuth(request);
+    if (deny) return deny;
     try {
         const { data, error } = await supabaseService
             .from('waitlist')

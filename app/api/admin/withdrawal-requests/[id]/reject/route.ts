@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdminAuth(request);
+  if (deny) return deny;
   try {
-    const adminSecret = process.env.ADMIN_API_SECRET;
-    if (adminSecret) {
-      const headerSecret = request.headers.get('x-admin-secret');
-      const dashboardAuth = request.headers.get('x-dashboard-auth');
-      if (headerSecret !== adminSecret && dashboardAuth !== 'true') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
-
     const { id: rawId } = await params;
     const id = Number(rawId);
     if (!Number.isFinite(id)) {
@@ -45,4 +39,3 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: err.message || 'Failed to reject withdrawal request' }, { status: 500 });
   }
 }
-
