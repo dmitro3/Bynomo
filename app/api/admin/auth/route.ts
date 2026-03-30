@@ -1,27 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { issueAdminToken, COOKIE_NAME, ttlSeconds } from '@/lib/admin/adminToken';
 
 /**
  * Admin dashboard authentication.
- * The password is stored exclusively in the DASHBOARD_PASSWORD environment
- * variable on the server. It is never exposed in source code or client bundles.
- * Changing it requires access to the Vercel project's environment variables.
+ *
+ * On success issues a short-lived HMAC-signed session token stored in an
+ * httpOnly, Secure, SameSite=Strict cookie — the password itself is never
+ * sent back to the client or stored in localStorage.
  */
 export async function POST(request: NextRequest) {
-    try {
-        const { password } = await request.json();
+  try {
+    const { password } = await request.json();
 
-        const stored = process.env.DASHBOARD_PASSWORD;
-        if (!stored) {
-            // Env var not configured — deny access to avoid an open backdoor.
-            return NextResponse.json({ ok: false, error: 'Auth not configured on server.' }, { status: 503 });
-        }
-
-        if (password !== stored) {
-            return NextResponse.json({ ok: false }, { status: 401 });
-        }
-
-        return NextResponse.json({ ok: true });
-    } catch {
-        return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
+    const stored = process.env.DASHBOARD_PASSWORD;
+    if (!stored) {
+      return NextResponse.json(
+        { ok: false, error: 'Auth not configured on server.' },
+        { status: 503 },
+      );
     }
+
+    if (!password || password !== stored) {
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+
+    const token = issueAdminToken();
+    const ttl = ttlSeconds();
+
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: ttl,
+      path: '/',
+    });
+    return res;
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
+  }
 }

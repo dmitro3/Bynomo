@@ -1,30 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdminToken, COOKIE_NAME } from './adminToken';
 
 /**
  * Server-side admin authentication guard.
  *
- * The client sends the admin password as the `x-admin-token` header on every
- * request.  We validate it against the `DASHBOARD_PASSWORD` environment
- * variable on the server.  The password is NEVER exposed in client bundles —
- * only read inside this server-side helper.
+ * Validates the httpOnly session cookie set by POST /api/admin/auth.
+ * The cookie is signed and short-lived — the password itself is never
+ * stored on the client.
  *
  * Usage in any route handler:
  *   const deny = requireAdminAuth(request);
  *   if (deny) return deny;
  */
 export function requireAdminAuth(request: NextRequest): NextResponse | null {
-  const password = process.env.DASHBOARD_PASSWORD;
-
-  if (!password) {
-    // Env var not configured — deny all requests to avoid an open backdoor.
+  if (!process.env.DASHBOARD_PASSWORD) {
     return NextResponse.json(
       { error: 'Admin auth not configured on server. Set DASHBOARD_PASSWORD.' },
       { status: 503 },
     );
   }
 
-  const token = request.headers.get('x-admin-token');
-  if (!token || token !== password) {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  if (!verifyAdminToken(token)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

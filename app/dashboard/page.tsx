@@ -195,11 +195,7 @@ export default function AdminDashboard() {
 
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
-
-    // Returns fetch options with the admin auth token header injected
-    const adminHeaders = (): Record<string, string> => ({
-        'x-admin-token': localStorage.getItem('admin_token') ?? '',
-    });
+    const [sessionExpired, setSessionExpired] = useState(false);
     const [gameplayFilter, setGameplayFilter] = useState<'all' | 'real' | 'demo'>('all');
     const [chainFilter, setChainFilter] = useState<string>('ALL');
 
@@ -223,7 +219,7 @@ export default function AdminDashboard() {
         setWalletIntelLoading(true);
         setWalletIntelError(null);
         try {
-            const res = await fetch(`/api/admin/wallet-insights?address=${encodeURIComponent(q)}`, { headers: adminHeaders() });
+            const res = await fetch(`/api/admin/wallet-insights?address=${encodeURIComponent(q)}`, { credentials: 'include' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Lookup failed');
             setWalletIntel(data);
@@ -256,12 +252,19 @@ export default function AdminDashboard() {
         document.body.removeChild(link);
     };
 
+    // On mount, probe the server to see if a valid session cookie already exists
     useEffect(() => {
-        const token = localStorage.getItem('admin_token');
-        if (token) {
-            setIsAuthorized(true);
-            fetchData();
-        }
+        fetch('/api/admin/stats', { credentials: 'include' })
+            .then(r => {
+                if (r.ok) {
+                    setIsAuthorized(true);
+                    fetchData();
+                }
+            })
+            .catch(() => {/* not logged in */});
+        // Clean up old localStorage keys from the previous auth system
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_authorized');
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -271,24 +274,28 @@ export default function AdminDashboard() {
             const res = await fetch('/api/admin/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ password: passwordInput }),
             });
             if (res.ok) {
                 const data = await res.json();
                 if (data.ok) {
                     setIsAuthorized(true);
-                    // Store the actual password so it can be sent as x-admin-token
-                    localStorage.setItem('admin_token', passwordInput);
-                    // Clear legacy key if present
-                    localStorage.removeItem('admin_authorized');
+                    setSessionExpired(false);
                     fetchData();
                     return;
                 }
             }
-            alert('Yanlış şifre!');
+            alert('Wrong password.');
         } catch {
             alert('Auth check failed. Try again.');
         }
+    };
+
+    const handleLogout = async () => {
+        await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+        setIsAuthorized(false);
+        setPasswordInput('');
     };
 
     useEffect(() => {
@@ -301,20 +308,22 @@ export default function AdminDashboard() {
         setLoading(true);
         setWaitlistError(null);
         try {
-            const h = { headers: adminHeaders() };
+            const opts = { credentials: 'include' as const };
             const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes, playerLedgerRes] = await Promise.all([
-                fetch('/api/admin/stats', h),
-                fetch('/api/admin/users', h),
-                fetch('/api/admin/transactions', h),
-                fetch('/api/admin/currencies', h),
-                fetch('/api/admin/game-history', h),
-                fetch('/api/admin/danger-zone', h),
-                fetch('/api/admin/banned-wallets', h),
-                fetch('/api/admin/waitlist', h),
-                fetch('/api/admin/access-codes', h),
-                fetch('/api/admin/withdrawal-requests/pending', h),
-                fetch('/api/admin/player-ledger', h),
+                fetch('/api/admin/stats', opts),
+                fetch('/api/admin/users', opts),
+                fetch('/api/admin/transactions', opts),
+                fetch('/api/admin/currencies', opts),
+                fetch('/api/admin/game-history', opts),
+                fetch('/api/admin/danger-zone', opts),
+                fetch('/api/admin/banned-wallets', opts),
+                fetch('/api/admin/waitlist', opts),
+                fetch('/api/admin/access-codes', opts),
+                fetch('/api/admin/withdrawal-requests/pending', opts),
+                fetch('/api/admin/player-ledger', opts),
             ]);
+            // If any critical fetch returns 401, the session has expired
+            if (statsRes.status === 401) { setIsAuthorized(false); setSessionExpired(true); return; }
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) {
                 const data = await usersRes.json();
@@ -376,7 +385,8 @@ export default function AdminDashboard() {
         try {
             const res = await fetch('/api/admin/access-codes', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ count })
             });
             if (res.ok) {
@@ -393,7 +403,8 @@ export default function AdminDashboard() {
         try {
             const res = await fetch('/api/admin/banned-wallets', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     walletAddress: addr,
                     reason: banReasonInput.trim() || 'Banned by administrator',
@@ -416,7 +427,7 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(
                 `/api/admin/banned-wallets?walletAddress=${encodeURIComponent(walletAddress)}`,
-                { method: 'DELETE', headers: adminHeaders() }
+                { method: 'DELETE', credentials: 'include' }
             );
             if (res.ok) fetchData();
         } catch (e) {
@@ -428,7 +439,8 @@ export default function AdminDashboard() {
         try {
             const res = await fetch('/api/admin/users/status', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ userAddress, status })
             });
             if (res.ok) {
@@ -443,7 +455,8 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/accept`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
@@ -460,7 +473,8 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/reject`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
@@ -489,6 +503,9 @@ export default function AdminDashboard() {
                     <div className="text-center mb-8">
                         <h2 className="text-xl font-black text-white uppercase tracking-tight">Neural Access</h2>
                         <p className="text-xs text-white/30 uppercase tracking-wide font-bold mt-2">Restricted Area</p>
+                        {sessionExpired && (
+                            <p className="mt-3 text-xs text-amber-400/80 font-mono">Session expired — please log in again.</p>
+                        )}
                     </div>
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="relative">
@@ -553,6 +570,12 @@ export default function AdminDashboard() {
                             className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs font-black text-white uppercase tracking-widest transition-all"
                         >
                             {loading ? 'Syncing...' : 'Sync Terminal'}
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="px-6 py-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-full text-xs font-black text-rose-300 uppercase tracking-widest transition-all"
+                        >
+                            Log out
                         </button>
                     </div>
                 </div>
