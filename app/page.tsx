@@ -171,31 +171,31 @@ export default function WaitlistPage() {
                             href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-4 px-14 group"
+                            className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group"
                             aria-hidden={i > 0}
                         >
                     
 
                             {/* Emoji */}
-                            <span className="text-xl">🎉</span>
+                            <span className="text-base sm:text-xl">🎉</span>
 
                             {/* Main message */}
-                            <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                            <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
                                 Bynomo is accepted for{' '}
-                                <span className="font-black text-emerald-400 text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
+                                <span className="font-black text-emerald-400 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
                                     $4M Bagsapp Funding
                                 </span>
                             </span>
 
                             {/* CTA chip */}
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                            <span className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
                                 style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}>
                                 View on Bags.fm
                                 <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
                             </span>
 
                             {/* Separator */}
-                            <span className="text-emerald-900 text-lg mx-6">◆</span>
+                            <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
                         </a>
                     ))}
                 </div>
@@ -270,7 +270,7 @@ export default function WaitlistPage() {
                                             }
                                         }
                                     }}
-                                    className="text-[12vw] lg:text-[10rem] font-black leading-[0.8] tracking-tighter text-white"
+                                    className="text-[14vw] lg:text-[10rem] font-black leading-[0.8] lg:leading-[0.8] tracking-tighter text-white"
                                     style={{ fontFamily: 'var(--font-orbitron)' }}
                                 >
                                     {letter}
@@ -284,13 +284,13 @@ export default function WaitlistPage() {
                         initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
                         animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex flex-col justify-center items-start lg:pl-4 z-10"
+                        className="flex flex-col justify-center items-start lg:pl-4 z-10 -mt-8 lg:mt-0"
                     >
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-                            className="text-3xl lg:text-5xl font-bold text-white mb-8 tracking-tight"
+                            className="text-2xl lg:text-5xl font-bold text-white mb-6 lg:mb-8 tracking-tight"
                         >
                             Predict the next tick.
                         </motion.h2>
@@ -299,7 +299,7 @@ export default function WaitlistPage() {
                             {!isSubmitted ? (
                                 <form onSubmit={handleSubmit} className="w-full">
                                     <div
-                                        className={`relative flex items-center bg-white/5 border border-white/10 rounded-full p-2 transition-all duration-300 ${isHovered || email ? 'bg-white/10 border-white/20' : ''}`}
+                                        className={`relative flex items-center bg-white/5 border border-white/10 rounded-full p-1.5 transition-all duration-300 ${isHovered || email ? 'bg-white/10 border-white/20' : ''}`}
                                         onMouseEnter={() => setIsHovered(true)}
                                         onMouseLeave={() => setIsHovered(false)}
                                     >
@@ -309,12 +309,12 @@ export default function WaitlistPage() {
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
-                                            className="bg-transparent border-none outline-none text-white px-6 py-3 w-full placeholder:text-white/30 font-medium"
+                                            className="bg-transparent border-none outline-none text-white px-4 lg:px-6 py-2.5 lg:py-3 w-full placeholder:text-white/30 font-medium text-sm lg:text-base"
                                         />
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="px-8 py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider text-sm hover:bg-gray-200 transition-colors shrink-0"
+                                            className="px-6 lg:px-8 py-2.5 lg:py-3 bg-white text-black rounded-full font-bold uppercase tracking-wider text-[10px] lg:text-sm hover:bg-gray-200 transition-colors shrink-0"
                                         >
                                             {isSubmitting ? '...' : 'Join'}
                                         </button>
@@ -324,9 +324,9 @@ export default function WaitlistPage() {
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="p-6 rounded-3xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium flex items-center gap-3"
+                                    className="p-4 lg:p-6 rounded-3xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium flex items-center gap-3 text-sm lg:text-base"
                                 >
-                                    <span className="text-xl">✨</span> You're on the list.
+                                    <span className="text-lg lg:text-xl">✨</span> You're on the list.
                                 </motion.div>
                             )}
                         </div>
@@ -385,7 +385,7 @@ export default function WaitlistPage() {
                     <div
                         className="testimonial-track"
                         style={{
-                            transform: `translateX(calc(${(testimonials.length - 1) / 2 * 1000}px - ${activeIdx * 1000}px))`
+                            transform: `translateX(calc(${(testimonials.length - 1) / 2} * var(--testimonial-step) - ${activeIdx} * var(--testimonial-step)))`
                         }}
                     >
                         {testimonials.map((t, i) => (
