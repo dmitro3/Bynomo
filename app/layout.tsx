@@ -89,7 +89,8 @@ export default function RootLayout({
         <PostHogProvider>
           <Providers>
             <Header />
-            <main className="flex-1 relative flex flex-col min-h-0 min-w-0">
+            {/* Body is h-screen overflow-hidden: this must scroll or every page taller than the viewport is clipped. */}
+            <main className="flex-1 relative flex flex-col min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
               {children}
             </main>
           </Providers>
