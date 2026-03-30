@@ -74,9 +74,12 @@ function StepCard({
     const Icon = step.icon;
     return (
         <motion.li
-            initial={{ opacity: 0, y: 22 }}
+            // Never leave items invisible on mobile scroll.
+            // `#how-it-works` uses `overflow-hidden`, and the old `opacity: 0` + negative
+            // viewport margin could prevent IntersectionObserver from firing in time.
+            initial={{ opacity: 1, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-28px' }}
+            viewport={{ once: true, amount: 0.22 }}
             transition={{
                 duration: 0.52,
                 delay: globalIndex * 0.06,

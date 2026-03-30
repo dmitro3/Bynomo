@@ -67,7 +67,10 @@ export const GameBoard: React.FC = () => {
   const { disconnect: disconnectInitia, requestTxBlock: requestInitiaTx } = useInterwovenKit();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
-  const [selectedDuration, setSelectedDuration] = useState<number>(30);
+  // Default box-mode settings (when user lands on /trade):
+  // - Quick Amount: 0.1
+  // - Expiration Time: 5s
+  const [selectedDuration, setSelectedDuration] = useState<number>(5);
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   const [blitzCountdown, setBlitzCountdown] = useState<string>('');

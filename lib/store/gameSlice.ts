@@ -144,7 +144,9 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   isSettling: false,
   lastResult: null,
   error: null,
-  timeframeSeconds: 30, // Default for binomo
+  // Default pacing for box/draw.
+  // This repo's initial `gameMode` is `box`, so the chart grid/green-line speed should start at 5s.
+  timeframeSeconds: 5,
   activeTab: 'bet',
   activeIndicators: {},
   isIndicatorsOpen: false,
