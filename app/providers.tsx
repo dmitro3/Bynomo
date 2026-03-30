@@ -29,6 +29,7 @@ import interwovenKitStyles from '@initia/interwovenkit-react/styles.js';
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
 import type { AssetType } from '@/lib/utils/priceFeed';
+import { useSessionTracker } from '@/hooks/useSessionTracker';
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -74,6 +75,9 @@ function WalletSync() {
     fetchProfile,
     preferredNetwork
   } = useOverflowStore();
+
+  // Track session dwell time for this wallet
+  useSessionTracker(address, storeNetwork);
 
   // Sync Push Chain PC balance directly into the store whenever wagmi reports it
   useEffect(() => {

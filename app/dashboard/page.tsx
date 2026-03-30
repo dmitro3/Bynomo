@@ -672,6 +672,64 @@ export default function AdminDashboard() {
                                                     )}
                                                 </div>
 
+                                                {/* Time on platform */}
+                                                {walletIntel.timeOnPlatform && (
+                                                    <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-6 space-y-4">
+                                                        <p className="text-xs font-black uppercase tracking-widest text-violet-300/60">Time on platform</p>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                                            <div>
+                                                                <p className="text-xs uppercase text-white/35">Total dwell time</p>
+                                                                <p className="font-mono text-2xl text-violet-300 font-black">
+                                                                    {walletIntel.timeOnPlatform.formatted || '0s'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs uppercase text-white/35">Sessions</p>
+                                                                <p className="font-mono text-2xl text-white">
+                                                                    {walletIntel.timeOnPlatform.totalSessions}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs uppercase text-white/35">First seen</p>
+                                                                <p className="font-mono text-xs text-white/70 mt-1">
+                                                                    {walletIntel.timeOnPlatform.firstSeen
+                                                                        ? new Date(walletIntel.timeOnPlatform.firstSeen).toLocaleString()
+                                                                        : '—'}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs uppercase text-white/35">Last seen</p>
+                                                                <p className="font-mono text-xs text-white/70 mt-1">
+                                                                    {walletIntel.timeOnPlatform.lastSeen
+                                                                        ? new Date(walletIntel.timeOnPlatform.lastSeen).toLocaleString()
+                                                                        : '—'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        {walletIntel.timeOnPlatform.recentSessions?.length > 0 && (
+                                                            <details className="mt-2">
+                                                                <summary className="text-xs text-white/40 uppercase cursor-pointer hover:text-white/60 transition-colors">
+                                                                    Session history ({walletIntel.timeOnPlatform.recentSessions.length} shown)
+                                                                </summary>
+                                                                <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
+                                                                    {walletIntel.timeOnPlatform.recentSessions.map((s: any) => (
+                                                                        <div key={s.id} className="flex flex-wrap gap-2 text-xs font-mono border-b border-white/5 pb-1 text-white/50">
+                                                                            <span className="text-violet-300/70">{s.network}</span>
+                                                                            <span>{new Date(s.started_at).toLocaleString()}</span>
+                                                                            <span className="text-white/30">→</span>
+                                                                            <span>{s.ended_at ? new Date(s.ended_at).toLocaleString() : <span className="text-emerald-400">active</span>}</span>
+                                                                            <span className="ml-auto text-violet-200/60">{s.durationSeconds}s</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </details>
+                                                        )}
+                                                        {walletIntel.timeOnPlatform.totalSessions === 0 && (
+                                                            <p className="text-xs text-white/25">No session data yet. Sessions are recorded once the user connects their wallet.</p>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                                     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
                                                         <p className="text-xs font-black uppercase tracking-widest text-white/40">House balances (per currency)</p>

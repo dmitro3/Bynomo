@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       wdRes,
       profileRes,
       refRes,
+      sessRes,
     ] = await Promise.all([
       supabaseService.from('user_balances').select('*').in('user_address', variants),
       supabaseService
@@ -86,6 +87,12 @@ export async function GET(request: NextRequest) {
         .in('user_address', variants)
         .limit(1),
       supabaseService.from('user_referrals').select('*').in('user_address', variants).limit(1),
+      supabaseService
+        .from('user_sessions')
+        .select('id, network, started_at, last_ping_at, ended_at')
+        .in('wallet_address', variants)
+        .order('started_at', { ascending: false })
+        .limit(200),
     ]);
 
     if (balRes.error) throw balRes.error;
@@ -94,6 +101,41 @@ export async function GET(request: NextRequest) {
     if (wdRes.error) throw wdRes.error;
     if (profileRes.error) throw profileRes.error;
     if (refRes.error) throw refRes.error;
+    // Sessions table may not exist yet — treat as empty rather than throwing
+    const sessionRows = sessRes.error ? [] : (sessRes.data ?? []);
+
+    // Compute dwell-time stats
+    const now = Date.now();
+    let totalSeconds = 0;
+    for (const s of sessionRows) {
+      const end = s.ended_at ? new Date(s.ended_at).getTime() : Math.min(new Date(s.last_ping_at).getTime() + 90_000, now);
+      const start = new Date(s.started_at).getTime();
+      totalSeconds += Math.max(0, Math.floor((end - start) / 1000));
+    }
+    const lastSeen = sessionRows.length > 0 ? sessionRows[0].last_ping_at : null;
+    const firstSeen = sessionRows.length > 0 ? sessionRows[sessionRows.length - 1].started_at : null;
+    function fmtDuration(s: number) {
+      if (s <= 0) return '0s';
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return [h > 0 ? `${h}h` : '', m > 0 ? `${m}m` : '', `${sec}s`].filter(Boolean).join(' ');
+    }
+    const timeOnPlatform = {
+      totalSessions: sessionRows.length,
+      totalSeconds,
+      formatted: fmtDuration(totalSeconds),
+      lastSeen,
+      firstSeen,
+      recentSessions: sessionRows.slice(0, 20).map(s => ({
+        id: s.id,
+        network: s.network,
+        started_at: s.started_at,
+        last_ping_at: s.last_ping_at,
+        ended_at: s.ended_at ?? null,
+        durationSeconds: Math.max(0, Math.floor(((s.ended_at ? new Date(s.ended_at).getTime() : Math.min(new Date(s.last_ping_at).getTime() + 90_000, now)) - new Date(s.started_at).getTime()) / 1000)),
+      })),
+    };
 
     const rawBalances = balRes.data ?? [];
     const mergedBal = new Map<string, (typeof rawBalances)[0]>();
@@ -269,6 +311,7 @@ export async function GET(request: NextRequest) {
       recentAudit: auditRows.slice(0, 80),
       recentBets: betRows.slice(0, 80),
       withdrawalHistory: wdRows,
+      timeOnPlatform,
     });
   } catch (e: unknown) {
     const msg = messageFromUnknown(e);
