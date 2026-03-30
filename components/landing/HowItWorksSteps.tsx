@@ -194,7 +194,7 @@ function RowFlowDivider() {
 
 export default function HowItWorksSteps() {
     return (
-        <section className="relative w-full py-0">
+        <div className="relative w-full py-0">
             <div className="flex flex-col gap-0">
                 {ROWS.map((row, rowIndex) => (
                     <React.Fragment key={row.map((s) => s.id).join('-')}>
@@ -211,6 +211,6 @@ export default function HowItWorksSteps() {
                     </React.Fragment>
                 ))}
             </div>
-        </section>
+        </div>
     );
 }
