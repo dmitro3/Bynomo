@@ -3,20 +3,24 @@ import { supabaseService } from '@/lib/supabase/serviceClient';
 
 // Auto-create the table if it doesn't exist yet (idempotent)
 async function ensureTable() {
-  await supabaseService.rpc('exec_sql' as any, {
-    sql: `
-      create table if not exists public.user_sessions (
-        id               uuid primary key default gen_random_uuid(),
-        wallet_address   text not null,
-        network          text not null default 'BNB',
-        started_at       timestamptz not null default now(),
-        last_ping_at     timestamptz not null default now(),
-        ended_at         timestamptz
-      );
-      create index if not exists idx_user_sessions_wallet  on public.user_sessions (wallet_address);
-      create index if not exists idx_user_sessions_started on public.user_sessions (started_at desc);
-    `,
-  }).catch(() => {/* RPC may not exist — table creation handled below */});
+  try {
+    await supabaseService.rpc('exec_sql' as any, {
+      sql: `
+        create table if not exists public.user_sessions (
+          id               uuid primary key default gen_random_uuid(),
+          wallet_address   text not null,
+          network          text not null default 'BNB',
+          started_at       timestamptz not null default now(),
+          last_ping_at     timestamptz not null default now(),
+          ended_at         timestamptz
+        );
+        create index if not exists idx_user_sessions_wallet  on public.user_sessions (wallet_address);
+        create index if not exists idx_user_sessions_started on public.user_sessions (started_at desc);
+      `,
+    });
+  } catch {
+    // RPC may not exist — table creation handled by manual migration
+  }
 }
 
 // Session timeout: if no ping for 90s, that session is considered ended
