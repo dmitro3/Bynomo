@@ -7,10 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 type LeaderboardRow = {
-  wallet_address: string;
+  wallet_address: string; // always truncated before sending to client
   total_bets: number;
   wins: number;
   losses: number;
@@ -21,6 +21,12 @@ type LeaderboardRow = {
   primary_network: string;
   username?: string | null;
 };
+
+/** Truncate wallet address so it cannot be used to query other APIs */
+function truncateAddress(addr: string): string {
+  if (!addr || addr.length < 12) return addr;
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
 
 // Simple in-memory cache to shield Supabase from repeated leaderboard hits.
 // This lives per lambda/edge instance but dramatically reduces load in practice.
@@ -137,6 +143,7 @@ async function fetchLeaderboardFromSupabase(
 
   return leaderboard.map((l) => ({
     ...l,
+    wallet_address: truncateAddress(l.wallet_address),
     username: usernameMap[l.wallet_address] || null,
   }));
 }

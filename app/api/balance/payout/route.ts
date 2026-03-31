@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 

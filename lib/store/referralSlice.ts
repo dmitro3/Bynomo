@@ -1,5 +1,4 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '../supabase/client';
 
 export interface ReferralState {
     referralCode: string | null;
@@ -30,19 +29,13 @@ export const createReferralSlice: StateCreator<ReferralState> = (set, get) => ({
 
     fetchReferralInfo: async (address: string) => {
         try {
-            const { data, error } = await supabase
-                .from('user_referrals')
-                .select('*')
-                .eq('user_address', address)
-                .single();
-
-            if (data) {
-                set({
-                    referralCode: data.referral_code,
-                    referralCount: data.referral_count
-                });
+            const res = await fetch(`/api/referral?address=${encodeURIComponent(address)}`);
+            if (!res.ok) return;
+            const { referral } = await res.json();
+            if (referral) {
+                set({ referralCode: referral.referral_code, referralCount: referral.referral_count });
             } else {
-                // If no referral info, create one
+                // No record yet — create one server-side
                 await (get() as any).createReferralCode(address);
             }
         } catch (error) {
@@ -51,80 +44,34 @@ export const createReferralSlice: StateCreator<ReferralState> = (set, get) => ({
     },
 
     createReferralCode: async (address: string) => {
-        // Check if code already exists to avoid duplicate work
-        const { data: existing } = await supabase
-            .from('user_referrals')
-            .select('referral_code, referral_count')
-            .eq('user_address', address)
-            .single();
-
-        if (existing) {
-            set({ referralCode: existing.referral_code, referralCount: existing.referral_count });
-            return existing.referral_code;
-        }
-
-        const shortAddr = address.slice(-4).toUpperCase();
-        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const code = `bynomo-${shortAddr}${randomStr}`;
-
-        const referredByCode = get().referredBy;
-        let referredByAddress = null;
-
-        if (referredByCode) {
-            const { data: refUser } = await supabase
-                .from('user_referrals')
-                .select('user_address')
-                .eq('referral_code', referredByCode)
-                .single();
-
-            if (refUser && refUser.user_address !== address) {
-                referredByAddress = refUser.user_address;
-            }
-        }
-
-        const { data, error } = await supabase
-            .from('user_referrals')
-            .insert({
-                user_address: address,
-                referral_code: code,
-                referred_by: referredByAddress,
-                referral_count: 0
-            })
-            .select()
-            .single();
-
-        if (data) {
-            set({
-                referralCode: data.referral_code,
-                referralCount: data.referral_count
+        try {
+            const referredByCode = get().referredBy;
+            const res = await fetch('/api/referral', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address, referredByCode: referredByCode ?? undefined }),
             });
-
-            // Increment referrer's count if applicable
-            if (referredByAddress) {
-                await supabase.rpc('increment_referral_count', { referrer_address: referredByAddress });
-            }
-
-            return data.referral_code;
+            if (!res.ok) return '';
+            const data = await res.json();
+            set({ referralCode: data.referral_code, referralCount: data.referral_count ?? 0 });
+            return data.referral_code ?? '';
+        } catch (error) {
+            console.error('Error creating referral code:', error);
+            return '';
         }
-        return code;
     },
 
     fetchReferralLeaderboard: async () => {
         set({ isLoadingReferrals: true });
         try {
-            const { data, error } = await supabase
-                .from('user_referrals')
-                .select('user_address, referral_count')
-                .order('referral_count', { ascending: false })
-                .limit(20);
-
-            if (data) {
-                set({ referralLeaderboard: data });
-            }
+            const res = await fetch('/api/referral?leaderboard=1');
+            if (!res.ok) return;
+            const { leaderboard } = await res.json();
+            if (leaderboard) set({ referralLeaderboard: leaderboard });
         } catch (error) {
-            console.error('Error fetching leaderboard:', error);
+            console.error('Error fetching referral leaderboard:', error);
         } finally {
             set({ isLoadingReferrals: false });
         }
-    }
+    },
 });
