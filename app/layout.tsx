@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Orbitron } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { PostHogProvider } from "@/lib/posthog/PostHogProvider";
@@ -27,7 +26,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://bynomo.fun'),
   title: "Bynomo - Trade over 300+ Crypto, Stocks, Metals and Forex with 5s-1m time-charts",
   description:
-    "The first on-chain binary options trading dapp. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust.",
+    "The first on-chain binary options trading dapp. Powered by oracle-backed price attestations and minimal-trust settlement.",
   keywords: [
     "binary options",
     "crypto trading",
@@ -49,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Bynomo — Trade over 300+ Crypto, Stocks, Metals and Forex with 5s-1m time-charts",
     description:
-      "The first on-chain binary options trading dapp. Powered by Pyth Hermes price attestations, Supabase, and x402-style payments. Oracle-bound resolution, minimal trust",
+      "The first on-chain binary options trading dapp with oracle-backed price attestations and minimal-trust settlement.",
     images: [{ url: '/overflowlogo.png', width: 512, height: 512, alt: 'Bynomo' }],
   },
   twitter: {
@@ -69,20 +68,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-JHPW0PY2QX"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-JHPW0PY2QX');
-          `}
-        </Script>
-      </head>
+      <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-[#02040a] text-white h-screen overflow-hidden flex flex-col`}
       >
