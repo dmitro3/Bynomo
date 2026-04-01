@@ -119,37 +119,49 @@ export default function WaitlistPage() {
                 {/* Scrolling track */}
                 <div className="announcement-track flex items-center whitespace-nowrap">
                     {[0, 1, 2, 3].map(i => (
-                        <a
-                            key={i}
-                            href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group"
-                            aria-hidden={i > 0}
-                        >
-                    
-
-                            {/* Emoji */}
-                            <span className="text-base sm:text-xl">🎉</span>
-
-                            {/* Main message */}
-                            <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
-                                Bynomo is accepted for{' '}
-                                <span className="font-black text-emerald-400 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
-                                    $4M Bagsapp Funding
+                        <React.Fragment key={i}>
+                            <a
+                                href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group"
+                                aria-hidden={i > 0}
+                            >
+                                <span className="text-base sm:text-xl">🎉</span>
+                                <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                                    Bynomo is accepted for{' '}
+                                    <span className="font-black text-emerald-400 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
+                                        $4M Bagsapp Funding
+                                    </span>
                                 </span>
-                            </span>
+                                <span
+                                    className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                                    style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}
+                                >
+                                    View on Bags.fm
+                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
+                                </span>
+                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
+                            </a>
 
-                            {/* CTA chip */}
-                            <span className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
-                                style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}>
-                                View on Bags.fm
-                                <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
-                            </span>
-
-                            {/* Separator */}
-                            <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
-                        </a>
+                            <a href="/litepaper" className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group" aria-hidden={i > 0}>
+                                <span className="text-base sm:text-xl">📘</span>
+                                <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                                    Bynomo Litepaper is now{' '}
+                                    <span className="font-black text-emerald-300 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.35)' }}>
+                                        LIVE
+                                    </span>
+                                </span>
+                                <span
+                                    className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                                    style={{ background: 'linear-gradient(135deg, #6ee7b7, #34d399)' }}
+                                >
+                                    Open Litepaper
+                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
+                                </span>
+                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
+                            </a>
+                        </React.Fragment>
                     ))}
                 </div>
             </div>
@@ -239,6 +251,16 @@ export default function WaitlistPage() {
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                         className="flex flex-col justify-center items-start lg:pl-4 z-10 -mt-8 lg:mt-0 gap-6 lg:gap-8"
                     >
+                        <Link
+                            href="/litepaper"
+                            className="group inline-flex items-center gap-2 rounded-full border border-emerald-300/40 bg-emerald-400/15 px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] text-emerald-100 shadow-[0_0_35px_-12px_rgba(52,211,153,0.75)] hover:bg-emerald-400/25 transition-colors"
+                            aria-label="Open Bynomo litepaper"
+                        >
+                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                            Bynomo Litepaper is now LIVE
+                            <span className="group-hover:translate-x-0.5 transition-transform">↗</span>
+                        </Link>
+
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -409,6 +431,7 @@ export default function WaitlistPage() {
                     <div className="footer-link-group">
                         <a href="https://x.com/bynomofun" target="_blank" rel="noopener noreferrer" className="footer-meta-item">X / Twitter</a>
                         <a href="https://linktr.ee/bynomo.fun" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Linktree</a>
+                        <a href="https://github.com/AmaanSayyad/Bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">GitHub</a>
                         <a href="https://t.me/bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Telegram</a>
                         <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Discord</a>
                         <a href="https://bags.fm/Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Bags</a>

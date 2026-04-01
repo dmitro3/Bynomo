@@ -257,9 +257,9 @@ export default function AdminDashboard() {
         fetch('/api/admin/stats', { credentials: 'include' })
             .then(r => {
                 if (r.ok) {
-                    setIsAuthorized(true);
-                    fetchData();
-                }
+            setIsAuthorized(true);
+            fetchData();
+        }
             })
             .catch(() => {/* not logged in */});
         // Clean up old localStorage keys from the previous auth system
@@ -280,9 +280,9 @@ export default function AdminDashboard() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.ok) {
-                    setIsAuthorized(true);
+            setIsAuthorized(true);
                     setSessionExpired(false);
-                    fetchData();
+            fetchData();
                     return;
                 }
             }

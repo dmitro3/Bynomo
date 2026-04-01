@@ -78,6 +78,24 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
+                {pathname === '/' && (
+                    <div className="hidden xl:flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-white/55">
+                        <Link href="/litepaper" className="hover:text-white transition-colors">Litepaper</Link>
+                        <a href="https://linktr.ee/bynomo.fun" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Linktree</a>
+                        <a href="https://x.com/bynomofun" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">X</a>
+                        <a href="https://t.me/bynomo" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a>
+                        <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</a>
+                        <a
+                            href="https://bags.fm/Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-white transition-colors"
+                        >
+                            Bags
+                        </a>
+                    </div>
+                )}
+
                 {pathname !== '/' && accessCode !== null && (
                     <button
                         onClick={activateDemoMode}
