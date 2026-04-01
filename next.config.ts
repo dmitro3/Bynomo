@@ -21,7 +21,8 @@ const nextConfig: NextConfig = {
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https: wss:",
-      "frame-src 'none'",
+      // Allow only known embed providers used by the app.
+      "frame-src https://www.youtube.com https://youtube.com https://dexscreener.com",
       "upgrade-insecure-requests",
     ].join("; ");
 
