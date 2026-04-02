@@ -22,6 +22,9 @@ interface ModeStats {
     platformPnLByNetwork?: Record<string, NetworkPnLRow>;
     totalUsers: number;
     totalReferrals: number;
+    /** Mean session length from `user_sessions` (ping tracker); seconds. */
+    averageSessionSeconds?: number;
+    sessionSampleCount?: number;
 }
 
 interface Stats {
@@ -92,6 +95,18 @@ interface BannedWalletRow {
 function fmtPnL(n: number | undefined | null) {
     if (n === undefined || n === null || !Number.isFinite(n)) return '0';
     return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+/** Human-readable mean session length for terminal stats. */
+function fmtAvgSession(seconds: number | undefined, sampleCount: number | undefined): string {
+    if (!sampleCount || seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return '—';
+    const s = Math.round(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${r}s`;
+    return `${r}s`;
 }
 
 /** Native token ticker for bet_history.network — not USD. */
@@ -599,7 +614,12 @@ export default function AdminDashboard() {
                         <StatBox title="Total Referrals" value={(stats?.real?.totalReferrals ?? 0).toString()} label="Network Growth" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                        <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                        <StatBox
+                            title="Avg. time spent"
+                            value={fmtAvgSession(stats?.real?.averageSessionSeconds, stats?.real?.sessionSampleCount)}
+                            label={`Mean dwell per session · ${(stats?.real?.sessionSampleCount ?? 0).toLocaleString()} sessions · 30s pings + 90s idle tail`}
+                        />
                     </div>
 
                     <div className="pt-4 text-xs font-black uppercase tracking-wider text-white/30">Demo Mode Stats</div>
@@ -620,6 +640,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <StatBox title="Market Assets" value={marketTokens.length.toString()} label="Active Price Feeds" />
+                        <StatBox
+                            title="Avg. time spent"
+                            value={fmtAvgSession(stats?.demo?.averageSessionSeconds, stats?.demo?.sessionSampleCount)}
+                            label={`Mean dwell per session · ${(stats?.demo?.sessionSampleCount ?? 0).toLocaleString()} sessions · demo wallets only`}
+                        />
                     </div>
                 </div>
 

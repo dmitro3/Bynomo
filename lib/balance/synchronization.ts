@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '../supabase/client';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 
 /**
  * Result of a synchronization check
@@ -129,11 +130,13 @@ export async function reconcileUserBalance(
   const timestamp = new Date();
   
   try {
+    const variants = walletAddressSearchVariants(userAddress);
     // Query user's current balance from Supabase
     const { data: userData, error: queryError } = await supabase
       .from('user_balances')
       .select('balance')
-      .eq('user_address', userAddress)
+      .in('user_address', variants)
+      .limit(1)
       .single();
 
     if (queryError) {

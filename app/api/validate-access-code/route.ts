@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,6 +12,8 @@ export async function POST(request: NextRequest) {
         if (!walletAddress) {
             return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
         }
+
+        const walletKey = canonicalHouseUserAddress(walletAddress);
 
         // 1. Check if the code is valid and unused
         const { data: accessCode, error: fetchError } = await supabase
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
             .update({
                 is_used: true,
                 used_at: new Date().toISOString(),
-                wallet_address: walletAddress
+                wallet_address: walletKey
             })
             .eq('code', accessCode.code);
 
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
         const { error: profileError } = await supabase
             .from('user_profiles')
             .upsert({
-                user_address: walletAddress,
+                user_address: walletKey,
                 access_code: accessCode.code,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_address' });

@@ -10,9 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { ethers } from 'ethers';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { ethers } from 'ethers';
 
 export async function GET(
   request: NextRequest,
@@ -68,26 +70,16 @@ export async function GET(
       );
     }
 
-    // Query user_balances table (exclude user_tier initially to check if it exists or just handle error)
-    const { data, error } = await supabase
+    const variants = walletAddressSearchVariants(address);
+
+    // Sum balances across legacy duplicate rows (e.g. mixed EVM casing)
+    const { data: balRows, error } = await supabase
       .from('user_balances')
-      .select('balance, updated_at')
-      .eq('user_address', address)
-      .eq('currency', currency)
-      .single();
+      .select('balance, updated_at, user_address')
+      .in('user_address', variants)
+      .eq('currency', currency);
 
-    // Handle database errors
     if (error) {
-      if (error.code === 'PGRST116') {
-        const globallyBanned = await isWalletGloballyBanned(address);
-        return NextResponse.json({
-          balance: 0,
-          updatedAt: null,
-          tier: 'free',
-          globallyBanned,
-        });
-      }
-
       console.error('Database error fetching balance:', error);
       return NextResponse.json(
         { error: 'Service temporarily unavailable. Please try again.' },
@@ -95,30 +87,46 @@ export async function GET(
       );
     }
 
-    // Try to fetch user_tier separately to avoid crashing if column doesn't exist
+    if (!balRows?.length) {
+      const globallyBanned = await isWalletGloballyBanned(address);
+      return NextResponse.json({
+        balance: 0,
+        updatedAt: null,
+        tier: 'free',
+        globallyBanned,
+      });
+    }
+
+    const totalBalance = balRows.reduce((s, r) => s + parseFloat(String(r.balance)), 0);
+    const latestRow = balRows.reduce((best, r) =>
+      !best || new Date(r.updated_at) > new Date(best.updated_at) ? r : best,
+    balRows[0]);
+
+    const userKey = canonicalHouseUserAddress(address);
+    const tierSource =
+      balRows.find(r => r.user_address === userKey) ?? latestRow;
+
     let userTier = 'free';
     try {
       const { data: tierData } = await supabase
         .from('user_balances')
         .select('user_tier')
-        .eq('user_address', address)
+        .eq('user_address', tierSource.user_address)
         .eq('currency', currency)
         .single();
 
-      if (tierData && tierData.user_tier) {
-        userTier = tierData.user_tier;
+      if (tierData && (tierData as { user_tier?: string }).user_tier) {
+        userTier = String((tierData as { user_tier?: string }).user_tier);
       }
     } catch (e) {
-      // Ignore error if column doesn't exist
       console.warn('Could not fetch user_tier, defaulting to free:', e);
     }
 
     const globallyBanned = await isWalletGloballyBanned(address);
 
-    // Return balance and updated_at timestamp
     return NextResponse.json({
-      balance: parseFloat(data.balance),
-      updatedAt: data.updated_at,
+      balance: totalBalance,
+      updatedAt: latestRow.updated_at,
       tier: userTier,
       globallyBanned,
     });

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 interface PayoutRequest {
   userAddress: string;
@@ -59,13 +60,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userKey = canonicalHouseUserAddress(userAddress);
+
     // Call credit_balance_for_payout stored procedure
     // This procedure handles:
     // - Atomic balance update with row-level locking
     // - Creating user record if it doesn't exist
     // - Inserting audit log entry with operation_type='bet_won'
     const { data, error } = await supabase.rpc('credit_balance_for_payout', {
-      p_user_address: userAddress,
+      p_user_address: userKey,
       p_payout_amount: payoutAmount,
       p_currency: currency,
       p_bet_id: betId,

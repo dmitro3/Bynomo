@@ -6,12 +6,11 @@
  */
 
 import { supabaseService } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 /** Normalize for storage/lookup: EVM hex lowercased, other chains unchanged (e.g. Solana base58). */
 export function normalizeWalletForBanKey(address: string): string {
-  const t = address.trim();
-  if (t.startsWith('0x')) return t.toLowerCase();
-  return t;
+  return canonicalHouseUserAddress(address);
 }
 
 /** Emergency list without DB migration — comma-separated in BANNED_WALLET_ADDRESSES */

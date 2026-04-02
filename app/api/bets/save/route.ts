@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 export async function POST(request: NextRequest) {
     try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
             .from('bet_history')
             .upsert({
                 id,
-                wallet_address: walletAddress.toLowerCase(),
+                wallet_address: canonicalHouseUserAddress(walletAddress),
                 asset: asset || 'BNB',
                 direction: direction || 'UP',
                 amount: parseFloat(amount) || 0,

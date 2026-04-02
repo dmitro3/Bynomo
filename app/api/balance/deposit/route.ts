@@ -18,6 +18,7 @@ import { getSomniaConfig } from '@/lib/somnia/config';
 import { getZGConfig } from '@/lib/zg/config';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 interface DepositRequest {
   userAddress: string;
@@ -221,9 +222,11 @@ export async function POST(request: NextRequest) {
     }
     const combinedTxHash = feeTxHash ? `${txHash}|feeTx:${feeTxHash}` : txHash;
 
+    const userKey = canonicalHouseUserAddress(userAddress);
+
     // Call update_balance_for_deposit stored procedure
     const { data, error } = await supabase.rpc('update_balance_for_deposit', {
-      p_user_address: userAddress,
+      p_user_address: userKey,
       p_deposit_amount: netDepositAmount,
       p_currency: normalizedCurrency,
       p_transaction_hash: combinedTxHash,

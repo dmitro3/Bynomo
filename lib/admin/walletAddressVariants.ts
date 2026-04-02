@@ -2,12 +2,14 @@
  * Build possible DB variants for a wallet string (EVM case, legacy lowercased non-EVM).
  */
 
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+
 export function walletAddressSearchVariants(raw: string): string[] {
   const t = raw.trim();
   if (!t) return [];
-  const s = new Set<string>([t]);
+  const canonical = canonicalHouseUserAddress(t);
+  const s = new Set<string>([t, canonical]);
   if (t.startsWith('0x')) {
-    s.add(t.toLowerCase());
     return [...s];
   }
   // Non-EVM: keep original; some code paths may have lowercased incorrectly

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { isDemoBetHistoryRow, walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 const FREQUENCY_REVIEW_THRESHOLD = 10;
 
@@ -69,12 +70,12 @@ export async function GET(_request: NextRequest) {
             currencies: Set<string>;
         };
         const wdMap: Record<string, WdStats> = {};
-        const norm = (a: string) => (a || '').toLowerCase();
+        const norm = (a: string) => canonicalHouseUserAddress(a || '');
 
         (auditWithdrawals ?? []).forEach((r: any) => {
             const k = norm(r.user_address);
             if (!wdMap[k]) wdMap[k] = {
-                user_address: r.user_address,
+                user_address: k,
                 completed_count: 0, pending_count: 0, total_count: 0,
                 total_withdrawn: 0, pending_amount: 0,
                 pending_requests: [], currencies: new Set(),
@@ -87,7 +88,7 @@ export async function GET(_request: NextRequest) {
         (pendingWithdrawals ?? []).forEach((r: any) => {
             const k = norm(r.user_address);
             if (!wdMap[k]) wdMap[k] = {
-                user_address: r.user_address,
+                user_address: k,
                 completed_count: 0, pending_count: 0, total_count: 0,
                 total_withdrawn: 0, pending_amount: 0,
                 pending_requests: [], currencies: new Set(),
@@ -104,17 +105,18 @@ export async function GET(_request: NextRequest) {
             stats.total_count = stats.completed_count + stats.pending_count;
             if (stats.total_count < FREQUENCY_REVIEW_THRESHOLD) continue;
 
-            // Enrich with deposit/balance/P&L data
+            // Enrich with deposit/balance/P&L data (include legacy EVM casing variants)
+            const addrVariants = walletAddressSearchVariants(stats.user_address);
             const { data: auditDeposits } = await supabase
                 .from('balance_audit_log')
                 .select('amount, currency')
                 .eq('operation_type', 'deposit')
-                .ilike('user_address', stats.user_address);
+                .in('user_address', addrVariants);
 
             const { data: balances } = await supabase
                 .from('user_balances')
                 .select('currency, balance')
-                .ilike('user_address', stats.user_address);
+                .in('user_address', addrVariants);
 
             const totalDeposited = (auditDeposits ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
             const totalAvailableBalance = (balances ?? []).reduce((s: number, r: any) => s + Number(r.balance), 0);

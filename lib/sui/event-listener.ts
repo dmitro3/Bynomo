@@ -11,6 +11,7 @@ import { getSuiConfig } from './config';
 import { supabase } from '../supabase/client';
 import type { SuiEvent } from '@mysten/sui/client';
 import { logEventError, logSupabaseError, logInfo } from '@/lib/logging/error-logger';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 // Event data interfaces matching the Move contract structs
 interface DepositEventData {
@@ -265,11 +266,12 @@ async function updateUserBalance(
   transactionHash: string
 ): Promise<void> {
   try {
+    const addrKey = canonicalHouseUserAddress(address);
     // Get current balance
     const { data: currentBalanceData, error: fetchError } = await supabase
       .from('user_balances')
       .select('balance')
-      .eq('user_address', address)
+      .eq('user_address', addrKey)
       .single();
 
     let balanceBefore = 0;
@@ -284,14 +286,14 @@ async function updateUserBalance(
 
     // Ensure balance doesn't go negative
     if (balanceAfter < 0) {
-      throw new Error(`Balance would go negative for ${address}: ${balanceAfter}`);
+      throw new Error(`Balance would go negative for ${addrKey}: ${balanceAfter}`);
     }
 
     // Update or insert balance
     const { error: upsertError } = await supabase
       .from('user_balances')
       .upsert({
-        user_address: address,
+        user_address: addrKey,
         balance: balanceAfter,
         updated_at: new Date().toISOString(),
       }, {
@@ -306,7 +308,7 @@ async function updateUserBalance(
     const { error: auditError } = await supabase
       .from('balance_audit_log')
       .insert({
-        user_address: address,
+        user_address: addrKey,
         operation_type: operation,
         amount: amount,
         balance_before: balanceBefore,
@@ -320,7 +322,7 @@ async function updateUserBalance(
     }
 
     console.log(
-      `Balance updated for ${address}: ${balanceBefore} -> ${balanceAfter} (${operation} ${amount})`
+      `Balance updated for ${addrKey}: ${balanceBefore} -> ${balanceAfter} (${operation} ${amount})`
     );
   } catch (error) {
     console.error('Failed to update user balance:', error);

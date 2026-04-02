@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 export async function GET(request: NextRequest) {
     try {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
         const { data, error } = await supabase
             .from('bet_history')
             .select('*')
-            .eq('wallet_address', wallet.toLowerCase())
+            .eq('wallet_address', canonicalHouseUserAddress(wallet))
             .order('resolved_at', { ascending: false })
             .limit(limit);
 

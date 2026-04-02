@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { ethers } from 'ethers';
-import { calculateFeeAmount, collectPlatformFeeFromTreasury } from '@/lib/fees/platformFee';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
+import { calculateFeeAmount, collectPlatformFeeFromTreasury } from '@/lib/fees/platformFee';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { ethers } from 'ethers';
 
 async function executeTreasuryWithdrawal(
   userAddress: string,
@@ -111,36 +113,41 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         normalizedCurrency;
       const expectedMessage = `BYNOMO withdrawal authorization\naddress:${userAddress}\namount:${amount.toFixed(8)}\ncurrency:${displayCurrency}\nsignedAt:${signedAt}`;
       const recovered = ethers.verifyMessage(expectedMessage, String(req.signature));
-      if (recovered.toLowerCase() !== userAddress.toLowerCase()) {
+      if (canonicalHouseUserAddress(recovered) !== canonicalHouseUserAddress(userAddress)) {
         return NextResponse.json({ error: 'Invalid withdrawal signature' }, { status: 401 });
       }
     }
 
-    // Validate user balance + status
-    const { data: userData, error: userError } = await supabase
-      .from('user_balances')
-      .select('balance, status')
-      .eq('user_address', userAddress)
-      .eq('currency', currency)
-      .single();
+    const addrVariants = walletAddressSearchVariants(userAddress);
 
-    if (userError || !userData) {
+    const { data: balRows, error: userError } = await supabase
+      .from('user_balances')
+      .select('balance, status, user_address')
+      .in('user_address', addrVariants)
+      .eq('currency', currency);
+
+    if (userError || !balRows?.length) {
       return NextResponse.json({ error: 'User record not found' }, { status: 404 });
     }
-    if (userData.status === 'frozen') {
-      return NextResponse.json({ error: 'Account is frozen. Withdrawals are disabled.' }, { status: 403 });
+    for (const row of balRows) {
+      if (row.status === 'frozen') {
+        return NextResponse.json({ error: 'Account is frozen. Withdrawals are disabled.' }, { status: 403 });
+      }
+      if (row.status === 'banned') {
+        return NextResponse.json({ error: 'Account is banned.' }, { status: 403 });
+      }
     }
-    if (userData.status === 'banned') {
-      return NextResponse.json({ error: 'Account is banned.' }, { status: 403 });
-    }
-    if (Number(userData.balance) < amount) {
+    const sortedByBal = [...balRows].sort((a, b) => Number(b.balance) - Number(a.balance));
+    const userRow = sortedByBal.find(r => Number(r.balance) >= amount);
+    if (!userRow) {
       return NextResponse.json({ error: 'Insufficient house balance for acceptance' }, { status: 400 });
     }
+    const dbAddress = userRow.user_address;
 
     // Execute chain transfers.
     const feeAmountFromRequest = Number(req.fee_amount);
     const { combinedTxHash, feeTxHash } = await executeTreasuryWithdrawal(
-      userAddress,
+      userAddress.trim(),
       currency,
       amount,
       Number.isFinite(feeAmountFromRequest) ? feeAmountFromRequest : undefined,
@@ -148,7 +155,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Update Supabase balance (deducts user's balance and logs withdrawal audit).
     const { data: updData, error: updError } = await supabase.rpc('update_balance_for_withdrawal', {
-      p_user_address: userAddress,
+      p_user_address: dbAddress,
       p_withdrawal_amount: amount,
       p_currency: currency,
       p_transaction_hash: combinedTxHash,

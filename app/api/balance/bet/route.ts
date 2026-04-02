@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 interface BetRequest {
   userAddress: string;
@@ -85,6 +86,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userKey = canonicalHouseUserAddress(userAddress);
+
     // Call deduct_balance_for_bet stored procedure
     // This procedure handles:
     // - Atomic balance update with row-level locking
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
     // - Validating sufficient balance
     // - Inserting audit log entry with operation_type='bet_placed'
     const { data, error } = await supabase.rpc('deduct_balance_for_bet', {
-      p_user_address: userAddress,
+      p_user_address: userKey,
       p_bet_amount: betAmount,
       p_currency: currency,
     });
@@ -129,12 +132,12 @@ export async function POST(request: NextRequest) {
     // The bet is tracked in the database and resolved by the game engine.
     try {
       // Generate a bet ID
-      const betId = `bet_${Date.now()}_${userAddress.slice(-6)}`;
+      const betId = `bet_${Date.now()}_${userKey.slice(-6)}`;
 
       // Log bet placement for debugging
       console.log('Bet placed:', {
         betId,
-        userAddress,
+        userAddress: userKey,
         betAmount,
         multiplier,
         targetCell,

@@ -8,7 +8,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 function truncate(addr: string) {
   if (!addr || addr.length < 12) return addr;
@@ -39,18 +41,24 @@ export async function GET(req: NextRequest) {
   // Single wallet info
   const address = searchParams.get('address')?.trim();
   if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });
+  const variants = walletAddressSearchVariants(address);
 
-  const { data, error } = await supabase
+  const { data: refRows, error } = await supabase
     .from('user_referrals')
-    .select('referral_code, referral_count, referred_by')
-    .eq('user_address', address)
-    .single();
+    .select('referral_code, referral_count, referred_by, user_address')
+    .in('user_address', variants)
+    .limit(1);
 
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ referral: data ?? null });
+  const row = refRows?.[0];
+  return NextResponse.json({
+    referral: row
+      ? { referral_code: row.referral_code, referral_count: row.referral_count, referred_by: row.referred_by }
+      : null,
+  });
 }
 
 // ── POST ──────────────────────────────────────────────────────────────────────
@@ -59,20 +67,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { address, referredByCode } = body as { address: string; referredByCode?: string };
     if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });
+    const addrKey = canonicalHouseUserAddress(address);
 
     // Idempotent — return existing record if already registered
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from('user_referrals')
       .select('referral_code, referral_count')
-      .eq('user_address', address)
-      .single();
+      .in('user_address', walletAddressSearchVariants(address))
+      .limit(1);
 
+    const existing = existingRows?.[0];
     if (existing) {
       return NextResponse.json({ referral_code: existing.referral_code, referral_count: existing.referral_count });
     }
 
     // Generate a unique referral code
-    const shortAddr = address.slice(-4).toUpperCase();
+    const shortAddr = addrKey.slice(-4).toUpperCase();
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const code = `bynomo-${shortAddr}${randomStr}`;
 
@@ -84,14 +94,15 @@ export async function POST(req: NextRequest) {
         .select('user_address')
         .eq('referral_code', referredByCode)
         .single();
-      if (refUser && refUser.user_address !== address) {
+      if (refUser && canonicalHouseUserAddress(refUser.user_address) !== addrKey) {
+        // Use exact DB `user_address` so `increment_referral_count` matches the PK row.
         referredByAddress = refUser.user_address;
       }
     }
 
     const { data, error } = await supabase
       .from('user_referrals')
-      .insert({ user_address: address, referral_code: code, referred_by: referredByAddress, referral_count: 0 })
+      .insert({ user_address: addrKey, referral_code: code, referred_by: referredByAddress, referral_count: 0 })
       .select()
       .single();
 

@@ -1,6 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { normalizeWalletForBanKey } from '@/lib/bans/walletBan';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
+
+/** PostgREST default max rows per request is often 1000 — page until exhausted. */
+const BET_HISTORY_PAGE = 1000;
+const SESSION_PAGE = 1000;
+/** Match `app/api/session/ping/route.ts` — session end inferred from last ping + tail if still open. */
+const SESSION_IDLE_TAIL_MS = 90_000;
+
+function sessionDurationSeconds(
+    row: { started_at: string; last_ping_at: string; ended_at: string | null },
+    nowMs: number,
+): number {
+    const end = row.ended_at
+        ? new Date(row.ended_at).getTime()
+        : Math.min(new Date(row.last_ping_at).getTime() + SESSION_IDLE_TAIL_MS, nowMs);
+    const start = new Date(row.started_at).getTime();
+    return Math.max(0, Math.floor((end - start) / 1000));
+}
+
+async function fetchAllUserSessionsForStats() {
+    const columns = 'wallet_address, started_at, last_ping_at, ended_at';
+    const rows: {
+        wallet_address: string;
+        started_at: string;
+        last_ping_at: string;
+        ended_at: string | null;
+    }[] = [];
+    let from = 0;
+    for (;;) {
+        const { data, error } = await supabase
+            .from('user_sessions')
+            .select(columns)
+            .order('started_at', { ascending: true })
+            .range(from, from + SESSION_PAGE - 1);
+        if (error) throw new Error(error.message);
+        const chunk = data ?? [];
+        rows.push(...(chunk as typeof rows));
+        if (chunk.length < SESSION_PAGE) break;
+        from += SESSION_PAGE;
+    }
+    return rows;
+}
+
+async function fetchAllBetHistoryRowsForStats() {
+    const columns = 'id, wallet_address, amount, payout, won, network';
+    const rows: any[] = [];
+    let from = 0;
+    for (;;) {
+        const { data, error } = await supabase
+            .from('bet_history')
+            .select(columns)
+            .order('id', { ascending: true })
+            .range(from, from + BET_HISTORY_PAGE - 1);
+        if (error) throw new Error(error.message);
+        const chunk = data ?? [];
+        rows.push(...chunk);
+        if (chunk.length < BET_HISTORY_PAGE) break;
+        from += BET_HISTORY_PAGE;
+    }
+    return rows;
+}
 
 export async function GET(request: NextRequest) {
     const deny = requireAdminAuth(request);
@@ -8,11 +69,7 @@ export async function GET(request: NextRequest) {
     try {
         // 1. Aggregate bet history by demo vs real.
         // Demo bets are stored with demo wallets (wallet_address starts with 0xdemo / 0xDEMO).
-        const { data: betRows } = await supabase
-            .from('bet_history')
-            .select('id, wallet_address, amount, payout, won, network');
-
-        const bets = betRows ?? [];
+        const bets = await fetchAllBetHistoryRowsForStats();
         const isDemoWallet = (walletAddress: string | null | undefined) =>
             !!walletAddress && walletAddress.toLowerCase().startsWith('0xdemo');
         /** Demo play uses bet ids like "demo-<timestamp>" while still using the user's real wallet. */
@@ -55,8 +112,28 @@ export async function GET(request: NextRequest) {
         const realPlatformPnL = realTotalVolume - realTotalPayout;
         const realPlatformPnLByNetwork = aggregateByNetwork(realBets);
 
-        const demoUniqueWallets = new Set(demoBets.map(b => (b as any).wallet_address).filter(Boolean));
-        const realUniqueWallets = new Set(realBets.map(b => (b as any).wallet_address).filter(Boolean));
+        const norm = (addr: string) => normalizeWalletForBanKey(String(addr));
+
+        const demoUserKeys = new Set(
+            demoBets.map(b => (b as any).wallet_address).filter(Boolean).map((w: string) => norm(w)),
+        );
+        const realUserKeys = new Set(
+            realBets.map(b => (b as any).wallet_address).filter(Boolean).map((w: string) => norm(w)),
+        );
+
+        const { data: bannedRows, error: bannedError } = await supabase
+            .from('banned_wallets')
+            .select('wallet_address');
+        if (bannedError) {
+            console.warn('[admin/stats] banned_wallets:', bannedError.message);
+        }
+        for (const row of bannedRows ?? []) {
+            const w = (row as { wallet_address?: string }).wallet_address;
+            if (!w) continue;
+            const key = norm(w);
+            if (isDemoWallet(w)) demoUserKeys.add(key);
+            else realUserKeys.add(key);
+        }
 
         // 2. Referrals (split by demo vs real wallet)
         const { data: referralRows } = await supabase
@@ -86,14 +163,42 @@ export async function GET(request: NextRequest) {
             currencyStats[b.currency].userCount += 1;
         });
 
+        // 4. Average session dwell (user_sessions / session ping tracker)
+        let averageSessionSecondsReal = 0;
+        let averageSessionSecondsDemo = 0;
+        let sessionCountReal = 0;
+        let sessionCountDemo = 0;
+        try {
+            const nowMs = Date.now();
+            const sessionRows = await fetchAllUserSessionsForStats();
+            let sumReal = 0;
+            let sumDemo = 0;
+            for (const s of sessionRows) {
+                const sec = sessionDurationSeconds(s, nowMs);
+                if (isDemoWallet(s.wallet_address)) {
+                    sumDemo += sec;
+                    sessionCountDemo++;
+                } else {
+                    sumReal += sec;
+                    sessionCountReal++;
+                }
+            }
+            averageSessionSecondsReal = sessionCountReal > 0 ? sumReal / sessionCountReal : 0;
+            averageSessionSecondsDemo = sessionCountDemo > 0 ? sumDemo / sessionCountDemo : 0;
+        } catch (e: any) {
+            console.warn('[admin/stats] user_sessions:', e?.message ?? e);
+        }
+
         const demo = {
             totalVolume: demoTotalVolume,
             totalBets: demoTotalBets,
             platformPnL: demoPlatformPnL,
             /** Native units per `network` — meaningful; top-level platformPnL mixes chains (informational only). */
             platformPnLByNetwork: demoPlatformPnLByNetwork,
-            totalUsers: demoUniqueWallets.size,
+            totalUsers: demoUserKeys.size,
             totalReferrals: demoTotalReferrals,
+            averageSessionSeconds: averageSessionSecondsDemo,
+            sessionSampleCount: sessionCountDemo,
         };
 
         const real = {
@@ -101,15 +206,17 @@ export async function GET(request: NextRequest) {
             totalBets: realTotalBets,
             platformPnL: realPlatformPnL,
             platformPnLByNetwork: realPlatformPnLByNetwork,
-            totalUsers: realUniqueWallets.size,
+            totalUsers: realUserKeys.size,
             totalReferrals: realTotalReferrals,
+            averageSessionSeconds: averageSessionSecondsReal,
+            sessionSampleCount: sessionCountReal,
         };
 
         return NextResponse.json({
             // Backward compatible top-level fields (overall)
             totalVolume: demoTotalVolume + realTotalVolume,
             totalBets: demoTotalBets + realTotalBets,
-            totalUsers: demoUniqueWallets.size + realUniqueWallets.size,
+            totalUsers: demoUserKeys.size + realUserKeys.size,
             platformPnL: demoPlatformPnL + realPlatformPnL,
             currencyStats,
             revenue: demoPlatformPnL + realPlatformPnL,

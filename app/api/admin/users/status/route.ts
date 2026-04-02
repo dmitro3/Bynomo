@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 
 export async function POST(request: NextRequest) {
     const deny = requireAdminAuth(request);
@@ -16,10 +17,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
         }
 
+        const variants = walletAddressSearchVariants(userAddress);
         const { data, error } = await supabase
             .from('user_balances')
             .update({ status })
-            .eq('user_address', userAddress);
+            .in('user_address', variants);
 
         if (error) throw error;
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
+import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 export async function GET(_request: NextRequest) {
     const deny = requireAdminAuth(_request);
@@ -35,7 +36,9 @@ export async function GET(_request: NextRequest) {
             .select('user_address, username');
 
         const profileMap: Record<string, string> = {};
-        (profiles ?? []).forEach((p: any) => { profileMap[p.user_address] = p.username; });
+        (profiles ?? []).forEach((p: any) => {
+            profileMap[canonicalHouseUserAddress(p.user_address)] = p.username;
+        });
 
         // Aggregate audit events → deposited / withdrawn per (address, currency)
         type Row = {
@@ -51,13 +54,13 @@ export async function GET(_request: NextRequest) {
             username: string | null;
         };
 
-        const key = (addr: string, cur: string) => `${addr}::${cur}`;
+        const key = (addr: string, cur: string) => `${canonicalHouseUserAddress(addr)}::${cur}`;
         const map: Record<string, Row> = {};
 
         (auditRows ?? []).forEach((r: any) => {
             const k = key(r.user_address, r.currency);
             if (!map[k]) map[k] = {
-                user_address: r.user_address,
+                user_address: canonicalHouseUserAddress(r.user_address),
                 currency: r.currency,
                 total_deposited: 0,
                 total_withdrawn: 0,
@@ -66,7 +69,7 @@ export async function GET(_request: NextRequest) {
                 total_wins: 0,
                 total_wagered: 0,
                 total_payout: 0,
-                username: profileMap[r.user_address] ?? null,
+                username: profileMap[canonicalHouseUserAddress(r.user_address)] ?? null,
             };
             if (r.operation_type === 'deposit')    map[k].total_deposited  += Number(r.amount);
             if (r.operation_type === 'withdrawal') map[k].total_withdrawn  += Number(r.amount);
@@ -76,7 +79,7 @@ export async function GET(_request: NextRequest) {
         (balanceRows ?? []).forEach((b: any) => {
             const k = key(b.user_address, b.currency);
             if (!map[k]) map[k] = {
-                user_address: b.user_address,
+                user_address: canonicalHouseUserAddress(b.user_address),
                 currency: b.currency,
                 total_deposited: 0,
                 total_withdrawn: 0,
@@ -85,9 +88,9 @@ export async function GET(_request: NextRequest) {
                 total_wins: 0,
                 total_wagered: 0,
                 total_payout: 0,
-                username: profileMap[b.user_address] ?? null,
+                username: profileMap[canonicalHouseUserAddress(b.user_address)] ?? null,
             };
-            map[k].current_balance = Number(b.balance);
+            map[k].current_balance += Number(b.balance);
         });
 
         // Fold in real bet stats
@@ -96,7 +99,8 @@ export async function GET(_request: NextRequest) {
             .forEach((b: any) => {
                 // Bet history only stores wallet_address (no explicit currency column
                 // matching user_balances). Look for any row belonging to this address.
-                const entries = Object.values(map).filter(r => r.user_address.toLowerCase() === (b.wallet_address ?? '').toLowerCase());
+                const bw = canonicalHouseUserAddress(b.wallet_address ?? '');
+                const entries = Object.values(map).filter(r => r.user_address === bw);
                 entries.forEach(row => {
                     row.total_bets += 1;
                     row.total_wagered += Number(b.amount ?? 0);

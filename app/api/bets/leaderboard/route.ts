@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { isDemoBetHistoryRow, walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 type LeaderboardRow = {
   wallet_address: string; // always truncated before sending to client
@@ -76,7 +77,7 @@ async function fetchLeaderboardFromSupabase(
   const realRows = (data || []).filter((row: any) => !isDemoBetHistoryRow(row));
 
   realRows.forEach((row: any) => {
-    const addr = row.wallet_address;
+    const addr = canonicalHouseUserAddress(row.wallet_address ?? '');
     const net = row.network || 'BNB';
     if (!walletStats[addr]) {
       walletStats[addr] = {
@@ -125,12 +126,14 @@ async function fetchLeaderboardFromSupabase(
     return leaderboard;
   }
 
-  // Fetch usernames for the leaderboard entries
-  const walletAddresses = leaderboard.map((l) => l.wallet_address);
+  const profileLookupKeys = new Set<string>();
+  leaderboard.forEach((l) => {
+    walletAddressSearchVariants(l.wallet_address).forEach((v) => profileLookupKeys.add(v));
+  });
   const { data: profileData, error: profileError } = await supabase
     .from('user_profiles')
     .select('user_address, username')
-    .in('user_address', walletAddresses);
+    .in('user_address', [...profileLookupKeys]);
 
   if (profileError) {
     console.warn('Supabase leaderboard profile error:', profileError);
@@ -138,7 +141,7 @@ async function fetchLeaderboardFromSupabase(
 
   const usernameMap: Record<string, string> = {};
   profileData?.forEach((p) => {
-    usernameMap[p.user_address] = p.username;
+    usernameMap[canonicalHouseUserAddress(p.user_address)] = p.username;
   });
 
   return leaderboard.map((l) => ({

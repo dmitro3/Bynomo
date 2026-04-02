@@ -10,6 +10,8 @@ import { transferINITFromTreasury } from '@/lib/initia/backend-client';
 import { ethers } from 'ethers';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 interface WithdrawRequest {
   userAddress: string;
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
         normalizedCurrency;
       const expectedMessage = `BYNOMO withdrawal authorization\naddress:${userAddress}\namount:${amount.toFixed(8)}\ncurrency:${displayCurrency}\nsignedAt:${signedAt}`;
       const recovered = ethers.verifyMessage(expectedMessage, authorizationSignature);
-      if (recovered.toLowerCase() !== userAddress.toLowerCase()) {
+      if (canonicalHouseUserAddress(recovered) !== canonicalHouseUserAddress(userAddress)) {
         return NextResponse.json(
           { error: 'Invalid withdrawal signature' },
           { status: 401 }
@@ -106,29 +108,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. Get house balance and status from Supabase and validate
-    const { data: userData, error: userError } = await supabase
-      .from('user_balances')
-      .select('balance, status')
-      .eq('user_address', userAddress)
-      .eq('currency', currency)
-      .single();
+    const addrVariants = walletAddressSearchVariants(userAddress);
 
-    if (userError || !userData) {
+    // 1. Get house balance and status from Supabase and validate (merge legacy EVM casing rows)
+    const { data: balRows, error: userError } = await supabase
+      .from('user_balances')
+      .select('balance, status, user_address')
+      .in('user_address', addrVariants)
+      .eq('currency', currency);
+
+    if (userError || !balRows?.length) {
       return NextResponse.json({ error: 'User record not found' }, { status: 404 });
     }
 
-    if (userData.status === 'frozen') {
-      return NextResponse.json({ error: 'Account is frozen. Withdrawals are disabled.' }, { status: 403 });
+    for (const row of balRows) {
+      if (row.status === 'frozen') {
+        return NextResponse.json({ error: 'Account is frozen. Withdrawals are disabled.' }, { status: 403 });
+      }
+      if (row.status === 'banned') {
+        return NextResponse.json({ error: 'Account is banned.' }, { status: 403 });
+      }
     }
 
-    if (userData.status === 'banned') {
-      return NextResponse.json({ error: 'Account is banned.' }, { status: 403 });
-    }
-
-    if (userData.balance < amount) {
+    const sortedByBal = [...balRows].sort((a, b) => Number(b.balance) - Number(a.balance));
+    const userRow = sortedByBal.find(r => Number(r.balance) >= amount);
+    if (!userRow) {
       return NextResponse.json({ error: `Insufficient house balance in ${currency}` }, { status: 400 });
     }
+
+    const dbAddress = userRow.user_address;
+    const userData = { balance: userRow.balance, status: userRow.status };
 
     // ── Withdrawal-frequency guard ─────────────────────────────────────────
     // Count ALL completed + pending withdrawals for this user across all chains.
@@ -142,12 +151,12 @@ export async function POST(request: NextRequest) {
           .from('balance_audit_log')
           .select('id', { count: 'exact', head: true })
           .eq('operation_type', 'withdrawal')
-          .ilike('user_address', userAddress),
+          .in('user_address', addrVariants),
         supabase
           .from('withdrawal_requests')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'pending')
-          .ilike('user_address', userAddress),
+          .in('user_address', addrVariants),
       ]);
       withdrawalCount = (auditCountRes.count ?? 0) + (pendingCountRes.count ?? 0);
     }
@@ -200,7 +209,7 @@ export async function POST(request: NextRequest) {
       const { data: pendingRow, error: pendingError } = await supabase
         .from('withdrawal_requests')
         .insert({
-          user_address: userAddress,
+          user_address: canonicalHouseUserAddress(userAddress),
           currency: currency,
           amount,
           fee_amount: feeAmount,
@@ -292,7 +301,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Update Supabase balance using RPC
     const { data, error } = await supabase.rpc('update_balance_for_withdrawal', {
-      p_user_address: userAddress,
+      p_user_address: dbAddress,
       p_withdrawal_amount: amount,
       p_currency: currency,
       p_transaction_hash: combinedTxHash,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase/serviceClient';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 // Auto-create the table if it doesn't exist yet (idempotent)
 async function ensureTable() {
@@ -39,6 +40,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'wallet_address required' }, { status: 400 });
     }
 
+    const w = canonicalHouseUserAddress(wallet_address);
+
     const now = new Date().toISOString();
     const cutoff = new Date(Date.now() - SESSION_TIMEOUT_SECONDS * 1000).toISOString();
 
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
         .from('user_sessions')
         .select('id, last_ping_at')
         .eq('id', session_id)
-        .eq('wallet_address', wallet_address)
+        .eq('wallet_address', w)
         .is('ended_at', null)
         .single();
 
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
     const { data: active } = await supabaseService
       .from('user_sessions')
       .select('id')
-      .eq('wallet_address', wallet_address)
+      .eq('wallet_address', w)
       .is('ended_at', null)
       .gt('last_ping_at', cutoff)
       .order('last_ping_at', { ascending: false })
@@ -85,14 +88,14 @@ export async function POST(req: NextRequest) {
     await supabaseService
       .from('user_sessions')
       .update({ ended_at: cutoff })
-      .eq('wallet_address', wallet_address)
+      .eq('wallet_address', w)
       .is('ended_at', null)
       .lt('last_ping_at', cutoff);
 
     // Create a new session
     const { data: created, error } = await supabaseService
       .from('user_sessions')
-      .insert({ wallet_address, network, started_at: now, last_ping_at: now })
+      .insert({ wallet_address: w, network, started_at: now, last_ping_at: now })
       .select('id')
       .single();
 
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
       await ensureTable();
       const { data: retry, error: err2 } = await supabaseService
         .from('user_sessions')
-        .insert({ wallet_address, network, started_at: now, last_ping_at: now })
+        .insert({ wallet_address: w, network, started_at: now, last_ping_at: now })
         .select('id')
         .single();
       if (err2) return NextResponse.json({ error: err2.message }, { status: 500 });
@@ -127,11 +130,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'session_id and wallet_address required' }, { status: 400 });
     }
 
+    const w = canonicalHouseUserAddress(wallet_address);
+
     await supabaseService
       .from('user_sessions')
       .update({ ended_at: new Date().toISOString() })
       .eq('id', session_id)
-      .eq('wallet_address', wallet_address)
+      .eq('wallet_address', w)
       .is('ended_at', null);
 
     return NextResponse.json({ status: 'closed' });

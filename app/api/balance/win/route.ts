@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { ethers } from 'ethers';
+import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
 interface WinRequest {
     userAddress: string;
@@ -47,9 +47,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const userKey = canonicalHouseUserAddress(userAddress);
+
         // Call credit_balance_for_payout stored procedure
         const { data, error } = await supabase.rpc('credit_balance_for_payout', {
-            p_user_address: userAddress,
+            p_user_address: userKey,
             p_payout_amount: winAmount,
             p_currency: currency,
             p_bet_id: betId,
