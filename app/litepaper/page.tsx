@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next';
 import MermaidDiagram from '@/components/ui/MermaidDiagram';
+import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 
 // NOTE: metadata moved to runtime UI in client mode.
 const DEMO_VIDEO_EMBED = 'https://www.youtube.com/embed/pjFNfzP9laA?si=ORvaAt1pkN4REEWB';
@@ -779,6 +780,10 @@ export default function LitepaperPage() {
       </div>
       <footer className="py-24 px-10 border-t border-white/5 bg-black relative z-10 w-full overflow-hidden">
         <div className="huge-footer-logo">BYNOMO</div>
+
+        <div className="flex w-full max-w-[1400px] mx-auto justify-center px-4 pt-8 pb-2">
+          <ProductHuntBadge />
+        </div>
 
         <div className="footer-meta">
           <div className="footer-meta-item">2026 © All rights reserved</div>

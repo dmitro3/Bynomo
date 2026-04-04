@@ -8,6 +8,7 @@ import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
 import DemoVideoSection from '@/components/landing/DemoVideoSection';
 import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
 import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
+import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 import './waitlist/waitlist.css';
 
 const testimonials = [
@@ -305,6 +306,9 @@ export default function WaitlistPage() {
                                 <path d="M6 9l6 6 6-6" />
                             </svg>
                         </button>
+
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Featured on Product Hunt</p>
+                        <ProductHuntBadge theme="light" className="drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]" />
                     </motion.div>
 
                 </div>
@@ -444,6 +448,10 @@ export default function WaitlistPage() {
             {/* FOOTER SECTION */}
             <footer className="py-24 px-10 border-t border-white/5 bg-black relative z-10 w-full overflow-hidden">
                 <div className="huge-footer-logo">BYNOMO</div>
+
+                <div className="footer-product-hunt">
+                    <ProductHuntBadge />
+                </div>
 
                 <div className="footer-meta">
                     <div className="footer-meta-item">2026 © All rights reserved</div>

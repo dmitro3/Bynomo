@@ -323,6 +323,15 @@
     }
 }
 
+.footer-product-hunt {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 16px 8px;
+}
+
 .footer-meta {
     display: flex;
     justify-content: space-between;
