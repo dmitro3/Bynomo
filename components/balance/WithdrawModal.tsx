@@ -33,11 +33,13 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const { connector } = useAccount();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
+  const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
+  const suiToken = network === 'SUI' ? (selectedCurrency === 'USDC' ? 'USDC' : 'SUI') : null;
   const userTier = useOverflowStore(state => state.userTier);
   const feePercent = userTier === 'vip' ? 0.08 : userTier === 'standard' ? 0.09 : 0.10;
   const feeLabel = `${Math.round(feePercent * 100)}%`;
   const currencySymbol =
-    network === 'SUI' ? 'USDC' :
+    network === 'SUI' ? (suiToken ?? 'SUI') :
       network === 'SOL' ? (selectedCurrency || 'SOL') :
         network === 'XLM' ? 'XLM' :
           network === 'XTZ' ? 'XTZ' :
@@ -202,6 +204,30 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
+        {/* SUI token selector */}
+        {network === 'SUI' && (
+          <div className="flex gap-2">
+            {(['SUI', 'USDC'] as const).map(tok => (
+              <button
+                key={tok}
+                onClick={() => { setSelectedCurrency(tok); setAmount(''); setError(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-xs font-black uppercase tracking-widest transition-colors ${
+                  suiToken === tok
+                    ? 'border-[#FF006E]/60 bg-[#FF006E]/10 text-[#FF006E]'
+                    : 'border-white/10 bg-white/[0.03] text-white/30 hover:text-white/60'
+                }`}
+              >
+                <img
+                  src={tok === 'SUI' ? '/sui-logo.png' : '/logos/usdc-logo.png'}
+                  alt={tok}
+                  className="w-4 h-4 rounded-full"
+                />
+                {tok}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="bg-gradient-to-br from-[#FF006E]/10 to-purple-500/10 border border-[#FF006E]/30 rounded-lg p-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#FF006E]/20 text-[#FF006E] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">
             {networkName}
@@ -210,7 +236,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             Available to Withdraw
           </p>
           <p className="text-[#FF006E] text-xl font-bold font-mono flex items-center gap-2">
-            {network === 'SUI' && <img src="/logos/usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'SUI' && suiToken === 'USDC' && <img src="/logos/usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'SUI' && suiToken === 'SUI' && <img src="/sui-logo.png" alt="SUI" className="w-5 h-5 rounded-full" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
             {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}

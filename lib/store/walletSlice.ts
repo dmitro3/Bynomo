@@ -124,9 +124,16 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
         }
         set({ walletBalance: bal });
       } else if (network === 'SUI') {
-        const { getUSDCBalance } = await import('@/lib/sui/client');
-        const bal = await getUSDCBalance(address);
-        set({ walletBalance: bal });
+        const suiCurrency = get().selectedCurrency || 'SUI';
+        if (suiCurrency === 'SUI') {
+          const { getSUIBalance } = await import('@/lib/sui/client');
+          const bal = await getSUIBalance(address);
+          set({ walletBalance: bal });
+        } else {
+          const { getUSDCBalance } = await import('@/lib/sui/client');
+          const bal = await getUSDCBalance(address);
+          set({ walletBalance: bal });
+        }
       } else if (network === 'XLM') {
         const { getXLMBalance } = await import('@/lib/stellar/client');
         const bal = await getXLMBalance(address);

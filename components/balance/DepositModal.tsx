@@ -12,7 +12,7 @@ import { getAddress } from 'viem';
 import { getSomniaConfig } from '@/lib/somnia/config';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getSuiConfig } from '@/lib/sui/config';
-import { buildDepositTransaction as buildSuiDepositTransaction } from '@/lib/sui/client';
+import { buildDepositTransaction as buildSuiDepositTransaction, buildNativeSuiDepositTransaction } from '@/lib/sui/client';
 
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
@@ -58,11 +58,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const toast = useToast();
 
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
-  const currencySymbol = network === 'SUI' ? 'USDC' : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
+  const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
+  const suiToken = network === 'SUI' ? (selectedCurrency === 'USDC' ? 'USDC' : 'SUI') : null;
+  const currencySymbol = network === 'SUI' ? (suiToken ?? 'SUI') : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
   const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : network === 'OCT' ? 'OneChain' : network === 'ZG' ? '0G Mainnet' : network === 'INIT' ? 'Initia Mainnet' : 'BNB Chain';
 
   // Quick select amounts
-  const quickAmounts = network === 'SUI' ? [1, 5, 10, 25] : [0.1, 0.5, 1, 5];
+  const quickAmounts = network === 'SUI' ? (suiToken === 'USDC' ? [1, 5, 10, 25] : [0.5, 1, 2, 5]) : [0.1, 0.5, 1, 5];
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -109,8 +111,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   const handleMaxClick = () => {
     if (walletBalance > 0) {
-      // Leave a small amount for gas (except for Sui USDC)
-      const gasBuffer = network === 'SUI' ? 0 : network === 'SOL' ? 0.001 : 0.005;
+      // Leave a small amount for gas (native SUI needs buffer; USDC on SUI doesn't)
+      const gasBuffer = network === 'SUI' ? (suiToken === 'SUI' ? 0.01 : 0) : network === 'SOL' ? 0.001 : 0.005;
       const maxAmount = Math.max(0, walletBalance - gasBuffer);
       setAmount(maxAmount.toFixed(4));
       setError(null);
@@ -140,7 +142,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         if (!suiAccount) throw new Error('Sui wallet not connected');
         toast.info('Please confirm the transaction in your Sui wallet...');
 
-        const tx = await buildSuiDepositTransaction(depositAmount, address);
+        const tx = suiToken === 'SUI'
+          ? await buildNativeSuiDepositTransaction(depositAmount, address)
+          : await buildSuiDepositTransaction(depositAmount, address);
         const result = await signAndExecuteSui({ transaction: tx as any });
         txHash = result.digest;
 
@@ -387,6 +391,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       showCloseButton={!isLoading}
     >
       <div className="space-y-4">
+        {/* SUI token selector */}
+        {network === 'SUI' && (
+          <div className="flex gap-2">
+            {(['SUI', 'USDC'] as const).map(tok => (
+              <button
+                key={tok}
+                onClick={() => { setSelectedCurrency(tok); setAmount(''); setError(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-xs font-black uppercase tracking-widest transition-colors ${
+                  suiToken === tok
+                    ? 'border-[#00f5ff]/60 bg-[#00f5ff]/10 text-[#00f5ff]'
+                    : 'border-white/10 bg-white/[0.03] text-white/30 hover:text-white/60'
+                }`}
+              >
+                <img
+                  src={tok === 'SUI' ? '/sui-logo.png' : '/logos/usdc-logo.png'}
+                  alt={tok}
+                  className="w-4 h-4 rounded-full"
+                />
+                {tok}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="bg-gradient-to-br from-[#00f5ff]/10 to-purple-500/10 border border-[#00f5ff]/30 rounded-lg p-3 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#00f5ff]/20 text-[#00f5ff] text-[8px] font-bold uppercase tracking-tighter rounded-bl-lg">
             {networkName}
@@ -395,7 +423,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             Wallet Balance
           </p>
           <p className="text-[#00f5ff] text-xl font-bold font-mono flex items-center gap-2">
-            {network === 'SUI' && <img src="/logos/usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'SUI' && suiToken === 'USDC' && <img src="/logos/usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'SUI' && suiToken === 'SUI' && <img src="/sui-logo.png" alt="SUI" className="w-5 h-5 rounded-full" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
             {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}

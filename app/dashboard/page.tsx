@@ -212,7 +212,7 @@ export default function AdminDashboard() {
         'wallet_intel' | 'users' | 'financial' | 'markets' | 'gameplay' | 'danger' | 'referrals' | 'waitlist' | 'access_codes' | 'player_pnl'
     >('wallet_intel');
     const [playerPnl, setPlayerPnl] = useState<any[]>([]);
-    const [pnlSort, setPnlSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'total_deposited', dir: 'desc' });
+    const [pnlSort, setPnlSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'first_deposit_at', dir: 'asc' });
     const [waitlist, setWaitlist] = useState<any[]>([]);
     const [waitlistError, setWaitlistError] = useState<string | null>(null);
     const [accessCodes, setAccessCodes] = useState<any[]>([]);
@@ -1160,8 +1160,15 @@ export default function AdminDashboard() {
                                     const sortedPnl = [...playerPnl]
                                         .filter(p => !searchTerm || p.user_address.toLowerCase().includes(searchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(searchTerm.toLowerCase())))
                                         .sort((a, b) => {
-                                            const v = (x: any) => x[pnlSort.col] ?? 0;
-                                            return pnlSort.dir === 'desc' ? v(b) - v(a) : v(a) - v(b);
+                                            const col = pnlSort.col;
+                                            const dir = pnlSort.dir;
+                                            if (col === 'first_deposit_at') {
+                                                const da = a.first_deposit_at ?? '';
+                                                const db = b.first_deposit_at ?? '';
+                                                return dir === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+                                            }
+                                            const v = (x: any) => x[col] ?? 0;
+                                            return dir === 'desc' ? v(b) - v(a) : v(a) - v(b);
                                         });
                                     const SortTh = ({ col, label }: { col: string; label: string }) => (
                                         <th
@@ -1183,6 +1190,7 @@ export default function AdminDashboard() {
                                                         <tr className="border-b border-white/10">
                                                             <th className="px-8 py-5 text-left text-xs font-black text-white/30 uppercase tracking-widest">Player</th>
                                                             <th className="px-8 py-5 text-left text-xs font-black text-white/30 uppercase tracking-widest">Currency</th>
+                                                            <SortTh col="first_deposit_at" label="Joined" />
                                                             <SortTh col="total_deposited" label="Deposited" />
                                                             <SortTh col="total_withdrawn" label="Withdrawn" />
                                                             <SortTh col="current_balance" label="Avail. Balance" />
@@ -1192,8 +1200,8 @@ export default function AdminDashboard() {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {loading ? <tr><td colSpan={8} className="px-8 py-10 text-center text-white/20 text-xs">Loading…</td></tr>
-                                                         : sortedPnl.length === 0 ? <tr><td colSpan={8} className="px-8 py-10 text-center text-white/20 text-xs">No player data yet.</td></tr>
+                                                        {loading ? <tr><td colSpan={9} className="px-8 py-10 text-center text-white/20 text-xs">Loading…</td></tr>
+                                                         : sortedPnl.length === 0 ? <tr><td colSpan={9} className="px-8 py-10 text-center text-white/20 text-xs">No player data yet.</td></tr>
                                                          : sortedPnl.map((p, i) => {
                                                             const isWinner = p.net_pnl > 0;
                                                             const isLoser  = p.net_pnl < 0;
@@ -1228,6 +1236,12 @@ export default function AdminDashboard() {
                                                                     {/* Currency */}
                                                                     <td className="px-8 py-5">
                                                                         <span className="text-xs font-black border border-white/10 rounded px-2 py-1 uppercase">{p.currency}</span>
+                                                                    </td>
+                                                                    {/* Joined */}
+                                                                    <td className="px-8 py-5 font-mono text-white/40 text-xs whitespace-nowrap">
+                                                                        {p.first_deposit_at
+                                                                            ? new Date(p.first_deposit_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                                            : '—'}
                                                                     </td>
                                                                     {/* Deposited */}
                                                                     <td className="px-8 py-5 font-mono text-white text-sm">{fmt(p.total_deposited)}</td>

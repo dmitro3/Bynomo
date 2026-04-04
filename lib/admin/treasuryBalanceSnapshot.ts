@@ -295,17 +295,37 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
   const suiRpc = process.env.NEXT_PUBLIC_SUI_RPC_ENDPOINT?.trim();
   const suiTreasury = process.env.NEXT_PUBLIC_SUI_TREASURY_ADDRESS?.trim();
   const suiUsdcType = process.env.NEXT_PUBLIC_USDC_TYPE?.trim();
-  if (shouldQuerySuiTreasury() && suiRpc && suiTreasury && suiUsdcType) {
+  if (shouldQuerySuiTreasury() && suiRpc && suiTreasury) {
+    // Native SUI
     tasks.push(
       row({
         chain: 'SUI',
-        label: 'Sui — treasury (USDC)',
+        label: 'Sui — treasury (SUI)',
         address: suiTreasury,
-        asset: 'USDC',
+        asset: 'SUI',
         explorerUrl: `https://suiscan.xyz/mainnet/account/${encodeURIComponent(suiTreasury)}`,
-        fetch: () => suiUsdcBalance(suiRpc, suiTreasury, suiUsdcType),
+        fetch: async () => {
+          const { SuiClient } = await import('@mysten/sui/client');
+          const client = new SuiClient({ url: suiRpc });
+          const bal = await client.getBalance({ owner: suiTreasury });
+          return Number(bal.totalBalance) / 1_000_000_000;
+        },
       }),
     );
+
+    // USDC on Sui
+    if (suiUsdcType) {
+      tasks.push(
+        row({
+          chain: 'SUI',
+          label: 'Sui — treasury (USDC)',
+          address: suiTreasury,
+          asset: 'USDC',
+          explorerUrl: `https://suiscan.xyz/mainnet/account/${encodeURIComponent(suiTreasury)}`,
+          fetch: () => suiUsdcBalance(suiRpc, suiTreasury, suiUsdcType),
+        }),
+      );
+    }
   }
 
   // OneChain OCT

@@ -25,6 +25,38 @@ export function getSuiClient(): SuiClient {
 }
 
 /**
+ * Get native SUI balance for a given address (in SUI, not MIST)
+ */
+export async function getSUIBalance(address: string): Promise<number> {
+  if (!address) return 0;
+  const client = getSuiClient();
+  try {
+    const balance = await client.getBalance({ owner: address });
+    return parseInt(balance.totalBalance) / 1_000_000_000;
+  } catch (error) {
+    console.warn(`Failed to get native SUI balance for ${address}:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Build a native SUI deposit transaction (splits from the gas coin).
+ * Amount is in SUI (not MIST).
+ */
+export async function buildNativeSuiDepositTransaction(
+  amount: number,
+  userAddress: string
+): Promise<Transaction> {
+  const config = getSuiConfig();
+  const amountInMist = BigInt(Math.floor(amount * 1_000_000_000));
+  const tx = new Transaction();
+  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)]);
+  tx.transferObjects([coin], tx.pure.address(config.treasuryAddress));
+  tx.setSender(userAddress);
+  return tx;
+}
+
+/**
  * Build a deposit transaction
  * Simple transfer of USDC to the treasury address
  */

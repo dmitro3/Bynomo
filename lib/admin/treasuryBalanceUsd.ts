@@ -45,7 +45,7 @@ export async function fetchPythUsdPartial(): Promise<Partial<Record<PythSym, num
 
 /** CoinGecko `simple/price` ids → usd */
 export async function fetchCoingeckoTreasuryUsd(): Promise<Record<string, number>> {
-  const ids = ['starknet', 'initia', 'zero-g-network'].join(',');
+  const ids = ['starknet', 'initia', 'zero-gravity'].join(',');
   try {
     const r = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
@@ -76,6 +76,7 @@ export function usdPerUnit(
 
   if (chain === 'BNB' && asset === 'BNB') return pyth.BNB ?? null;
   if (chain === 'SOL' && asset === 'SOL') return pyth.SOL ?? null;
+  if (chain === 'SUI' && asset === 'SUI') return pyth.SUI ?? null;
   if (chain === 'SUI' && asset === 'USDC') return 1;
   if (chain === 'XLM' && asset === 'XLM') return pyth.XLM ?? null;
   if (chain === 'XTZ' && asset === 'XTZ') return pyth.XTZ ?? null;
@@ -83,7 +84,7 @@ export function usdPerUnit(
 
   if (chain === 'STRK' && asset === 'STRK') return cg.starknet ?? null;
   if (chain === 'INIT' && asset === 'INIT') return cg.initia ?? null;
-  if (chain === '0G' && asset === '0G') return cg['zero-g-network'] ?? null;
+  if (chain === '0G' && asset === '0G') return cg['zero-gravity'] ?? null;
 
   // EVM L2 / testnet gas tokens without dedicated feeds — rough ETH proxy
   if (chain === 'PUSH' && asset === 'native') return pyth.ETH ?? null;
