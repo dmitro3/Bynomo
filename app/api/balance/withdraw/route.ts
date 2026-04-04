@@ -308,6 +308,9 @@ export async function POST(request: NextRequest) {
           withdrawTxHash = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
         }
       } else if (normalizedCurrency === 'SUI') {
+        const { transferSUIFromTreasury } = await import('@/lib/sui/backend-client');
+        withdrawTxHash = await transferSUIFromTreasury(userAddress, netWithdrawAmount);
+      } else if (normalizedCurrency === 'USDC') {
         const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
         withdrawTxHash = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
       } else if (normalizedCurrency === 'XLM') {
