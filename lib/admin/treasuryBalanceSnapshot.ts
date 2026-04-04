@@ -1,5 +1,5 @@
 /**
- * Read-only on-chain balances for admin dashboard (treasury + platform fee wallets).
+ * Read-only on-chain balances for admin dashboard (treasury EOAs only).
  * Uses only public env addresses and RPC URLs — no private keys.
  */
 
@@ -12,9 +12,21 @@ import { getZGConfig } from '@/lib/zg/config';
 import { getOneChainConfig } from '@/lib/onechain/config';
 import { getStarknetConfig } from '@/lib/starknet/config';
 import { getInitiaConfig } from '@/lib/initia/config';
+import {
+  shouldQueryBnbTreasury,
+  shouldQueryInitiaTreasury,
+  shouldQueryOneChainTreasury,
+  shouldQueryPushTreasury,
+  shouldQuerySolanaTreasury,
+  shouldQuerySomniaTreasury,
+  shouldQueryStarknetTreasury,
+  shouldQueryStellarTreasury,
+  shouldQuerySuiTreasury,
+  shouldQueryTezosTreasury,
+  shouldQueryZgTreasury,
+} from '@/lib/admin/treasuryDashboardNetwork';
 
 export type TreasuryBalanceRow = {
-  group: 'treasury' | 'fee';
   chain: string;
   label: string;
   address: string;
@@ -23,8 +35,6 @@ export type TreasuryBalanceRow = {
   formatted: string;
   explorerUrl: string | null;
   error: string | null;
-  /** Heuristic: balance below a chain-specific floor (ops should top up). */
-  isLow: boolean;
 };
 
 const FETCH_MS = 14_000;
@@ -125,29 +135,7 @@ async function initiaUinit(restUrl: string, address: string, denom: string): Pro
   return Number(row.amount) / 1e6;
 }
 
-/** Rough floors for “top up soon” highlighting (native units per chain, not USD). */
-const LOW_BALANCE_MIN: Record<string, number> = {
-  BNB: 0.05,
-  PUSH: 0.02,
-  STT: 1,
-  '0G': 0.05,
-  OCT: 5,
-  SOL: 0.08,
-  SUI: 100, // USDC on Sui
-  XLM: 10,
-  XTZ: 2,
-  NEAR: 2,
-  STRK: 15,
-  INIT: 3,
-};
-
-function isLowBalance(chain: string, asset: string, balance: number | null): boolean {
-  if (balance === null || !Number.isFinite(balance)) return false;
-  const min = LOW_BALANCE_MIN[chain] ?? (asset === 'USDC' ? 100 : 0.02);
-  return balance < min;
-}
-
-type RowInput = Pick<TreasuryBalanceRow, 'group' | 'chain' | 'label' | 'address' | 'asset' | 'explorerUrl'> & {
+type RowInput = Pick<TreasuryBalanceRow, 'chain' | 'label' | 'address' | 'asset' | 'explorerUrl'> & {
   fetch: () => Promise<number>;
 };
 
@@ -159,7 +147,6 @@ async function row(partial: RowInput): Promise<TreasuryBalanceRow> {
       balance,
       formatted: fmt(balance),
       error: null,
-      isLow: isLowBalance(partial.chain, partial.asset, balance),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'failed';
@@ -168,7 +155,6 @@ async function row(partial: RowInput): Promise<TreasuryBalanceRow> {
       balance: null,
       formatted: '—',
       error: msg,
-      isLow: false,
     };
   }
 }
@@ -194,7 +180,7 @@ function explorerEvm(kind: 'bsc' | 'push' | 'somnia' | 'zg', addr: string): stri
 }
 
 /**
- * Collect balances for all configured treasury + fee addresses (best effort per chain).
+ * Collect balances for all configured treasury EOAs (best effort per chain).
  */
 export async function buildTreasuryBalanceSnapshot(): Promise<{
   generatedAt: string;
@@ -202,16 +188,13 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
 }> {
   const tasks: Promise<TreasuryBalanceRow>[] = [];
 
-  const evmFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM?.trim() || null;
-
   // BNB
   try {
     const cfg = getBNBConfig();
     const chain = cfg.network === 'mainnet' ? bsc : bscTestnet;
-    if (cfg.treasuryAddress) {
+    if (shouldQueryBnbTreasury(cfg.network) && cfg.treasuryAddress) {
       tasks.push(
         row({
-          group: 'treasury',
           chain: 'BNB',
           label: 'BNB Smart Chain — treasury',
           address: cfg.treasuryAddress,
@@ -222,50 +205,22 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
         }),
       );
     }
-    if (evmFee) {
-      tasks.push(
-        row({
-          group: 'fee',
-          chain: 'BNB',
-          label: 'BNB — platform fee wallet (EVM)',
-          address: evmFee,
-          asset: 'BNB',
-          explorerUrl: explorerEvm('bsc', evmFee),
-          fetch: () =>
-            evmNativeBalance(cfg.rpcEndpoint, chain.id, chain.name, chain.nativeCurrency.symbol, evmFee),
-        }),
-      );
-    }
   } catch {
     /* skip */
   }
 
-  // Push
+  // Push (skipped on dashboard unless ADMIN_TREASURY_SHOW_TESTNET — integration is testnet)
   try {
     const cfg = getPushConfig();
-    if (cfg.treasuryAddress) {
+    if (shouldQueryPushTreasury() && cfg.treasuryAddress) {
       tasks.push(
         row({
-          group: 'treasury',
           chain: 'PUSH',
           label: 'Push — treasury',
           address: cfg.treasuryAddress,
           asset: 'native',
           explorerUrl: explorerEvm('push', cfg.treasuryAddress),
           fetch: () => evmNativeBalance(cfg.rpcEndpoint, cfg.chainId, 'Push', 'ETH', cfg.treasuryAddress),
-        }),
-      );
-    }
-    if (evmFee) {
-      tasks.push(
-        row({
-          group: 'fee',
-          chain: 'PUSH',
-          label: 'Push — platform fee wallet (EVM)',
-          address: evmFee,
-          asset: 'native',
-          explorerUrl: explorerEvm('push', evmFee),
-          fetch: () => evmNativeBalance(cfg.rpcEndpoint, cfg.chainId, 'Push', 'ETH', evmFee),
         }),
       );
     }
@@ -277,11 +232,10 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
   try {
     const cfg = getSomniaConfig();
     const rpc = cfg.rpcUrls[0];
-    if (cfg.treasuryAddress) {
+    if (shouldQuerySomniaTreasury(cfg.chainName) && cfg.treasuryAddress) {
       const addr = String(cfg.treasuryAddress);
       tasks.push(
         row({
-          group: 'treasury',
           chain: 'STT',
           label: 'Somnia — treasury',
           address: addr,
@@ -289,19 +243,6 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
           explorerUrl: explorerEvm('somnia', addr),
           fetch: () =>
             evmNativeBalance(rpc, cfg.chainId, cfg.chainName, cfg.nativeCurrency.symbol, addr),
-        }),
-      );
-    }
-    if (evmFee) {
-      tasks.push(
-        row({
-          group: 'fee',
-          chain: 'STT',
-          label: 'Somnia — platform fee wallet (EVM)',
-          address: evmFee,
-          asset: cfg.nativeCurrency.symbol,
-          explorerUrl: explorerEvm('somnia', evmFee),
-          fetch: () => evmNativeBalance(rpc, cfg.chainId, cfg.chainName, cfg.nativeCurrency.symbol, evmFee),
         }),
       );
     }
@@ -313,11 +254,10 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
   try {
     const cfg = getZGConfig();
     const rpc = cfg.rpcUrls[0];
-    if (cfg.treasuryAddress) {
+    if (shouldQueryZgTreasury(rpc) && cfg.treasuryAddress) {
       const addr = String(cfg.treasuryAddress);
       tasks.push(
         row({
-          group: 'treasury',
           chain: '0G',
           label: '0G — treasury',
           address: addr,
@@ -328,34 +268,19 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
         }),
       );
     }
-    if (evmFee) {
-      tasks.push(
-        row({
-          group: 'fee',
-          chain: '0G',
-          label: '0G — platform fee wallet (EVM)',
-          address: evmFee,
-          asset: cfg.nativeCurrency.symbol,
-          explorerUrl: explorerEvm('zg', evmFee),
-          fetch: () => evmNativeBalance(rpc, cfg.chainId, cfg.chainName, cfg.nativeCurrency.symbol, evmFee),
-        }),
-      );
-    }
   } catch {
     /* skip */
   }
 
   // Solana
   const solTreasury = process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS?.trim();
-  const solFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_SOL?.trim();
   const solRpc =
     process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta'
       ? 'https://api.mainnet-beta.solana.com'
       : process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-  if (solTreasury) {
+  if (shouldQuerySolanaTreasury() && solTreasury) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'SOL',
         label: 'Solana — treasury',
         address: solTreasury,
@@ -365,29 +290,14 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  if (solFee) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'SOL',
-        label: 'Solana — platform fee wallet',
-        address: solFee,
-        asset: 'SOL',
-        explorerUrl: `https://solscan.io/account/${encodeURIComponent(solFee)}`,
-        fetch: () => solNativeLamports(solRpc, solFee),
-      }),
-    );
-  }
 
   // Sui USDC
   const suiRpc = process.env.NEXT_PUBLIC_SUI_RPC_ENDPOINT?.trim();
   const suiTreasury = process.env.NEXT_PUBLIC_SUI_TREASURY_ADDRESS?.trim();
   const suiUsdcType = process.env.NEXT_PUBLIC_USDC_TYPE?.trim();
-  const suiFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_SUI?.trim();
-  if (suiRpc && suiTreasury && suiUsdcType) {
+  if (shouldQuerySuiTreasury() && suiRpc && suiTreasury && suiUsdcType) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'SUI',
         label: 'Sui — treasury (USDC)',
         address: suiTreasury,
@@ -397,49 +307,38 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  if (suiRpc && suiFee && suiUsdcType) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'SUI',
-        label: 'Sui — platform fee wallet (USDC)',
-        address: suiFee,
-        asset: 'USDC',
-        explorerUrl: `https://suiscan.xyz/mainnet/account/${encodeURIComponent(suiFee)}`,
-        fetch: () => suiUsdcBalance(suiRpc, suiFee, suiUsdcType),
-      }),
-    );
-  }
 
   // OneChain OCT
   try {
     const oc = getOneChainConfig();
-    if (oc.treasuryAddress && oc.rpcEndpoint) {
+    const ocExplorer = process.env.NEXT_PUBLIC_ONECHAIN_EXPLORER || 'https://explorer-testnet.onechain.one';
+    if (
+      shouldQueryOneChainTreasury(oc.rpcEndpoint, ocExplorer) &&
+      oc.treasuryAddress &&
+      oc.rpcEndpoint
+    ) {
       tasks.push(
         row({
-          group: 'treasury',
           chain: 'OCT',
           label: 'OneChain — treasury (OCT)',
           address: oc.treasuryAddress,
           asset: 'OCT',
-          explorerUrl: `https://explorer-testnet.onechain.one/address/${encodeURIComponent(oc.treasuryAddress)}`,
+          explorerUrl: `${ocExplorer.replace(/\/$/, '')}/address/${encodeURIComponent(oc.treasuryAddress)}`,
           fetch: () => onechainOctBalance(oc.rpcEndpoint, oc.treasuryAddress, oc.octCoinType, oc.decimals),
         }),
       );
     }
-    // Fee wallet for OCT is the shared EVM address in env — not a Sui/OneChain address; skip to avoid bogus RPC errors.
   } catch {
     /* skip */
   }
 
   // Stellar
   const xlmTreasury = process.env.NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS?.trim();
-  const xlmFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_XLM?.trim();
+  const stellarNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK?.trim() || 'public';
   const horizon = process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL?.trim() || 'https://horizon.stellar.org';
-  if (xlmTreasury) {
+  if (shouldQueryStellarTreasury(stellarNetwork, horizon) && xlmTreasury) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'XLM',
         label: 'Stellar — treasury',
         address: xlmTreasury,
@@ -449,28 +348,13 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  if (xlmFee) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'XLM',
-        label: 'Stellar — platform fee wallet',
-        address: xlmFee,
-        asset: 'XLM',
-        explorerUrl: `https://stellar.expert/explorer/public/account/${encodeURIComponent(xlmFee)}`,
-        fetch: () => stellarNativeXlm(horizon, xlmFee),
-      }),
-    );
-  }
 
   // Tezos
   const xtzTreasury = process.env.NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS?.trim();
-  const xtzFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_XTZ?.trim();
   const xtzRpc = process.env.NEXT_PUBLIC_TEZOS_RPC_URL?.trim() || 'https://rpc.tzkt.io/mainnet';
-  if (xtzTreasury) {
+  if (shouldQueryTezosTreasury(xtzRpc) && xtzTreasury) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'XTZ',
         label: 'Tezos — treasury',
         address: xtzTreasury,
@@ -480,28 +364,13 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  if (xtzFee) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'XTZ',
-        label: 'Tezos — platform fee wallet',
-        address: xtzFee,
-        asset: 'XTZ',
-        explorerUrl: `https://tzkt.io/${encodeURIComponent(xtzFee)}`,
-        fetch: () => tezosNativeXtz(xtzRpc, xtzFee),
-      }),
-    );
-  }
 
   // NEAR
   const nearTreasury = process.env.NEXT_PUBLIC_NEAR_TREASURY_ADDRESS?.trim();
-  const nearFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR?.trim();
   const nearNode = 'https://rpc.mainnet.near.org';
   if (nearTreasury) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'NEAR',
         label: 'NEAR — treasury',
         address: nearTreasury,
@@ -511,26 +380,12 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  if (nearFee) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'NEAR',
-        label: 'NEAR — platform fee wallet',
-        address: nearFee,
-        asset: 'NEAR',
-        explorerUrl: `https://nearblocks.io/address/${encodeURIComponent(nearFee)}`,
-        fetch: () => nearNativeNear(nearNode, nearFee),
-      }),
-    );
-  }
 
   // Starknet STRK (ERC-20)
   const snCfg = getStarknetConfig();
-  if (snCfg.treasuryAddress) {
+  if (shouldQueryStarknetTreasury(snCfg.chainId) && snCfg.treasuryAddress) {
     tasks.push(
       row({
-        group: 'treasury',
         chain: 'STRK',
         label: 'Starknet — treasury (STRK token)',
         address: snCfg.treasuryAddress,
@@ -543,31 +398,13 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
       }),
     );
   }
-  const strkFee = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK?.trim();
-  if (strkFee) {
-    tasks.push(
-      row({
-        group: 'fee',
-        chain: 'STRK',
-        label: 'Starknet — platform fee wallet (STRK token)',
-        address: strkFee,
-        asset: 'STRK',
-        explorerUrl: `https://starkscan.co/contract/${encodeURIComponent(strkFee)}`,
-        fetch: async () => {
-          const { getSTRKBalance } = await import('@/lib/starknet/client');
-          return getSTRKBalance(strkFee);
-        },
-      }),
-    );
-  }
 
   // Initia
   try {
     const ic = getInitiaConfig();
-    if (ic.treasuryAddress && ic.restUrl) {
+    if (shouldQueryInitiaTreasury() && ic.treasuryAddress && ic.restUrl) {
       tasks.push(
         row({
-          group: 'treasury',
           chain: 'INIT',
           label: 'Initia — treasury',
           address: ic.treasuryAddress,
@@ -583,21 +420,16 @@ export async function buildTreasuryBalanceSnapshot(): Promise<{
 
   const rows = await Promise.all(tasks);
 
-  // De-dupe identical chain+group+address+asset (e.g. same EVM fee key on multiple rows)
   const seen = new Set<string>();
   const unique: TreasuryBalanceRow[] = [];
   for (const r of rows) {
-    const k = `${r.group}|${r.chain}|${r.address}|${r.asset}|${r.label}`;
+    const k = `${r.chain}|${r.address}|${r.asset}|${r.label}`;
     if (seen.has(k)) continue;
     seen.add(k);
     unique.push(r);
   }
 
-  unique.sort((a, b) => {
-    const g = a.group.localeCompare(b.group);
-    if (g !== 0) return g;
-    return a.chain.localeCompare(b.chain) || a.label.localeCompare(b.label);
-  });
+  unique.sort((a, b) => a.chain.localeCompare(b.chain) || a.label.localeCompare(b.label));
 
   return { generatedAt: new Date().toISOString(), rows: unique };
 }

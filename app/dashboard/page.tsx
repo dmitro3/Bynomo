@@ -93,16 +93,17 @@ interface BannedWalletRow {
 }
 
 interface TreasuryBalanceApiRow {
-    group: 'treasury' | 'fee';
     chain: string;
     label: string;
     address: string;
     asset: string;
     balance: number | null;
     formatted: string;
+    balanceUsd: number | null;
+    formattedUsd: string;
+    unitUsd: number | null;
     explorerUrl: string | null;
     error: string | null;
-    isLow: boolean;
 }
 
 function fmtPnL(n: number | undefined | null) {
@@ -224,6 +225,7 @@ export default function AdminDashboard() {
     const [treasurySnapshot, setTreasurySnapshot] = useState<{
         generatedAt: string;
         rows: TreasuryBalanceApiRow[];
+        usdNote?: string;
     } | null>(null);
     const [treasuryLoading, setTreasuryLoading] = useState(false);
     const [treasuryError, setTreasuryError] = useState<string | null>(null);
@@ -258,6 +260,7 @@ export default function AdminDashboard() {
             setTreasurySnapshot({
                 generatedAt: data.generatedAt,
                 rows: Array.isArray(data.rows) ? data.rows : [],
+                usdNote: typeof data.usdNote === 'string' ? data.usdNote : undefined,
             });
         } catch (e: unknown) {
             setTreasuryError(e instanceof Error ? e.message : 'Failed to load balances');
@@ -689,18 +692,21 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* On-chain treasuries & fee collectors (read-only RPC) */}
+                {/* On-chain treasury EOAs (read-only RPC) */}
                 <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/5 pb-6">
                         <div className="space-y-2">
                             <div className="text-xs font-black uppercase tracking-wider text-white/30">Liquidity rails</div>
-                            <h2 className="text-2xl font-black text-white tracking-tight">Treasury & fee wallet balances</h2>
+                            <h2 className="text-2xl font-black text-white tracking-tight">Treasury EOA balances</h2>
                             <p className="text-sm text-white/45 max-w-3xl leading-relaxed">
-                                Live native (or configured token) balances from your public env addresses.{' '}
-                                <span className="text-amber-200/85">Treasury</span> rows are player deposit float;{' '}
-                                <span className="text-emerald-200/85">Fee</span> rows are protocol fee sinks (deposit/withdraw cuts).{' '}
-                                Amounts are on-chain units per asset — not USD. Amber rows are below heuristic floors (tune in code if needed).
+                                Player-deposit treasury addresses from your public env (mainnet / Stellar public only — testnet rows are omitted). Native (or configured) units plus an{' '}
+                                <span className="text-cyan-200/85">approximate USD</span> column from Pyth / CoinGecko (see note below).
                             </p>
+                            {treasurySnapshot?.usdNote && (
+                                <p className="text-[11px] text-white/35 leading-relaxed max-w-3xl border-l border-white/10 pl-3">
+                                    {treasurySnapshot.usdNote}
+                                </p>
+                            )}
                             {treasurySnapshot?.generatedAt && (
                                 <p className="text-[10px] font-mono text-white/25">
                                     Snapshot: {new Date(treasurySnapshot.generatedAt).toLocaleString()}
@@ -723,22 +729,21 @@ export default function AdminDashboard() {
                         <p className="text-sm text-white/35 font-mono">Loading on-chain snapshot…</p>
                     )}
                     {treasurySnapshot && treasurySnapshot.rows.length === 0 && !treasuryLoading && (
-                        <p className="text-sm text-white/35">No treasury or fee addresses resolved from environment (check NEXT_PUBLIC_* vars).</p>
+                        <p className="text-sm text-white/35">No treasury addresses resolved from environment (check NEXT_PUBLIC_* vars).</p>
                     )}
                     {treasurySnapshot && treasurySnapshot.rows.length > 0 && (
                         <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm min-w-[900px]">
+                                <table className="w-full text-left text-sm min-w-[820px]">
                                     <thead>
                                         <tr className="text-[10px] font-black uppercase tracking-wider text-white/35 border-b border-white/10 bg-white/[0.02]">
-                                            <th className="px-4 py-3">Role</th>
                                             <th className="px-4 py-3">Chain</th>
                                             <th className="px-4 py-3">Label</th>
                                             <th className="px-4 py-3">Address</th>
                                             <th className="px-4 py-3">Asset</th>
                                             <th className="px-4 py-3 text-right">Balance</th>
+                                            <th className="px-4 py-3 text-right">≈ USD</th>
                                             <th className="px-4 py-3">Explorer</th>
-                                            <th className="px-4 py-3">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -750,21 +755,8 @@ export default function AdminDashboard() {
                                             return (
                                                 <tr
                                                     key={`${r.label}-${r.address}-${i}`}
-                                                    className={`border-b border-white/5 font-mono text-white/80 ${
-                                                        r.isLow ? 'bg-amber-500/[0.06]' : ''
-                                                    }`}
+                                                    className="border-b border-white/5 font-mono text-white/80"
                                                 >
-                                                    <td className="px-4 py-2.5">
-                                                        <span
-                                                            className={
-                                                                r.group === 'treasury'
-                                                                    ? 'text-amber-200/90 text-[10px] font-black uppercase'
-                                                                    : 'text-emerald-200/90 text-[10px] font-black uppercase'
-                                                            }
-                                                        >
-                                                            {r.group}
-                                                        </span>
-                                                    </td>
                                                     <td className="px-4 py-2.5">{r.chain}</td>
                                                     <td className="px-4 py-2.5 text-xs text-white/70 max-w-[220px]">{r.label}</td>
                                                     <td className="px-4 py-2.5 text-[11px] text-white/50" title={r.address}>
@@ -773,6 +765,16 @@ export default function AdminDashboard() {
                                                     <td className="px-4 py-2.5 text-white/45">{r.asset}</td>
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-white">
                                                         {r.error ? '—' : r.formatted}
+                                                    </td>
+                                                    <td
+                                                        className="px-4 py-2.5 text-right tabular-nums text-cyan-200/90"
+                                                        title={
+                                                            r.unitUsd != null && Number.isFinite(r.unitUsd)
+                                                                ? `~$${r.unitUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })} / unit`
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {r.error ? '—' : r.formattedUsd}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         {r.explorerUrl ? (
@@ -786,17 +788,6 @@ export default function AdminDashboard() {
                                                             </a>
                                                         ) : (
                                                             <span className="text-white/20">—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-[10px]">
-                                                        {r.error ? (
-                                                            <span className="text-rose-400/90" title={r.error}>
-                                                                Error
-                                                            </span>
-                                                        ) : r.isLow ? (
-                                                            <span className="text-amber-300/90">Low</span>
-                                                        ) : (
-                                                            <span className="text-white/25">OK</span>
                                                         )}
                                                     </td>
                                                 </tr>
