@@ -50,6 +50,15 @@ export async function transferSOLFromTreasury(
         const treasuryKeypair = getTreasuryKeypair();
         const toPublicKey = new PublicKey(toAddress);
 
+        // Pre-check treasury balance to give a clear error instead of raw 0x1
+        const treasuryLamports = await connection.getBalance(treasuryKeypair.publicKey);
+        const requiredLamports = Math.floor(amountSOL * LAMPORTS_PER_SOL) + 10_000; // 10k lamports for fee buffer
+        if (treasuryLamports < requiredLamports) {
+            throw new Error(
+                `Treasury has insufficient SOL balance. Available: ${(treasuryLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL, required: ${amountSOL.toFixed(6)} SOL. Withdrawal is temporarily unavailable — please try again later or contact support.`
+            );
+        }
+
         const transaction = new Transaction().add(
             SystemProgram.transfer({
                 fromPubkey: treasuryKeypair.publicKey,
@@ -68,6 +77,13 @@ export async function transferSOLFromTreasury(
         return signature;
     } catch (error) {
         console.error('Failed to transfer SOL from treasury:', error);
+        // Surface clean message for known simulation/insufficient-funds errors
+        if (error instanceof Error) {
+            const msg = error.message;
+            if (msg.includes('0x1') || msg.includes('insufficient lamports') || msg.includes('Simulation failed')) {
+                throw new Error('SOL withdrawal temporarily unavailable due to insufficient treasury balance. Please contact support.');
+            }
+        }
         throw error;
     }
 }
@@ -104,6 +120,15 @@ export async function transferTokenFromTreasury(
             treasuryKeypair.publicKey
         );
 
+        // Pre-check treasury token balance
+        const tokenBalance = Number(fromTokenAccount.amount);
+        const requiredRaw = Math.floor(amount * Math.pow(10, decimals));
+        if (tokenBalance < requiredRaw) {
+            throw new Error(
+                `Treasury has insufficient token balance. Available: ${(tokenBalance / Math.pow(10, decimals)).toFixed(decimals)} tokens, required: ${amount}. Withdrawal is temporarily unavailable — please try again later or contact support.`
+            );
+        }
+
         // Get or create ATA for receiver (destination)
         // Note: receiver might need to pay for account creation if it doesn't exist,
         // but typically the sender (treasury) pays for it here.
@@ -133,6 +158,12 @@ export async function transferTokenFromTreasury(
         return signature;
     } catch (error) {
         console.error('Failed to transfer token from treasury:', error);
+        if (error instanceof Error) {
+            const msg = error.message;
+            if (msg.includes('0x1') || msg.includes('insufficient') || msg.includes('Simulation failed')) {
+                throw new Error('Token withdrawal temporarily unavailable due to insufficient treasury balance. Please contact support.');
+            }
+        }
         throw error;
     }
 }

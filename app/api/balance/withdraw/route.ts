@@ -176,8 +176,7 @@ export async function POST(request: NextRequest) {
         if (alreadyOut + amount > maxWithdrawable) {
           return NextResponse.json(
             {
-              error: `Withdrawal exceeds the platform limit. You may withdraw at most 108% of your total deposit (deposited: ${totalDeposited.toFixed(6)} ${currency}, cap: ${maxWithdrawable.toFixed(6)} ${currency}, already withdrawn: ${alreadyOut.toFixed(6)} ${currency}, remaining: ${remainingAllowed.toFixed(6)} ${currency}).`,
-              cap: { totalDeposited, maxWithdrawable, alreadyWithdrawn: alreadyOut, remainingAllowed },
+              error: `Withdrawal amount exceeds your available limit. You have ${remainingAllowed > 0 ? `${remainingAllowed.toFixed(6)} ${currency} remaining` : 'no remaining withdrawal allowance'}. Please contact support if you believe this is an error.`,
             },
             { status: 400 },
           );
