@@ -1,69 +1,66 @@
 /**
  * GET /api/stats/public
- * Public (unauthenticated) platform stats for the landing page trust section.
- * Returns only aggregate numbers — no wallet addresses or user-identifiable data.
- * Cached for 5 minutes via Next.js revalidate.
+ * Public (unauthenticated) aggregate stats for the landing page.
+ *
+ * Uses the same `computePlatformStats()` function as /api/admin/stats so
+ * numbers on the public dashboard always match the admin dashboard exactly.
+ *
+ * Only the `real` subset is exposed — no demo data, no PII, no wallet addresses.
+ * Cached for 5 minutes via Next.js revalidation.
  */
 
 import { NextResponse } from 'next/server';
-import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { computePlatformStats } from '@/lib/admin/computeStats';
 
-export const revalidate = 300; // 5 min cache
+export const revalidate = 300;
 
 export async function GET() {
   try {
-    const [betsRes, balancesRes, depositsRes] = await Promise.all([
-      supabase
-        .from('bet_history')
-        .select('id, wallet_address, amount, won')
-        .order('id', { ascending: true }),
-      supabase
-        .from('user_balances')
-        .select('user_address, currency'),
-      supabase
-        .from('balance_audit_log')
-        .select('user_address, currency, operation_type, amount')
-        .eq('operation_type', 'deposit'),
-    ]);
+    const { real, currencyStats, totalDeposits, totalWithdrawals } =
+      await computePlatformStats();
 
-    const allBets = (betsRes.data ?? []).filter(b => !isDemoBetHistoryRow(b));
-    const totalBets = allBets.length;
-    const totalWins = allBets.filter(b => b.won).length;
+    // Build house balance by currency from currencyStats (sum of all user balances)
+    const houseBalanceByCurrency: Record<string, number> = {};
+    for (const [cur, stat] of Object.entries(currencyStats)) {
+      houseBalanceByCurrency[cur.toUpperCase()] = stat.totalBalance;
+    }
 
-    // Unique real wallets that ever placed a bet
-    const uniqueWallets = new Set(
-      allBets.map(b => (b.wallet_address ?? '').toLowerCase()).filter(Boolean)
-    ).size;
-
-    // Unique chains/currencies that have real deposits
-    const depositCurrencies = new Set(
-      (depositsRes.data ?? []).map(d => d.currency?.toUpperCase()).filter(Boolean)
-    );
-    const chainsSupported = depositCurrencies.size || 12; // fallback to known count
-
-    // Total deposited volume (across all real deposits)
-    // We keep this chain-agnostic (sum of native units) and show count instead of USD
-    const totalDeposits = (depositsRes.data ?? []).length;
+    // Top currencies by bet count from per-network breakdown
+    const topCurrencies = Object.entries(real.platformPnLByNetwork)
+      .sort((a, b) => b[1].volume - a[1].volume)
+      .slice(0, 5)
+      .map(([currency, row]) => ({
+        currency,
+        wagered: row.volume,
+        paid:    row.payout,
+        count:   0, // not needed by UI
+      }));
 
     return NextResponse.json({
-      totalBets,
-      totalWins,
-      uniqueWallets,
-      chainsSupported,
+      // Core metrics — real bets only, matching admin dashboard exactly
+      totalBets:    real.totalBets,
+      totalWins:    real.totalWins,
+      totalLosses:  real.totalLosses,
+      winRate:      real.winRate,
+      totalWagered: real.totalVolume,
+      totalPaidOut: real.totalPayout,
+      uniqueWallets: real.totalUsers,
+      chainsActive:  Object.keys(real.platformPnLByNetwork).filter(k => k !== 'UNKNOWN').length || 12,
       totalDeposits,
-      winRate: totalBets > 0 ? Math.round((totalWins / totalBets) * 100) : 0,
+      totalWithdrawals,
+      topCurrencies,
+      houseBalanceByCurrency,
     });
   } catch (e: any) {
-    console.error('[stats/public]', e);
-    // Return safe fallback so the landing page never errors
-    return NextResponse.json({
-      totalBets: 0,
-      totalWins: 0,
-      uniqueWallets: 0,
-      chainsSupported: 12,
-      totalDeposits: 0,
-      winRate: 0,
-    });
+    console.error('[stats/public]', e?.message ?? e);
+    return NextResponse.json(
+      {
+        totalBets: 0, totalWins: 0, totalLosses: 0, winRate: 0,
+        totalWagered: 0, totalPaidOut: 0, uniqueWallets: 0,
+        chainsActive: 12, totalDeposits: 0, totalWithdrawals: 0,
+        topCurrencies: [], houseBalanceByCurrency: {},
+      },
+      { status: 500 },
+    );
   }
 }
