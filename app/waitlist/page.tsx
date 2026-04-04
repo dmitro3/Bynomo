@@ -169,10 +169,10 @@ export default function WaitlistPage() {
 
             {/* HERO SECTION */}
             <section id="hero-top" className="min-h-screen flex flex-col justify-center relative overflow-hidden px-4 md:px-20">
-                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-24">
+                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-24 relative isolate">
 
-                    {/* LEFT SIDE: Big Brand Name */}
-                    <div className="flex flex-col justify-center select-none mix-blend-difference">
+                    {/* LEFT SIDE: Big brand (decorative) — below headline/body in stack */}
+                    <div className="relative z-0 flex flex-col justify-center select-none mix-blend-difference">
                         <motion.div
                             initial="hidden"
                             animate="visible"
@@ -218,7 +218,7 @@ export default function WaitlistPage() {
                         initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
                         animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex flex-col justify-center items-start lg:pl-4 z-10"
+                        className="relative z-20 flex flex-col justify-center items-start lg:pl-4"
                     >
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}

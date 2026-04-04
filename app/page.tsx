@@ -106,61 +106,81 @@ export default function WaitlistPage() {
         <div ref={containerRef} className="landing-layout h-full overflow-y-auto overflow-x-hidden scroll-smooth selection:bg-purple-500/30">
 
             {/* ── Announcement Banner ─────────────────────────────────────── */}
-            <div className="relative z-50 w-full overflow-hidden h-14 flex items-center"
-                style={{ background: 'linear-gradient(90deg, #021a0e 0%, #000d06 40%, #000d06 60%, #021a0e 100%)', borderBottom: '1px solid rgba(52,211,153,0.15)' }}>
+            <div
+                className="marquee-banner relative z-50 w-full overflow-hidden h-14 flex items-center"
+                style={{ background: 'linear-gradient(90deg, #021a0e 0%, #000d06 40%, #000d06 60%, #021a0e 100%)', borderBottom: '1px solid rgba(52,211,153,0.15)' }}
+            >
 
                 {/* Subtle top shimmer line */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent pointer-events-none" />
 
                 {/* Gradient edge fades */}
                 <div className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-[#021a0e] to-transparent z-10 pointer-events-none" />
                 <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#021a0e] to-transparent z-10 pointer-events-none" />
 
-                {/* Scrolling track */}
-                <div className="announcement-track flex items-center whitespace-nowrap">
+                {/* Track ignores pointer events; segments and pills opt in — hover/focus only on real controls, no parent leakage */}
+                <div className="announcement-track flex items-center whitespace-nowrap pointer-events-none">
                     {[0, 1, 2, 3].map(i => (
                         <React.Fragment key={i}>
-                            <a
-                                href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group"
+                            {/* Text is non-interactive; only the pill navigates (avoids huge accidental hit targets). */}
+                            <div
+                                className="pointer-events-auto inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14"
                                 aria-hidden={i > 0}
                             >
-                                <span className="text-base sm:text-xl">🎉</span>
-                                <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                                <span className="text-base sm:text-xl shrink-0" aria-hidden>
+                                    🎉
+                                </span>
+                                <span className="text-[10px] sm:text-sm font-semibold text-white/80">
                                     Bynomo is accepted for{' '}
                                     <span className="font-black text-emerald-400 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
                                         $4M Bagsapp Funding
                                     </span>
                                 </span>
-                                <span
-                                    className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                                <a
+                                    href="https://bags.fm/apps/067c4ea3-94c8-47b7-b0c2-d80029f7fed8"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    tabIndex={i > 0 ? -1 : undefined}
+                                    className="pointer-events-auto group inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 shrink-0"
                                     style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}
+                                    aria-label="View Bynomo on Bags.fm (opens in new tab)"
                                 >
                                     View on Bags.fm
-                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
+                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block" aria-hidden>
+                                        ↗
+                                    </span>
+                                </a>
+                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6 shrink-0" aria-hidden>
+                                    ◆
                                 </span>
-                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
-                            </a>
+                            </div>
 
-                            <a href="/litepaper" className="inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14 group" aria-hidden={i > 0}>
-                                <span className="text-base sm:text-xl">📘</span>
-                                <span className="text-[10px] sm:text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                            <div className="pointer-events-auto inline-flex items-center gap-2 sm:gap-4 px-8 sm:px-14" aria-hidden={i > 0}>
+                                <span className="text-base sm:text-xl shrink-0" aria-hidden>
+                                    📘
+                                </span>
+                                <span className="text-[10px] sm:text-sm font-semibold text-white/80">
                                     Bynomo Litepaper is now{' '}
                                     <span className="font-black text-emerald-300 text-xs sm:text-base" style={{ textShadow: '0 0 20px rgba(52,211,153,0.35)' }}>
                                         LIVE
                                     </span>
                                 </span>
-                                <span
-                                    className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-all group-hover:scale-105 shrink-0"
+                                <Link
+                                    href="/litepaper"
+                                    tabIndex={i > 0 ? -1 : undefined}
+                                    className="pointer-events-auto group inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold text-black transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 shrink-0"
                                     style={{ background: 'linear-gradient(135deg, #6ee7b7, #34d399)' }}
+                                    aria-label="Open Bynomo litepaper"
                                 >
                                     Open Litepaper
-                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block">↗</span>
+                                    <span className="group-hover:translate-x-0.5 transition-transform inline-block" aria-hidden>
+                                        ↗
+                                    </span>
+                                </Link>
+                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6 shrink-0" aria-hidden>
+                                    ◆
                                 </span>
-                                <span className="text-emerald-900 text-base sm:text-lg mx-3 sm:mx-6">◆</span>
-                            </a>
+                            </div>
                         </React.Fragment>
                     ))}
                 </div>
@@ -170,7 +190,8 @@ export default function WaitlistPage() {
                 .announcement-track {
                     animation: announcement-scroll 35s linear infinite;
                 }
-                .announcement-track:hover {
+                /* Pause when cursor is anywhere on the bar (not delegated from track :hover → children) */
+                .marquee-banner:hover .announcement-track {
                     animation-play-state: paused;
                 }
                 @keyframes announcement-scroll {
@@ -200,10 +221,9 @@ export default function WaitlistPage() {
 
             {/* HERO SECTION */}
             <section id="hero-top" className="min-h-screen flex flex-col justify-center relative overflow-hidden px-4 sm:px-6 lg:px-20">
-                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-10 sm:gap-12 lg:gap-24">
-
-                    {/* LEFT SIDE: Big Brand Name */}
-                    <div className="flex flex-col justify-center select-none mix-blend-difference">
+                <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-10 sm:gap-12 lg:gap-24 relative isolate">
+                    {/* LEFT SIDE: Big brand (decorative) — keep below headline/body in the stack */}
+                    <div className="relative z-0 flex flex-col justify-center select-none mix-blend-difference">
                         <motion.div
                             initial="hidden"
                             animate="visible"
@@ -249,7 +269,7 @@ export default function WaitlistPage() {
                         initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
                         animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex flex-col justify-center items-start lg:pl-4 z-10 -mt-8 lg:mt-0 gap-6 lg:gap-8"
+                        className="relative z-20 flex flex-col justify-center items-start lg:pl-4 -mt-8 lg:mt-0 gap-6 lg:gap-8"
                     >
                         <Link
                             href="/litepaper"

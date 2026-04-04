@@ -512,9 +512,9 @@ export const GameBoard: React.FC = () => {
       )}
 
 
-      {/* Modern Quick Bet Panel - Collapsible on Mobile */}
-      <div className="absolute bottom-6 sm:bottom-12 left-4 right-4 sm:left-8 sm:right-auto z-30 pointer-events-none">
-        <div className={`bg-gradient-to-br from-black/95 via-purple-950/30 to-black/95 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl overflow-hidden w-full sm:w-[300px] transition-all duration-300 ease-out pointer-events-auto flex flex-col ${isPanelOpen
+      {/* Modern Quick Bet Panel — height-capped + internal scroll so wallet/blitz never overflows under the viewport */}
+      <div className="absolute top-2 bottom-6 left-4 right-4 sm:top-4 sm:bottom-12 sm:left-8 sm:right-auto z-[110] pointer-events-none flex min-h-0 flex-col justify-end">
+        <div className={`max-h-full min-h-0 bg-gradient-to-br from-black/95 via-purple-950/30 to-black/95 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl overflow-hidden w-full sm:w-[300px] transition-all duration-300 ease-out pointer-events-auto flex flex-col ${isPanelOpen
           ? 'translate-y-0 opacity-100 scale-100'
           : 'translate-y-full opacity-0 scale-95 !pointer-events-none sm:translate-y-0 sm:opacity-100 sm:scale-100 sm:!pointer-events-auto'
           }`}>
@@ -528,7 +528,7 @@ export const GameBoard: React.FC = () => {
           </button>
 
           {/* Game Mode Selector */}
-          <div className="flex gap-1 p-1 bg-black/60 border-b border-white/5" data-tour="game-mode-toggle">
+          <div className="flex shrink-0 gap-1 p-1 bg-black/60 border-b border-white/5" data-tour="game-mode-toggle">
             <button
               onClick={() => setGameMode('box')}
               className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'box'
@@ -559,7 +559,7 @@ export const GameBoard: React.FC = () => {
           </div>
 
           {/* Tab Navigation - Pill Style */}
-          <div className="flex gap-1 p-2 bg-black/40">
+          <div className="flex shrink-0 gap-1 p-2 bg-black/40">
             <button
               onClick={() => setActiveTab('bet')}
               className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${activeTab === 'bet'
@@ -589,8 +589,8 @@ export const GameBoard: React.FC = () => {
             </button>
           </div>
 
-          {/* Content Area - Fixed Height */}
-          <div className="p-4 min-h-[180px] relative flex flex-col">
+          {/* Tab body — scrolls inside the card when content (e.g. wallet) is tall */}
+          <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto p-4">
             {/* Overlay if not authorized */}
             {isUnauthorized && (
               <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
@@ -625,7 +625,7 @@ export const GameBoard: React.FC = () => {
               </div>
             )}
 
-            <div className={`transition-all duration-700 h-full flex flex-col ${isUnauthorized ? 'blur-xl grayscale opacity-20 pointer-events-none select-none' : ''}`}>
+            <div className={`flex min-h-0 flex-col transition-all duration-700 ${isUnauthorized ? 'blur-xl grayscale opacity-20 pointer-events-none select-none' : ''}`}>
               {activeTab === 'bet' ? (
                 <div className="space-y-4">
                   {/* Amount Presets */}
@@ -938,7 +938,7 @@ export const GameBoard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 border-t border-white/5 mt-auto bg-black/20">
+          <div className="shrink-0 border-t border-white/5 bg-black/20 p-4">
             {!isWalletConnected ? (
               <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest text-center">
                 Connect wallet to start trading

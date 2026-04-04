@@ -92,6 +92,19 @@ interface BannedWalletRow {
     created_at: string;
 }
 
+interface TreasuryBalanceApiRow {
+    group: 'treasury' | 'fee';
+    chain: string;
+    label: string;
+    address: string;
+    asset: string;
+    balance: number | null;
+    formatted: string;
+    explorerUrl: string | null;
+    error: string | null;
+    isLow: boolean;
+}
+
 function fmtPnL(n: number | undefined | null) {
     if (n === undefined || n === null || !Number.isFinite(n)) return '0';
     return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -208,6 +221,13 @@ export default function AdminDashboard() {
     const [walletIntelLoading, setWalletIntelLoading] = useState(false);
     const [walletIntelError, setWalletIntelError] = useState<string | null>(null);
 
+    const [treasurySnapshot, setTreasurySnapshot] = useState<{
+        generatedAt: string;
+        rows: TreasuryBalanceApiRow[];
+    } | null>(null);
+    const [treasuryLoading, setTreasuryLoading] = useState(false);
+    const [treasuryError, setTreasuryError] = useState<string | null>(null);
+
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
     const [sessionExpired, setSessionExpired] = useState(false);
@@ -225,6 +245,25 @@ export default function AdminDashboard() {
             case 'XLM': return `https://stellar.expert/explorer/public/tx/${hash}`;
             case 'STRK': return `https://starkscan.co/tx/${hash}`;
             default: return null;
+        }
+    };
+
+    const fetchTreasuryBalances = async () => {
+        setTreasuryLoading(true);
+        setTreasuryError(null);
+        try {
+            const res = await fetch('/api/admin/treasury-balances', { credentials: 'include' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load on-chain balances');
+            setTreasurySnapshot({
+                generatedAt: data.generatedAt,
+                rows: Array.isArray(data.rows) ? data.rows : [],
+            });
+        } catch (e: unknown) {
+            setTreasuryError(e instanceof Error ? e.message : 'Failed to load balances');
+            setTreasurySnapshot(null);
+        } finally {
+            setTreasuryLoading(false);
         }
     };
 
@@ -316,7 +355,9 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (isAuthorized) {
             fetchData();
+            fetchTreasuryBalances();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional on auth gate only
     }, [isAuthorized]);
 
     const fetchData = async () => {
@@ -646,6 +687,126 @@ export default function AdminDashboard() {
                             label={`Mean dwell per session · ${(stats?.demo?.sessionSampleCount ?? 0).toLocaleString()} sessions · demo wallets only`}
                         />
                     </div>
+                </div>
+
+                {/* On-chain treasuries & fee collectors (read-only RPC) */}
+                <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/5 pb-6">
+                        <div className="space-y-2">
+                            <div className="text-xs font-black uppercase tracking-wider text-white/30">Liquidity rails</div>
+                            <h2 className="text-2xl font-black text-white tracking-tight">Treasury & fee wallet balances</h2>
+                            <p className="text-sm text-white/45 max-w-3xl leading-relaxed">
+                                Live native (or configured token) balances from your public env addresses.{' '}
+                                <span className="text-amber-200/85">Treasury</span> rows are player deposit float;{' '}
+                                <span className="text-emerald-200/85">Fee</span> rows are protocol fee sinks (deposit/withdraw cuts).{' '}
+                                Amounts are on-chain units per asset — not USD. Amber rows are below heuristic floors (tune in code if needed).
+                            </p>
+                            {treasurySnapshot?.generatedAt && (
+                                <p className="text-[10px] font-mono text-white/25">
+                                    Snapshot: {new Date(treasurySnapshot.generatedAt).toLocaleString()}
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={fetchTreasuryBalances}
+                            disabled={treasuryLoading}
+                            className="shrink-0 px-6 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 rounded-full text-xs font-black text-emerald-200 uppercase tracking-widest transition-all disabled:opacity-50"
+                        >
+                            {treasuryLoading ? 'Querying chains…' : 'Refresh balances'}
+                        </button>
+                    </div>
+                    {treasuryError && (
+                        <p className="text-sm text-rose-400 font-mono">{treasuryError}</p>
+                    )}
+                    {!treasurySnapshot && !treasuryError && treasuryLoading && (
+                        <p className="text-sm text-white/35 font-mono">Loading on-chain snapshot…</p>
+                    )}
+                    {treasurySnapshot && treasurySnapshot.rows.length === 0 && !treasuryLoading && (
+                        <p className="text-sm text-white/35">No treasury or fee addresses resolved from environment (check NEXT_PUBLIC_* vars).</p>
+                    )}
+                    {treasurySnapshot && treasurySnapshot.rows.length > 0 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm min-w-[900px]">
+                                    <thead>
+                                        <tr className="text-[10px] font-black uppercase tracking-wider text-white/35 border-b border-white/10 bg-white/[0.02]">
+                                            <th className="px-4 py-3">Role</th>
+                                            <th className="px-4 py-3">Chain</th>
+                                            <th className="px-4 py-3">Label</th>
+                                            <th className="px-4 py-3">Address</th>
+                                            <th className="px-4 py-3">Asset</th>
+                                            <th className="px-4 py-3 text-right">Balance</th>
+                                            <th className="px-4 py-3">Explorer</th>
+                                            <th className="px-4 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {treasurySnapshot.rows.map((r, i) => {
+                                            const short =
+                                                r.address.length > 18
+                                                    ? `${r.address.slice(0, 10)}…${r.address.slice(-8)}`
+                                                    : r.address;
+                                            return (
+                                                <tr
+                                                    key={`${r.label}-${r.address}-${i}`}
+                                                    className={`border-b border-white/5 font-mono text-white/80 ${
+                                                        r.isLow ? 'bg-amber-500/[0.06]' : ''
+                                                    }`}
+                                                >
+                                                    <td className="px-4 py-2.5">
+                                                        <span
+                                                            className={
+                                                                r.group === 'treasury'
+                                                                    ? 'text-amber-200/90 text-[10px] font-black uppercase'
+                                                                    : 'text-emerald-200/90 text-[10px] font-black uppercase'
+                                                            }
+                                                        >
+                                                            {r.group}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5">{r.chain}</td>
+                                                    <td className="px-4 py-2.5 text-xs text-white/70 max-w-[220px]">{r.label}</td>
+                                                    <td className="px-4 py-2.5 text-[11px] text-white/50" title={r.address}>
+                                                        {short}
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-white/45">{r.asset}</td>
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-white">
+                                                        {r.error ? '—' : r.formatted}
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        {r.explorerUrl ? (
+                                                            <a
+                                                                href={r.explorerUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-[10px] font-bold uppercase tracking-wider text-cyan-400/90 hover:text-cyan-300"
+                                                            >
+                                                                View
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-white/20">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-[10px]">
+                                                        {r.error ? (
+                                                            <span className="text-rose-400/90" title={r.error}>
+                                                                Error
+                                                            </span>
+                                                        ) : r.isLow ? (
+                                                            <span className="text-amber-300/90">Low</span>
+                                                        ) : (
+                                                            <span className="text-white/25">OK</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Navigation & Search */}

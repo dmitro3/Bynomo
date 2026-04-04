@@ -86,7 +86,7 @@ export function HeaderMenu() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
                         transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                        className="absolute top-full right-0 mt-3 w-64 bg-black/80 backdrop-blur-3xl border border-white/5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100]"
+                        className="absolute top-full right-0 z-[110] mt-3 w-64 overflow-hidden rounded-3xl border border-white/5 bg-black/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl"
                     >
                         <div className="p-3 space-y-1">
                             {menuItems.map((item, idx) => {

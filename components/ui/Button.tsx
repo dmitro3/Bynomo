@@ -14,7 +14,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyles = 'font-bold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles =
+    'cursor-pointer font-bold rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50';
 
   const variantStyles = {
     primary: 'bg-neon-blue hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(0,240,255,0.4)] hover:shadow-[0_0_25px_rgba(0,240,255,0.6)] border border-neon-blue',
