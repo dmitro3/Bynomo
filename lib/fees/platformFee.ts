@@ -67,7 +67,7 @@ export function getPlatformFeeWalletAddress(normalizedCurrency: string): string 
   return null;
 }
 
-const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+const BYNOMO_MINT = 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS';
 
 /**
  * Transfers `feeAmount` from the chain treasury to the platform fee collector.

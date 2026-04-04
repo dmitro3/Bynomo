@@ -157,7 +157,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         let transaction;
         if (selectedCurrency === 'BYNOMO') {
-          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          const BYNOMO_MINT = 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS';
           transaction = await buildTokenDepositTransaction(depositAmount, address, BYNOMO_MINT);
         } else {
           transaction = await buildDepositTransaction(depositAmount, address);

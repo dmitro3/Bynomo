@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
       } else if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
         if (normalizedCurrency === 'BYNOMO') {
           const { transferTokenFromTreasury } = await import('@/lib/solana/backend-client');
-          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          const BYNOMO_MINT = 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS';
           withdrawTxHash = await transferTokenFromTreasury(userAddress, netWithdrawAmount, BYNOMO_MINT);
         } else {
           const { transferSOLFromTreasury } = await import('@/lib/solana/backend-client');

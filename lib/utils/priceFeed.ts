@@ -42,7 +42,7 @@ export const PRICE_FEED_IDS = {
 } as const;
 
 export const CUSTOM_TOKENS = {
-  BYNOMO: 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump'
+  BYNOMO: 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS'
 } as const;
 
 export type AssetType = keyof typeof PRICE_FEED_IDS | keyof typeof CUSTOM_TOKENS;

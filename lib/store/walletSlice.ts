@@ -119,7 +119,7 @@ export const createWalletSlice: StateCreator<WalletState> = (set, get) => ({
           bal = await getSOLBalance(address);
         } else if (currency === 'BYNOMO') {
           // BYNOMO Token on Solana
-          const BYNOMO_MINT = 'Bi4NEEQhtrFdnoS9NjrXaWkQftXifh2t3RzQHSTQpump';
+          const BYNOMO_MINT = 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS';
           bal = await getTokenBalance(address, BYNOMO_MINT);
         }
         set({ walletBalance: bal });
