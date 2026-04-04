@@ -1156,6 +1156,7 @@ export default function AdminDashboard() {
                                 )}
 
                                 {activeTab === 'player_pnl' && (() => {
+                                    const bannedSet = new Set(bannedWallets.map(b => b.wallet_address.toLowerCase()));
                                     const sortedPnl = [...playerPnl]
                                         .filter(p => !searchTerm || p.user_address.toLowerCase().includes(searchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(searchTerm.toLowerCase())))
                                         .sort((a, b) => {
@@ -1196,14 +1197,22 @@ export default function AdminDashboard() {
                                                          : sortedPnl.map((p, i) => {
                                                             const isWinner = p.net_pnl > 0;
                                                             const isLoser  = p.net_pnl < 0;
+                                                            const isBanned = bannedSet.has(p.user_address.toLowerCase());
                                                             return (
-                                                                <tr key={p.user_address + p.currency} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                                                                <tr key={p.user_address + p.currency} className={`hover:bg-white/[0.02] transition-colors border-b border-white/5 ${isBanned ? 'bg-rose-950/20' : ''}`}>
                                                                     {/* Rank + identity */}
                                                                     <td className="px-8 py-5">
                                                                         <div className="flex items-center gap-3">
                                                                             <span className="text-white/20 font-mono text-xs w-5">#{i + 1}</span>
-                                                            <div className="flex flex-col">
-                                                                                <span className="text-white text-sm font-bold">{p.username || 'Anonymous'}</span>
+                                                            <div className="flex flex-col gap-1">
+                                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                                    <span className="text-white text-sm font-bold">{p.username || 'Anonymous'}</span>
+                                                                                    {isBanned && (
+                                                                                        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                                                                            ⊘ Banned
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
                                                                                 <a
                                                                                     href={getExplorerAddressUrl(p.user_address, p.currency)}
                                                                                     target="_blank"
