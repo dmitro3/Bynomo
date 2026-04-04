@@ -139,7 +139,52 @@ export async function POST(request: NextRequest) {
     const dbAddress = userRow.user_address;
     const userData = { balance: userRow.balance, status: userRow.status };
 
-    // ── Withdrawal-frequency guard ─────────────────────────────────────────
+    // ── Withdrawal cap: max payout = total_deposited × 1.08 (mainnet only) ──
+    // Testnet / internal chains are exempt.
+    const TESTNET_CURRENCIES = new Set(['PUSH', 'PC', 'SOMNIA', 'STT', 'OCT', '0G']);
+    if (accountType === 'real' && !TESTNET_CURRENCIES.has(normalizedCurrency)) {
+      const [depositRes, withdrawnRes, pendingRes] = await Promise.all([
+        supabase
+          .from('balance_audit_log')
+          .select('amount')
+          .in('user_address', addrVariants)
+          .eq('currency', currency)
+          .eq('operation_type', 'deposit'),
+        supabase
+          .from('balance_audit_log')
+          .select('amount')
+          .in('user_address', addrVariants)
+          .eq('currency', currency)
+          .eq('operation_type', 'withdrawal'),
+        supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .in('user_address', addrVariants)
+          .eq('currency', currency)
+          .in('status', ['pending', 'approved']),
+      ]);
+
+      const totalDeposited   = (depositRes.data  ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+      const totalWithdrawn   = (withdrawnRes.data ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+      const pendingTotal     = (pendingRes.data   ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+
+      if (totalDeposited > 0) {
+        const maxWithdrawable  = totalDeposited * 1.08;
+        const alreadyOut       = totalWithdrawn + pendingTotal;
+        const remainingAllowed = Math.max(0, maxWithdrawable - alreadyOut);
+
+        if (alreadyOut + amount > maxWithdrawable) {
+          return NextResponse.json(
+            {
+              error: `Withdrawal exceeds the platform limit. You may withdraw at most 108% of your total deposit (deposited: ${totalDeposited.toFixed(6)} ${currency}, cap: ${maxWithdrawable.toFixed(6)} ${currency}, already withdrawn: ${alreadyOut.toFixed(6)} ${currency}, remaining: ${remainingAllowed.toFixed(6)} ${currency}).`,
+              cap: { totalDeposited, maxWithdrawable, alreadyWithdrawn: alreadyOut, remainingAllowed },
+            },
+            { status: 400 },
+          );
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     // Count ALL completed + pending withdrawals for this user across all chains.
     // Completed ones are tracked in balance_audit_log (operation_type='withdrawal').
     // Pending (not yet processed) ones are in withdrawal_requests with status='pending'.
