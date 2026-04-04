@@ -43,6 +43,42 @@ export function getTreasuryKeypair(): Ed25519Keypair {
 }
 
 /**
+ * Transfer native SUI from treasury to a user address.
+ * Amount is expressed in SUI (not MIST); converted internally (1 SUI = 1e9 MIST).
+ */
+export async function transferSUIFromTreasury(
+    toAddress: string,
+    amountSUI: number
+): Promise<string> {
+    try {
+        const client = getBackendSuiClient();
+        const keypair = getTreasuryKeypair();
+
+        const amountInMist = BigInt(Math.floor(amountSUI * 1_000_000_000));
+
+        const tx = new Transaction();
+        const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)]);
+        tx.transferObjects([coin], tx.pure.address(toAddress));
+
+        const result = await client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: keypair,
+            options: { showEffects: true },
+        });
+
+        if (result.effects?.status.status !== 'success') {
+            throw new Error(`SUI withdrawal failed: ${result.effects?.status.error || 'Unknown error'}`);
+        }
+
+        console.log(`SUI withdrawal successful: ${result.digest}`);
+        return result.digest;
+    } catch (error) {
+        console.error('Failed to transfer SUI from treasury:', error);
+        throw error;
+    }
+}
+
+/**
  * Transfer USDC from treasury to a user address
  */
 export async function transferUSDCFromTreasury(

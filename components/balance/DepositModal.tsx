@@ -395,7 +395,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             Wallet Balance
           </p>
           <p className="text-[#00f5ff] text-xl font-bold font-mono flex items-center gap-2">
-            {network === 'SUI' && <img src="/usd-coin-usdc-logo.png" alt="USDC" className="w-5 h-5" />}
+            {network === 'SUI' && <img src="/logos/usdc-logo.png" alt="USDC" className="w-5 h-5" />}
             {network === 'XTZ' && <img src="/logos/tezos-xtz-logo.png" alt="XTZ" className="w-5 h-5" />}
             {network === 'BNB' && <img src="/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />}
             {network === 'SOMNIA' && <img src="/logos/somnia.jpg" alt="SOMNIA" className="w-5 h-5" />}
