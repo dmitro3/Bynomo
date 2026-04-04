@@ -24,7 +24,6 @@ interface PublicStats {
   chainsActive: number;
   totalDeposits: number;
   topCurrencies: { currency: string; wagered: number; paid: number; count: number }[];
-  houseBalanceByCurrency: Record<string, number>;
 }
 
 // ─── Animated Counter ───────────────────────────────────────────────────────
@@ -230,53 +229,6 @@ function WinLossBar({ wins, losses, started }: { wins: number; losses: number; s
   );
 }
 
-// ─── Treasury Badges ─────────────────────────────────────────────────────────
-
-const CURRENCY_ACCENT: Record<string, string> = {
-  SOL:   '#9945FF',
-  USDC:  '#2775CA',
-  BNB:   '#F0B90B',
-  ETH:   '#627EEA',
-  SUI:   '#6fbcf0',
-  NEAR:  '#00EC97',
-  BYNOMO:'#10b981',
-};
-
-function TreasuryBadges({ data }: { data: Record<string, number> }) {
-  const entries = Object.entries(data)
-    .filter(([, v]) => v > 0.0001)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
-
-  if (entries.length === 0) {
-    return <p className="text-[12px] text-white/25 italic">Treasury data loading…</p>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {entries.map(([cur, bal]) => {
-        const color = CURRENCY_ACCENT[cur.toUpperCase()] ?? '#a855f7';
-        return (
-          <span
-            key={cur}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ring-white/[0.06]"
-            style={{ background: `${color}18`, color }}
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: color, boxShadow: `0 0 6px ${color}` }}
-            />
-            {cur.toUpperCase()}
-            <span className="font-mono text-[10px] tabular-nums text-white/50">
-              {bal >= 1000 ? fmt(Math.round(bal)) : bal.toFixed(2)}
-            </span>
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Section ─────────────────────────────────────────────────────────────────
 
 const CARDS = [
@@ -341,10 +293,10 @@ export default function LiveStatsSection() {
 
   const s = stats ?? {
     totalBets: 0, totalWins: 0, totalLosses: 0, winRate: 0,
-    totalWagered: 0, totalPaidOut: 0, uniqueWallets: 0,
-    chainsActive: 12, totalDeposits: 0, totalWithdrawals: 0,
-    topCurrencies: [], houseBalanceByCurrency: {},
-  };
+      totalWagered: 0, totalPaidOut: 0, uniqueWallets: 0,
+      chainsActive: 12, totalDeposits: 0, totalWithdrawals: 0,
+      topCurrencies: [],
+    };
 
   const cardValues: Record<string, number> = {
     trades:   s.totalBets,
@@ -442,76 +394,6 @@ export default function LiveStatsSection() {
             ))}
           </div>
         </div>
-
-        {/* Treasury row */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-7 sm:mt-8"
-        >
-          <article
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b0b12]/90 p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-[border-color] duration-300 lg:rounded-3xl lg:p-7 lg:hover:border-white/[0.12]"
-          >
-            {/* glow */}
-            <div
-              className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full opacity-15 blur-3xl transition-opacity duration-500 group-hover:opacity-25"
-              style={{ background: '#f59e0b' }}
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent"
-              aria-hidden
-            />
-            {/* accent bar */}
-            <div
-              className="absolute bottom-6 left-0 top-6 w-[3px] rounded-full"
-              style={{
-                background: 'linear-gradient(180deg, #f59e0b, #f59e0b55)',
-                boxShadow: '0 0 18px rgba(245,158,11,0.3)',
-              }}
-              aria-hidden
-            />
-
-            <div className="relative z-[1] pl-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <span
-                    className="mb-2 inline-flex rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.22em] ring-1 ring-inset ring-white/[0.07]"
-                    style={{ backgroundColor: 'rgba(245,158,11,0.13)', color: '#f59e0b' }}
-                  >
-                    Treasury Balance
-                  </span>
-                  <h3
-                    className="text-lg font-black leading-snug tracking-tight text-white sm:text-xl"
-                    style={{ fontFamily: 'var(--font-orbitron), system-ui, sans-serif' }}
-                  >
-                    House Custody — by Chain
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
-                  <span
-                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"
-                    style={{ boxShadow: '0 0 6px rgba(52,211,153,0.8)' }}
-                  />
-                  <span className="text-[11px] font-semibold text-white/40">Live</span>
-                </div>
-              </div>
-
-              <TreasuryBadges data={s.houseBalanceByCurrency} />
-
-              <p className="mt-4 text-[12px] leading-relaxed text-white/30">
-                Total funds currently custodied in the BYNOMO treasury across all supported chains. Balances reflect deposited assets not yet withdrawn.
-              </p>
-            </div>
-
-            <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-              aria-hidden
-            />
-          </article>
-        </motion.div>
 
         {/* Footnote */}
         <motion.p
