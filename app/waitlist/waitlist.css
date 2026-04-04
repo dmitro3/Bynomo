@@ -863,3 +863,116 @@
         gap: 16px;
     }
 }
+
+/* Encrypted teaser cards (Advisors / Partnerships on landing) */
+@keyframes encrypted-teaser-scan {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 0 8px;
+    }
+}
+
+.encrypted-teaser-card {
+    position: relative;
+}
+
+.encrypted-teaser-scan {
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.02) 2px,
+        rgba(255, 255, 255, 0.02) 4px
+    );
+    background-size: 100% 8px;
+    animation: encrypted-teaser-scan 6s linear infinite;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+}
+
+/* Partnership marquee tile overrides — slightly larger, rounded, with emerald accent */
+.partner-logo-tile {
+    width: 136px;
+    height: 136px;
+    border-radius: 20px;
+    border: 1px solid rgba(16, 185, 129, 0.12);
+    background: rgba(16, 185, 129, 0.04);
+    transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.partner-logo-tile:hover {
+    transform: translateY(-4px) scale(1.03);
+    border-color: rgba(16, 185, 129, 0.28);
+    background: rgba(16, 185, 129, 0.09);
+}
+
+.partner-marquee-track {
+    gap: 48px;
+}
+
+@media (max-width: 640px) {
+    .partner-logo-tile {
+        width: 104px;
+        height: 104px;
+        border-radius: 14px;
+    }
+}
+
+/* ── Advisor static card ── */
+.advisor-card {
+    position: relative;
+    border-radius: 24px;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    background: rgba(168, 85, 247, 0.05);
+    overflow: hidden;
+    box-shadow: 0 0 60px -16px rgba(168, 85, 247, 0.35);
+    transition: box-shadow 0.35s ease;
+    display: block;
+}
+
+.advisor-card:hover {
+    box-shadow: 0 0 80px -12px rgba(168, 85, 247, 0.50);
+}
+
+/* Image fills naturally — no forced aspect ratio, no cropping */
+.advisor-card-photo {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.advisor-card-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 9999px;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    background: rgba(10, 5, 20, 0.78);
+    backdrop-filter: blur(8px);
+    padding: 5px 10px 5px 8px;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(192, 132, 252, 0.90);
+}
+
+.advisor-card-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #a855f7;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+    animation: advisor-dot-pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes advisor-dot-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(168, 85, 247, 0.8); }
+    50%       { opacity: 0.6; box-shadow: 0 0 14px rgba(168, 85, 247, 0.5); }
+}

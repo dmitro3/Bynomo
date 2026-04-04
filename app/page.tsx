@@ -8,6 +8,8 @@ import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
 import DemoVideoSection from '@/components/landing/DemoVideoSection';
 import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
 import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
+import { AdvisorsRevealSection } from '@/components/landing/AdvisorsRevealSection';
+import { PartnershipsRevealSection } from '@/components/landing/PartnershipsRevealSection';
 import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 import './waitlist/waitlist.css';
 
@@ -350,6 +352,45 @@ export default function WaitlistPage() {
 
             {/* DEXSCREENER EMBED SECTION */}
             <DexscreenerEmbedSection />
+
+            {/* ADVISORS + PARTNERSHIPS — marquee rows */}
+            <section className="relative overflow-hidden border-t border-white/[0.06] bg-[#02040a]">
+                <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[700px] -translate-x-1/2 rounded-full bg-purple-600/[0.05] blur-[130px]" />
+
+                {/* Section heading */}
+                <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8 lg:pt-24">
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: '-40px' }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                        className="mb-12 text-center sm:mb-14 lg:mb-16"
+                    >
+                        <div className="mb-3 sm:mb-4 flex items-center justify-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.2em] sm:tracking-[0.35em] text-white/25">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+                            Network &amp; credibility
+                        </div>
+                        <h2
+                            className="mb-3 sm:mb-4 text-2xl min-[400px]:text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white px-1"
+                            style={{ fontFamily: 'var(--font-orbitron)' }}
+                        >
+                            Advisory Board{' '}
+
+                        </h2>
+                        
+                    </motion.div>
+                </div>
+
+                {/* Advisors — single static card */}
+                <div className="relative z-10 mb-14 sm:mb-16">
+                    <AdvisorsRevealSection />
+                </div>
+
+                {/* Partnerships marquee */}
+                <div className="relative z-10 pb-16 sm:pb-20 lg:pb-24">
+                    <PartnershipsRevealSection />
+                </div>
+            </section>
 
             {/* TESTIMONIALS SECTION */}
             <section>
