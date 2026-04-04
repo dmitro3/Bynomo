@@ -18,7 +18,7 @@ export function AdvisorsRevealSection() {
           <img
             src="/logos/Lucas Advisor.JPG"
             alt="Lucas Liao, Solutions Architect at BNB Chain — confirmed advisor"
-            className="advisor-card-photo"
+              className="advisor-card-photo" style={{ filter: 'blur(8px)', transform: 'scale(1.05)' }}
           />
 
           {/* Confirmed badge */}
