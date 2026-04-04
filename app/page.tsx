@@ -10,6 +10,7 @@ import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
 import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
 import { AdvisorsRevealSection } from '@/components/landing/AdvisorsRevealSection';
 import { PartnershipsRevealSection } from '@/components/landing/PartnershipsRevealSection';
+import LiveStatsSection from '@/components/landing/LiveStatsSection';
 import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 import './waitlist/waitlist.css';
 
@@ -349,6 +350,9 @@ export default function WaitlistPage() {
 
             {/* CHAINS + DEX LOGOS SECTION */}
             <LogosMarqueeSection />
+
+            {/* LIVE PLATFORM STATS */}
+            <LiveStatsSection />
 
             {/* DEXSCREENER EMBED SECTION */}
             <DexscreenerEmbedSection />
