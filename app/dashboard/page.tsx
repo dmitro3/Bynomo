@@ -200,6 +200,7 @@ export default function AdminDashboard() {
     const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
     const [marketTokens, setMarketTokens] = useState<MarketToken[]>([]);
     const [gameHistory, setGameHistory] = useState<BetHistory[]>([]);
+    const [modeAnalytics, setModeAnalytics] = useState<{ real: any[]; demo: any[]; combined: any[] } | null>(null);
     const [suspiciousUsers, setSuspiciousUsers] = useState<any[]>([]);
     const [frequencyUsers, setFrequencyUsers] = useState<any[]>([]);
     const [bannedWallets, setBannedWallets] = useState<BannedWalletRow[]>([]);
@@ -368,7 +369,7 @@ export default function AdminDashboard() {
         setWaitlistError(null);
         try {
             const opts = { credentials: 'include' as const };
-            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes, playerLedgerRes] = await Promise.all([
+            const [statsRes, usersRes, txRes, mktRes, gameRes, dangerRes, bannedRes, waitlistRes, accessCodesRes, pendingWithdrawalsRes, playerLedgerRes, modeRes] = await Promise.all([
                 fetch('/api/admin/stats', opts),
                 fetch('/api/admin/users', opts),
                 fetch('/api/admin/transactions', opts),
@@ -380,6 +381,7 @@ export default function AdminDashboard() {
                 fetch('/api/admin/access-codes', opts),
                 fetch('/api/admin/withdrawal-requests/pending', opts),
                 fetch('/api/admin/player-ledger', opts),
+                fetch('/api/admin/mode-analytics', opts),
             ]);
             // If any critical fetch returns 401, the session has expired
             if (statsRes.status === 401) { setIsAuthorized(false); setSessionExpired(true); return; }
@@ -432,6 +434,9 @@ export default function AdminDashboard() {
             if (playerLedgerRes.ok) {
                 const data = await playerLedgerRes.json();
                 setPlayerPnl(data.players || []);
+            }
+            if (modeRes.ok) {
+                setModeAnalytics(await modeRes.json());
             }
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
@@ -1278,6 +1283,136 @@ export default function AdminDashboard() {
 
                                 {activeTab === 'gameplay' && (
                                     <div key="gameplay" className="space-y-6">
+
+                                        {/* ── Mode Analytics Panel ─────────────────────────────── */}
+                                        {modeAnalytics && (
+                                            <div className="p-6 border-b border-white/5 space-y-5 bg-white/[0.01]">
+                                                <div className="flex items-center gap-3">
+                                                    <h3 className="text-xs font-black uppercase tracking-widest text-white/60">Game Mode P&amp;L — Real Wallets Only</h3>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 border border-white/10 rounded px-2 py-0.5">
+                                                        {(modeAnalytics.real ?? []).reduce((s: number, m: any) => s + m.totalBets, 0).toLocaleString()} rounds
+                                                    </span>
+                                                </div>
+
+                                                {/* Mode cards */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {(['binomo', 'box', 'draw'] as const).map(modeKey => {
+                                                        const modeLabels: Record<string, string> = { binomo: 'Classic (Binomo)', box: 'Box Mode', draw: 'Draw Mode' };
+                                                        const modeAccents: Record<string, { border: string; text: string; bg: string; glow: string }> = {
+                                                            binomo: { border: 'border-blue-500/30',   text: 'text-blue-400',   bg: 'bg-blue-500/[0.06]',   glow: 'rgba(59,130,246,0.15)' },
+                                                            box:    { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/[0.06]', glow: 'rgba(168,85,247,0.15)' },
+                                                            draw:   { border: 'border-amber-500/30',  text: 'text-amber-400',  bg: 'bg-amber-500/[0.06]',  glow: 'rgba(245,158,11,0.15)' },
+                                                        };
+                                                        const acc = modeAccents[modeKey];
+                                                        const m = (modeAnalytics.real ?? []).find((x: any) => x.mode === modeKey);
+
+                                                        if (!m) return (
+                                                            <div key={modeKey} className={`rounded-2xl border ${acc.border} ${acc.bg} p-5 flex flex-col gap-2`}>
+                                                                <p className={`text-xs font-black uppercase tracking-widest ${acc.text}`}>{modeLabels[modeKey]}</p>
+                                                                <p className="text-xs text-white/20 italic">No rounds recorded yet</p>
+                                                            </div>
+                                                        );
+
+                                                        const housePnLPositive = m.housePnL >= 0;
+                                                        return (
+                                                            <div key={modeKey} className={`rounded-2xl border ${acc.border} ${acc.bg} p-5 space-y-4`}>
+                                                                {/* Header */}
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className={`text-xs font-black uppercase tracking-widest ${acc.text}`}>{modeLabels[modeKey]}</p>
+                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${housePnLPositive ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/30 text-rose-400 bg-rose-500/10'}`}>
+                                                                        {housePnLPositive ? '▲ House profit' : '▼ House loss'}
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Big numbers */}
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div>
+                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Rounds</p>
+                                                                        <p className="text-xl font-black tabular-nums text-white">{m.totalBets.toLocaleString()}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Win Rate</p>
+                                                                        <p className={`text-xl font-black tabular-nums ${m.winRate > 52.6 ? 'text-rose-400' : 'text-emerald-400'}`}>{m.winRate}%</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Wins / Losses</p>
+                                                                        <p className="text-sm font-bold tabular-nums text-white/70">
+                                                                            <span className="text-emerald-400">{m.wins.toLocaleString()}</span>
+                                                                            <span className="text-white/20"> / </span>
+                                                                            <span className="text-rose-400">{m.losses.toLocaleString()}</span>
+                                                                        </p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Avg Multiplier</p>
+                                                                        <p className="text-sm font-bold tabular-nums text-white/70">{m.avgMultiplier}×</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Win-rate bar */}
+                                                                <div>
+                                                                    <div className="flex justify-between text-[10px] text-white/30 mb-1">
+                                                                        <span>User win rate</span>
+                                                                        <span className={m.winRate > 52.6 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                                                                            {m.winRate > 52.6 ? `+${(m.winRate - 52.6).toFixed(1)}% above break-even` : `${(52.6 - m.winRate).toFixed(1)}% below break-even`}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full rounded-full transition-all ${m.winRate > 52.6 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                                            style={{ width: `${Math.min(m.winRate, 100)}%` }}
+                                                                        />
+                                                                        {/* Break-even marker at 52.6% */}
+                                                                        <div className="relative -mt-1.5 h-1.5" style={{ marginLeft: '52.6%', width: '2px', background: 'rgba(255,255,255,0.3)', borderRadius: '1px' }} />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Per-chain P&L (top 3) */}
+                                                                {Object.keys(m.byChain).length > 0 && (
+                                                                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                                                                        <p className="text-[10px] text-white/20 uppercase tracking-wider">House P&amp;L by Chain (native units)</p>
+                                                                        {Object.entries(m.byChain as Record<string, any>)
+                                                                            .sort((a, b) => Math.abs(b[1].housePnL) - Math.abs(a[1].housePnL))
+                                                                            .slice(0, 4)
+                                                                            .map(([chain, c]) => (
+                                                                                <div key={chain} className="flex items-center justify-between text-xs">
+                                                                                    <span className="text-white/40 font-mono">{chain}</span>
+                                                                                    <span className="font-mono font-bold tabular-nums">
+                                                                                        <span className={c.housePnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                                                                            {c.housePnL >= 0 ? '+' : ''}{c.housePnL.toFixed(4)}
+                                                                                        </span>
+                                                                                        <span className="text-white/20 text-[10px] ml-1">
+                                                                                            ({c.wins}/{c.totalBets} wins)
+                                                                                        </span>
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Top assets */}
+                                                                {m.topAssets && m.topAssets.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-white/5">
+                                                                        {m.topAssets.map((a: { asset: string; count: number }) => (
+                                                                            <span key={a.asset} className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 text-white/40">
+                                                                                {a.asset} <span className="text-white/20">{a.count}</span>
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Cross-mode break-even note */}
+                                                <p className="text-[10px] text-white/20 leading-relaxed">
+                                                    Break-even win rate at 1.9× multiplier is 52.6%. Rates <span className="text-rose-400">above</span> this mean the house loses money on that mode.
+                                                    P&amp;L values are in each chain's native token — <span className="text-amber-300/70">do not sum across chains.</span>
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Filter bar */}
                                         <div className="p-6 border-b border-white/5 flex flex-wrap gap-6 items-center bg-white/[0.01]">
                                             <div className="flex gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
                                                 <button
