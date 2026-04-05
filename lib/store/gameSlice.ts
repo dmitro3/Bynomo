@@ -25,6 +25,9 @@ export interface ActiveBet {
   timestamp: number;
   status: 'active' | 'settled';
   network?: string; // Track which network (currency) this bet uses
+  /** Wallet address captured at placement time — used for settlement even if
+   *  the user disconnects their wallet before the round resolves. */
+  userAddress?: string;
   // Classic mode specific
   strikePrice?: number;
   endTime?: number;
@@ -443,6 +446,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         timestamp: Date.now(),
         status: 'active',
         network: currency, // Save the currency identifier used (e.g. XLM, NEAR, PC)
+        userAddress: userAddress, // Capture address at placement time for settlement
         ...(gameMode === 'binomo' ? {
           strikePrice: currentPrice,
           endTime: Date.now() + (durationSeconds * 1000)
@@ -649,9 +653,12 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       if (won) playWinSound();
       else playLoseSound();
 
+      // ── Remove bet from active state FIRST ───────────────────────────────
+      // This must happen synchronously before any async API calls to prevent
+      // the price-tick loop from resolving the same bet a second time.
       set({
         activeBets: activeBets.filter((b: ActiveBet) => b.id !== betId),
-        settledBets: [settledBet, ...settledBets].slice(0, 50), // Keep last 50
+        settledBets: [settledBet, ...settledBets].slice(0, 50),
         lastResult: {
           won,
           amount: resolvedBet.amount,
@@ -663,20 +670,25 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         }
       });
 
+      // ── Use the address that was captured at bet-placement time ───────────
+      // Falls back to current store address in case of older bets without it.
+      const settlementAddress = resolvedBet.userAddress || address;
+      const settlementCurrency = resolvedBet.network || (network || 'BNB');
+
       // Handle Balance Update
       if (won) {
-        if (accountType === 'real' && address) {
+        if (accountType === 'real' && settlementAddress) {
           fetch('/api/balance/win', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userAddress: address,
+              userAddress: settlementAddress,
               winAmount: payout,
-              currency: resolvedBet.network || (network || 'BNB'),
+              currency: settlementCurrency,
               betId: resolvedBet.id
             })
           }).then(() => {
-            if (fetchBalance) fetchBalance(address);
+            if (fetchBalance && settlementAddress) fetchBalance(settlementAddress);
           }).catch(console.error);
         } else if (accountType === 'demo') {
           updateBalance(payout, 'add');
@@ -715,16 +727,17 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         });
       }
 
-      // Save to Supabase for persistent history & leaderboard (non-blocking).
-      // Demo-mode bets must not be written: they use the user's real address but ids like "demo-*"
-      // and would inflate "real" admin economics if mixed with balance-backed play.
-      if (address && accountType === 'real') {
+      // ── Save to Supabase bet_history ──────────────────────────────────────
+      // Always attempt the save for real-mode bets, using the captured address.
+      // Demo bets (id prefix "demo-") are excluded to keep admin stats clean.
+      const isDemoBet = String(resolvedBet.id).toLowerCase().startsWith('demo-');
+      if (accountType === 'real' && settlementAddress && !isDemoBet) {
         fetch('/api/bets/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: resolvedBet.id,
-            walletAddress: address,
+            walletAddress: settlementAddress,
             asset: resolvedBet.asset || 'BNB',
             direction: resolvedBet.direction,
             amount: resolvedBet.amount,
@@ -734,7 +747,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
             payout: payout,
             won: won,
             mode: resolvedBet.mode,
-            network: resolvedBet.network || network || 'BNB',
+            network: settlementCurrency,
           })
         }).catch(err => console.error('Failed to save bet to Supabase:', err));
       }

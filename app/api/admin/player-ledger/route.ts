@@ -82,12 +82,24 @@ export async function GET(_request: NextRequest) {
 
         if (balErr) throw balErr;
 
-        // Real bet counts/volume per wallet
-        const { data: betRows, error: betErr } = await supabase
-            .from('bet_history')
-            .select('id, wallet_address, amount, payout, won');
-
-        if (betErr) throw betErr;
+        // Real bet counts/volume per wallet — paginate to avoid 1000-row truncation
+        const betRows: any[] = [];
+        {
+            const PAGE = 1000;
+            let from = 0;
+            for (;;) {
+                const { data, error: betErr } = await supabase
+                    .from('bet_history')
+                    .select('id, wallet_address, amount, payout, won, network')
+                    .order('id', { ascending: true })
+                    .range(from, from + PAGE - 1);
+                if (betErr) throw betErr;
+                const chunk = data ?? [];
+                betRows.push(...chunk);
+                if (chunk.length < PAGE) break;
+                from += PAGE;
+            }
+        }
 
         // User display names
         const { data: profiles } = await supabase

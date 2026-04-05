@@ -49,6 +49,22 @@ export async function POST(request: NextRequest) {
 
         const userKey = canonicalHouseUserAddress(userAddress);
 
+        // ── Deduplication guard ───────────────────────────────────────────────
+        // Prevent double-payout: if this bet_id already has a 'bet_won' entry in
+        // the audit log, return success immediately without crediting again.
+        if (betId) {
+            const { data: existing } = await supabase
+                .from('balance_audit_log')
+                .select('id')
+                .eq('operation_type', 'bet_won')
+                .eq('transaction_hash', betId)
+                .limit(1);
+            if (existing && existing.length > 0) {
+                console.warn(`[balance/win] duplicate payout blocked for betId=${betId}`);
+                return NextResponse.json({ success: true, duplicate: true, winAmount });
+            }
+        }
+
         // Call credit_balance_for_payout stored procedure
         const { data, error } = await supabase.rpc('credit_balance_for_payout', {
             p_user_address: userKey,
