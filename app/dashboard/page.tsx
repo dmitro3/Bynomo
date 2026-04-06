@@ -206,6 +206,7 @@ export default function AdminDashboard() {
     const [bannedWallets, setBannedWallets] = useState<BannedWalletRow[]>([]);
     const [banAddressInput, setBanAddressInput] = useState('');
     const [banReasonInput, setBanReasonInput] = useState('');
+    const [unbanningAddress, setUnbanningAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     // Default to Waitlist so collected emails are visible immediately.
@@ -496,6 +497,30 @@ export default function AdminDashboard() {
             if (res.ok) fetchData();
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    // Unban from Player P&L table — removes ban AND zeroes the wallet balance so they start fresh
+    const handleUnbanFromPnl = async (walletAddress: string) => {
+        if (!confirm(`Unban ${walletAddress}?\n\nThis will:\n• Remove the ban\n• Zero their available balance (they start fresh)\n\nContinue?`)) return;
+        setUnbanningAddress(walletAddress);
+        try {
+            const res = await fetch('/api/admin/unban-wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ walletAddress }),
+            });
+            if (res.ok) {
+                fetchData();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err?.error || 'Failed to unban wallet');
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setUnbanningAddress(null);
         }
     };
 
@@ -1222,9 +1247,18 @@ export default function AdminDashboard() {
                                                                                 <div className="flex items-center gap-2 flex-wrap">
                                                                                     <span className="text-white text-sm font-bold">{p.username || 'Anonymous'}</span>
                                                                                     {isBanned && (
-                                                                                        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                                                                                            ⊘ Banned
-                                                                                        </span>
+                                                                                        <>
+                                                                                            <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                                                                                ⊘ Banned
+                                                                                            </span>
+                                                                                            <button
+                                                                                                onClick={() => handleUnbanFromPnl(p.user_address)}
+                                                                                                disabled={unbanningAddress === p.user_address}
+                                                                                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
+                                                                                            >
+                                                                                                {unbanningAddress === p.user_address ? '…' : '↑ Unban'}
+                                                                                            </button>
+                                                                                        </>
                                                                                     )}
                                                                                 </div>
                                                                                 <a
