@@ -103,7 +103,7 @@ export const GameBoard: React.FC = () => {
     OCT:    0.01,
     INIT:   0.01,
   };
-  const blitzEntryFee = BLITZ_FEES[network] ?? 0.01;
+  const blitzEntryFee = (network ? BLITZ_FEES[network] : undefined) ?? 0.01;
 
   // Connection status
   const isWalletConnected = !!address;
