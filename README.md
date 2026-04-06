@@ -857,14 +857,43 @@ One-time per-window flat fees paid directly to the fee collector wallet on each 
 
 ## Competitive Landscape
 
-| Category | Examples | Limitation vs Bynomo |
-|----------|----------|---------------------|
-| Web2 Binary Options | Binomo, IQ Option, Quotex | Opaque settlement, algorithmic bias, trial-mode manipulation |
-| Crypto Prediction Markets | Polymarket, Kalshi, Azuro | Minutes-to-hours resolution — too slow for fast rounds |
-| CEX Derivatives | Binance Futures, Bybit, OKX | Complex mechanics — funding, liquidation, order types |
-| On-chain Options | Dopex, Lyra, Premia | Complex option mechanics, no instant UX |
-| Tap Trading | Euphoria_fi | Mobile-first perps, not a dedicated fast binary loop |
-| Multi-chain wallets | Various | UX fragmentation — no unified multi-chain binary experience |
+### Positioning
+
+Bynomo sits at the intersection of three large markets — binary options, prediction markets, and on-chain derivatives — but competes directly with none of them. It is the only product offering **sub-5-second oracle-settled binary rounds across 12 blockchains in a single UI**.
+
+### Feature Comparison
+
+| Feature | Bynomo | Binomo / IQ Option | Polymarket / Kalshi | Binance Futures / Bybit | Dopex / Lyra | Euphoria Fi |
+|---------|--------|-------------------|--------------------|-----------------------|-------------|------------|
+| Settlement speed | ✅ 5s – 1m | ✅ Fast (opaque) | ❌ Hours – days | ✅ Real-time | ❌ Hours – days | ✅ Real-time |
+| On-chain verifiable | ✅ Yes | ❌ No | ✅ Partial | ❌ No | ✅ Yes | ✅ Yes |
+| Oracle-driven (no manipulation) | ✅ Pyth Hermes | ❌ Proprietary algo | ✅ Partial | ❌ Internal | ✅ Yes | ✅ Yes |
+| No liquidation / funding rate | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| No wallet sig per bet | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ❌ No | ✅ Yes |
+| Multi-chain (12 chains) | ✅ 12 chains | ❌ Web2 only | ❌ 1–2 chains | ❌ CEX only | ❌ 1–2 chains | ❌ 1 chain |
+| Custom draw-your-own trade | ✅ Draw Mode | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
+| Demo mode (no wallet) | ✅ Yes | ✅ Yes | ❌ No | ❌ No | ❌ No | ❌ No |
+| Beginner-friendly UX | ✅ Yes | ✅ Yes | ❌ Complex | ❌ Complex | ❌ Complex | ✅ Yes |
+| Transparent P&L audit trail | ✅ Supabase + on-chain | ❌ No | ✅ On-chain | ❌ No | ✅ On-chain | ❌ No |
+
+### Competitive Moats
+
+| Moat | Detail |
+|------|--------|
+| **Speed** | 5s rounds are impossible without sub-1s oracle feeds — Pyth Hermes only reached production maturity in 2025 |
+| **Multi-chain depth** | 12 chains live with native wallet integrations — months of engineering to replicate |
+| **Draw Mode** | No other binary product lets users draw their own trade rectangle — entirely novel mechanic |
+| **Transparency** | Every balance event logged in an immutable audit trail — Web2 competitors cannot offer this |
+| **Network effects** | Each chain = its own community flywheel; 12 chains running in parallel |
+| **First mover** | No credible Web3 binary options product exists at production level — the category is wide open |
+
+### Why Competitors Can't Copy Quickly
+
+- **Web2 platforms** (Binomo, IQ Option) — can't go on-chain; their business model depends on opacity
+- **Prediction markets** (Polymarket, Kalshi) — built for long-form outcomes; architecture doesn't support 5s resolution
+- **CEX derivatives** (Binance, Bybit) — regulatory overhead, liquidation engines, funding rate complexity baked in
+- **On-chain options** (Dopex, Lyra) — smart-contract-bound, high gas, no instant UX
+- **Single-chain dapps** (Euphoria Fi) — building multi-chain from scratch is 6–12 months of wallet integration work
 
 ---
 
@@ -981,7 +1010,7 @@ sequenceDiagram
 | 1 | **DeFi-native traders** | Active on options/spot/futures/perps/DEXs seeking 5s–1m high-frequency instruments | Slow instruments — funding rates, liquidation, complexity | Sub-5s binary rounds, no liquidation, no wallet sig per bet | X/Twitter, DeFi Discord/Telegram, KOL partnerships |
 | 2 | **Binary options & prediction users (Web2 → Web3)** | Former Binomo / IQ Option / Quotex users + Polymarket / Kalshi users — 590M+ globally | Algorithmically rigged, no transparency, or too slow settlement | Fully oracle-driven, on-chain verifiable, 5s–1m settlement | Reddit (r/Forex, r/binaryoptions), SEO, YouTube, paid |
 | 3 | **Traders, Gamblers, Creators & Communities** | KOLs, trading groups, Telegram/Discord communities seeking gamified trading experiences | No product that combines trading skill + gamification on-chain | Box/Draw/Blitz modes, PnL sharing, leaderboards, streaks | Micro-influencers, viral clips, ambassador program |
-| 4 | **Aptos ecosystem** | All Aptos regional community groups, ecosystem projects, and executives | No fast binary trading dapp native to Aptos | Full Aptos integration — native APT support, executive-level distribution | Direct outreach to Aptos Foundation, all Aptos ecosystem projects |
+| 4 | **Chain ecosystem communities** (per chain) | All regional community groups, ecosystem projects, and chain executives across every supported chain | No fast binary trading dapp native to their chain | Native token support + chain-level distribution — reach every project, community, and executive in the ecosystem | Direct outreach to each chain's Foundation, regional ambassador groups, and all ecosystem projects |
 | 5 | **Chain ecosystem communities** | SOL, SUI, NEAR, STRK, XLM, XTZ, INIT native communities | No unified multi-chain trading experience | Native token support across 12 chains from one UI | Chain foundation grants, ecosystem hackathons, Twitter Spaces |
 
 ---
@@ -1002,7 +1031,7 @@ sequenceDiagram
 | Action | Detail | Budget | Success Metric |
 |--------|--------|--------|---------------|
 | **Viral X launch — Euphoria Fi playbook** | Host a giveaway at launch moment; word-of-mouth spreads across X organically — same strategy used by Euphoria Fi on MegaETH | Prize pool | 10K+ impressions day 1 |
-| **Aptos ecosystem blitz** | Reach every Aptos regional community group; request retweets from all Aptos executives and official Aptos accounts; pitch every Aptos ecosystem project for integration | $0 | Aptos Foundation official support |
+| **Per-chain ecosystem blitz** | For every supported chain: reach all regional community groups, request retweets from chain executives and official accounts, and pitch every ecosystem project for integration — repeat this playbook across SOL, BNB, SUI, NEAR, STRK, XLM, XTZ, INIT and every new chain added | $0 | Foundation-level support + ecosystem project integrations on each chain |
 | **Micro-influencer campaign** | Partner with 100 creators (1K–20K followers) in trading, crypto, and Web3 niches — each posts live gameplay clip or PnL screenshot | $5K–$15K total | 5M+ combined reach |
 | **PnL & streak clips on X/Telegram** | Short-form trade clips, PnL screenshots, and Blitz streak highlights engineered for virality | $0 | 50+ organic reposts per clip |
 | **Referral program launch** | Perpetual fee share — referrer earns % of referee's platform fees forever; deep links into Classic and Box modes | $0 (self-funding) | 25% of signups via referral |
@@ -1043,7 +1072,7 @@ sequenceDiagram
 | **Perpetual referral fee share** | Refer a trader → earn % of their fees forever; deep links into Classic + Box | Every depositor becomes a permanent distributor |
 | **PnL & streak virality** | Trade clips, PnL screenshots, Blitz streak highlights shared on X/Telegram | Zero-cost impressions; social proof that pulls in new traders |
 | **Micro-influencer network** | 100 creators (1K–20K followers) → combined reach > macro KOLs at fraction of cost | Authentic niche audiences convert better than broad audiences |
-| **Aptos ecosystem distribution** | Executive tweets + all ecosystem projects → built-in captive audience | One integration announcement = tens of thousands of impressions |
+| **Per-chain ecosystem distribution** | For each chain: executive tweets + official account support + all ecosystem projects → built-in captive audience already engaged in that chain | One integration announcement per chain = tens of thousands of impressions — multiplied across 12 chains |
 | **Weekly X Podcast / AMA** | Top traders live on X Spaces every week → authority + recurring attention | Builds a loyal returning audience week over week |
 | **Ambassador program** | Regional ambassadors run local groups + tutorials in native language | Global coverage with local trust — impossible to replicate with ads |
 | **Blitz FOMO** | 1-min active windows on a repeating cycle — urgency drives daily return visits | High retention mechanic baked into the core product loop |
