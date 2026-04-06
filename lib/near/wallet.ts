@@ -133,3 +133,42 @@ export const depositNEAR = async (amount: string) => {
 
     return txHash;
 };
+
+/**
+ * Transfer NEAR to any recipient (e.g. platform fee collector).
+ */
+export const transferNEARToAddress = async (amount: string, recipient: string): Promise<string> => {
+    const { selector, modal } = await initNearSelector();
+
+    const state = selector.store.getState();
+    const accountId = state.accounts[0]?.accountId;
+    if (!accountId) {
+        modal.show();
+        throw new Error("Please connect your wallet first");
+    }
+
+    const wallet = await selector.wallet();
+    if (wallet.id === 'sender') {
+        throw new Error("Sender wallet is not supported. Please use MyNearWallet, HereWallet, or Bitget Wallet.");
+    }
+
+    const amountInYocto = parseNearAmount(amount as `${number}`);
+    if (!amountInYocto) throw new Error("Invalid NEAR amount");
+
+    const result = await wallet.signAndSendTransaction({
+        receiverId: recipient,
+        actions: [actionCreators.transfer(BigInt(amountInYocto))],
+    });
+
+    if (!result) throw new Error("Transaction failed");
+
+    const txHash: string | undefined =
+        typeof result === 'string' ? result :
+        (result as any).transaction?.hash ||
+        (result as any).transaction_outcome?.id ||
+        (result as any).hash ||
+        (result as any).transactionHashes?.[0];
+
+    if (!txHash) throw new Error("Transaction completed but hash could not be retrieved");
+    return txHash;
+};

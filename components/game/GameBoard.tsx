@@ -87,7 +87,23 @@ export const GameBoard: React.FC = () => {
 
   // Unified balance and currency
   const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
-  const blitzEntryFee = network === 'BNB' ? 0.0001 : 0.01;
+  // Per-chain blitz entry fees (paid to the platform fee collector wallet, not treasury).
+  const BLITZ_FEES: Record<string, number> = {
+    BNB:    0.1,
+    SOL:    1,
+    SUI:    50,
+    XLM:    400,
+    XTZ:    150,
+    NEAR:   50,
+    STRK:   1500,
+    // Testnet / minor chains keep a nominal fee
+    PUSH:   0.01,
+    SOMNIA: 0.01,
+    ZG:     0.01,
+    OCT:    0.01,
+    INIT:   0.01,
+  };
+  const blitzEntryFee = BLITZ_FEES[network] ?? 0.01;
 
   // Connection status
   const isWalletConnected = !!address;
@@ -115,10 +131,11 @@ export const GameBoard: React.FC = () => {
       })
 
       if (network === 'SOL') {
-        const { getSolanaConnection, buildDepositTransaction } = await import('@/lib/solana/client');
+        const { getSolanaConnection, buildSolTransferTransaction } = await import('@/lib/solana/client');
         const connection = getSolanaConnection();
-        const transaction = await buildDepositTransaction(blitzEntryFee, address);
-
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_SOL;
+        if (!feeWallet) throw new Error('SOL fee collector wallet not configured');
+        const transaction = await buildSolTransferTransaction(blitzEntryFee, address, feeWallet);
         toast.info(`Confirming ${blitzEntryFee} SOL Blitz Entry...`);
         const signature = await sendSolanaTransaction(transaction, connection);
         console.log("Solana Blitz payment sig:", signature);
@@ -132,22 +149,22 @@ export const GameBoard: React.FC = () => {
         const provider = new ethers.BrowserProvider(ethereumProvider);
         const signer = await provider.getSigner();
 
-        const config = getBNBConfig();
-        if (!config.treasuryAddress) {
-          throw new Error("Treasury not configured");
-        }
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
+        if (!feeWallet) throw new Error('EVM fee collector wallet not configured');
 
         toast.info(`Confirming ${blitzEntryFee} BNB Blitz Entry...`);
         const txResponse = await signer.sendTransaction({
-          to: getAddress(config.treasuryAddress),
+          to: getAddress(feeWallet),
           value: ethers.parseEther(blitzEntryFee.toString()),
         });
         console.log("BNB Blitz payment tx:", txResponse.hash);
       } else if (network === 'SUI') {
         if (!suiAccount) throw new Error('Sui wallet not connected');
-        const { buildDepositTransaction } = await import('@/lib/sui/client');
-        const tx = await buildDepositTransaction(blitzEntryFee, address);
-        toast.info(`Confirming ${blitzEntryFee} USDC Blitz Entry on Sui...`);
+        const { buildSuiNativeTransferTransaction } = await import('@/lib/sui/client');
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_SUI;
+        if (!feeWallet) throw new Error('SUI fee collector wallet not configured');
+        const tx = await buildSuiNativeTransferTransaction(blitzEntryFee, address, feeWallet);
+        toast.info(`Confirming ${blitzEntryFee} SUI Blitz Entry...`);
         const result = await signAndExecuteSui({ transaction: tx as any });
         console.log("Sui Blitz payment digest:", result.digest);
       } else if (network === 'XTZ') {
@@ -166,18 +183,18 @@ export const GameBoard: React.FC = () => {
         const tezos = await getTezosClient();
         tezos.setWalletProvider(wallet);
 
-        const treasuryAddress = process.env.NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS;
-        if (!treasuryAddress) throw new Error('Tezos treasury not configured');
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_XTZ;
+        if (!feeWallet) throw new Error('XTZ fee collector wallet not configured');
 
         toast.info(`Confirming ${blitzEntryFee} XTZ Blitz Entry...`);
-        const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: blitzEntryFee }).send();
+        const op = await tezos.wallet.transfer({ to: feeWallet, amount: blitzEntryFee }).send();
         console.log("Tezos Blitz payment hash:", op.opHash);
       } else if (network === 'XLM') {
         const { StellarWalletsKit, WalletNetwork, allowAllModules } = await import('@creit.tech/stellar-wallets-kit');
         const { TransactionBuilder, Networks, Operation, Asset, Horizon } = await import('@stellar/stellar-sdk');
 
-        const treasuryAddress = process.env.NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS;
-        if (!treasuryAddress) throw new Error('Stellar treasury not configured');
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_XLM;
+        if (!feeWallet) throw new Error('XLM fee collector wallet not configured');
 
         const server = new Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon.stellar.org');
         const account = await server.loadAccount(address);
@@ -187,7 +204,7 @@ export const GameBoard: React.FC = () => {
           networkPassphrase: Networks.PUBLIC,
         })
           .addOperation(Operation.payment({
-            destination: treasuryAddress,
+            destination: feeWallet,
             asset: Asset.native(),
             amount: blitzEntryFee.toFixed(7),
           }))
@@ -204,34 +221,36 @@ export const GameBoard: React.FC = () => {
         const result = await server.submitTransaction(TransactionBuilder.fromXDR(signedTxXdr, Networks.PUBLIC));
         console.log("Stellar Blitz payment hash:", (result as any).hash);
       } else if (network === 'NEAR') {
-        const { depositNEAR } = await import('@/lib/near/wallet');
+        const { transferNEARToAddress } = await import('@/lib/near/wallet');
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR;
+        if (!feeWallet) throw new Error('NEAR fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} NEAR Blitz Entry...`);
-        const txHash = await depositNEAR(blitzEntryFee.toString());
+        const txHash = await transferNEARToAddress(blitzEntryFee.toString(), feeWallet);
         console.log("NEAR Blitz payment hash:", txHash);
       } else if (network === 'STRK') {
-        const { depositSTRK } = await import('@/lib/starknet/wallet');
+        const { transferSTRKToAddress } = await import('@/lib/starknet/wallet');
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK;
+        if (!feeWallet) throw new Error('STRK fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} STRK Blitz Entry...`);
-        const txHash = await depositSTRK(blitzEntryFee);
+        const txHash = await transferSTRKToAddress(blitzEntryFee, feeWallet);
         console.log("Starknet Blitz payment hash:", txHash);
       } else if (network === 'PUSH') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
-        const { getPushConfig } = await import('@/lib/push/config');
-        const pushConfig = getPushConfig();
-        if (!pushConfig.treasuryAddress) throw new Error('Push Chain treasury not configured');
+        const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
+        if (!evmFeeWallet) throw new Error('EVM fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} PC Blitz Entry...`);
         const hash = await walletClient.sendTransaction({
-          to: getAddress(pushConfig.treasuryAddress) as `0x${string}`,
+          to: getAddress(evmFeeWallet) as `0x${string}`,
           value: parseEther(blitzEntryFee.toString()),
         });
         console.log("Push Chain Blitz payment tx:", hash);
       } else if (network === 'SOMNIA') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
-        const { getSomniaConfig } = await import('@/lib/somnia/config');
-        const somniaConfig = getSomniaConfig();
-        if (!somniaConfig.treasuryAddress) throw new Error('Somnia treasury not configured');
+        const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
+        if (!evmFeeWallet) throw new Error('EVM fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} STT Blitz Entry...`);
         const hash = await walletClient.sendTransaction({
-          to: getAddress(somniaConfig.treasuryAddress as string),
+          to: getAddress(evmFeeWallet as string),
           value: parseEther(blitzEntryFee.toString()),
         });
         toast.info('Waiting for on-chain confirmation...');
@@ -241,12 +260,11 @@ export const GameBoard: React.FC = () => {
         console.log("Somnia Blitz payment tx:", hash);
       } else if (network === 'ZG') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
-        const { getZGConfig } = await import('@/lib/zg/config');
-        const zgConfig = getZGConfig();
-        if (!zgConfig.treasuryAddress) throw new Error('0G treasury not configured');
+        const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
+        if (!evmFeeWallet) throw new Error('EVM fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} 0G Blitz Entry...`);
         const hash = await walletClient.sendTransaction({
-          to: getAddress(zgConfig.treasuryAddress as string),
+          to: getAddress(evmFeeWallet as string),
           value: parseEther(blitzEntryFee.toString()),
         });
         toast.info('Waiting for on-chain confirmation...');

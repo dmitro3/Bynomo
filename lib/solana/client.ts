@@ -73,6 +73,50 @@ export async function buildDepositTransaction(
 }
 
 /**
+ * Build a SOL transfer transaction to any recipient address (e.g. fee collector).
+ */
+export async function buildSolTransferTransaction(
+    amount: number,
+    fromAddress: string,
+    toAddress: string
+): Promise<Transaction> {
+    const connection = getSolanaConnection();
+    const fromPubkey = new PublicKey(fromAddress);
+    const toPubkey   = new PublicKey(toAddress);
+
+    const transaction = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey,
+            toPubkey,
+            lamports: Math.floor(amount * LAMPORTS_PER_SOL),
+        })
+    );
+
+    const publicRpcs = [
+        getSolanaConfig().rpcEndpoint,
+        'https://solana-rpc.publicnode.com',
+        'https://api.mainnet-beta.solana.com',
+    ].filter(Boolean) as string[];
+
+    let blockhash = '';
+    for (const rpc of publicRpcs) {
+        try {
+            const conn = new Connection(rpc, 'confirmed');
+            const { blockhash: bh } = await conn.getLatestBlockhash();
+            blockhash = bh;
+            break;
+        } catch {
+            console.warn(`[buildSolTransferTransaction] blockhash failed for ${rpc}`);
+        }
+    }
+    if (!blockhash) throw new Error('All Solana RPCs failed to provide a blockhash.');
+
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = fromPubkey;
+    return transaction;
+}
+
+/**
  * Build a token deposit transaction
  */
 export async function buildTokenDepositTransaction(

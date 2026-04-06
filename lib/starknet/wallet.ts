@@ -88,3 +88,34 @@ export async function depositSTRK(amountSTRK: number): Promise<string> {
 
   return txHash;
 }
+
+/**
+ * Transfer STRK to any recipient (e.g. platform fee collector).
+ */
+export async function transferSTRKToAddress(amountSTRK: number, toAddress: string): Promise<string> {
+  const wallet = getInjectedWallet();
+  if (!wallet) {
+    throw new Error('No Starknet wallet found. Install Argent X or Braavos.');
+  }
+
+  if (!wallet.account) {
+    await wallet.enable({ showModal: true });
+  }
+
+  if (!wallet.account) {
+    throw new Error('Starknet wallet account not available.');
+  }
+
+  const { strkTokenAddress } = getStarknetConfig();
+  const calldata = await buildSTRKTransferCalldata(toAddress, amountSTRK);
+
+  const tx = await wallet.account.execute({
+    contractAddress: strkTokenAddress,
+    entrypoint: 'transfer',
+    calldata,
+  });
+
+  const txHash = tx?.transaction_hash || tx?.transactionHash || tx?.hash;
+  if (!txHash) throw new Error('Starknet transaction hash not returned by wallet');
+  return txHash;
+}

@@ -172,3 +172,33 @@ export async function getTreasuryBalance(): Promise<number> {
   const config = getSuiConfig();
   return getUSDCBalance(config.treasuryAddress);
 }
+
+/** SUI has 9 decimals (MIST = 10^9). */
+const SUI_MIST = 1_000_000_000;
+
+/**
+ * Build a native SUI transfer transaction to any recipient address.
+ * Used for blitz entry fees (50 SUI → fee collector wallet).
+ */
+export async function buildSuiNativeTransferTransaction(
+  amountSui: number,
+  fromAddress: string,
+  toAddress: string
+): Promise<Transaction> {
+  const client = getSuiClient();
+  const amountMist = BigInt(Math.floor(amountSui * SUI_MIST));
+
+  // Fetch all SUI coins owned by the sender
+  const coins = await client.getCoins({ owner: fromAddress, coinType: '0x2::sui::SUI' });
+  if (coins.data.length === 0) throw new Error('No SUI coins found in wallet');
+
+  const totalBalance = coins.data.reduce((s, c) => s + BigInt(c.balance), 0n);
+  if (totalBalance < amountMist) {
+    throw new Error(`Insufficient SUI. Have: ${Number(totalBalance) / SUI_MIST}, Need: ${amountSui}`);
+  }
+
+  const tx = new Transaction();
+  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+  tx.transferObjects([coin], tx.pure.address(toAddress));
+  return tx;
+}
