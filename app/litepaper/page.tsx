@@ -5,7 +5,7 @@ import MermaidDiagram from '@/components/ui/MermaidDiagram';
 import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 
 // NOTE: metadata moved to runtime UI in client mode.
-const DEMO_VIDEO_EMBED = 'https://www.youtube.com/embed/pjFNfzP9laA?si=ORvaAt1pkN4REEWB';
+const DEMO_VIDEO_EMBED = 'https://www.youtube.com/embed/t76ltZH9XSU?si=WNx_zsUJ9MJ6-J6l';
 const PITCH_DECK_EMBED =
   'https://docs.google.com/presentation/d/1kDVnUCeJ-LZ3dfpo_YsSqen6qSzlgzHFWFk79Eodj9A/embed?start=false&loop=false&delayms=3000';
 const PROJECT_GITHUB = 'https://github.com/AmaanSayyad/Bynomo';
