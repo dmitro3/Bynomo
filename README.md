@@ -1036,115 +1036,202 @@ sequenceDiagram
 
 ### Target Segments
 
-| Segment | Description | Channel |
-|---------|-------------|---------|
-| **Crypto retail traders** | Active on-chain users already trading perps / spot — familiar with risk | X/Twitter, crypto KOLs, Telegram |
-| **Web2 binary options refugees** | Former Binomo / IQ Option users looking for a transparent alternative | Reddit (r/Forex, r/binaryoptions), SEO |
-| **Degens / Blitz players** | High-frequency, high-risk players drawn to Blitz mode multipliers | Discord, meme culture, referrals |
-| **Chain ecosystem users** | SOL, SUI, NEAR, STRK communities — native chain grants and exposure | Chain foundation grants, ecosystem events |
-| **Institutional / prop desks** | Participants wanting a fast oracle-driven instrument | Direct outreach, VIP tier |
+| # | Segment | Who They Are | Pain Today | Bynomo Hook | Primary Channel |
+|---|---------|-------------|------------|-------------|----------------|
+| 1 | **DeFi-native traders** | Active on options/spot/futures/perps/DEXs seeking 5s–1m high-frequency instruments | Slow instruments — funding rates, liquidation, complexity | Sub-5s binary rounds, no liquidation, no wallet sig per bet | X/Twitter, DeFi Discord/Telegram, KOL partnerships |
+| 2 | **Binary options & prediction users (Web2 → Web3)** | Former Binomo / IQ Option / Quotex users + Polymarket / Kalshi users — 590M+ globally | Algorithmically rigged, no transparency, or too slow settlement | Fully oracle-driven, on-chain verifiable, 5s–1m settlement | Reddit (r/Forex, r/binaryoptions), SEO, YouTube, paid |
+| 3 | **Traders, Gamblers, Creators & Communities** | KOLs, trading groups, Telegram/Discord communities seeking gamified trading experiences | No product that combines trading skill + gamification on-chain | Box/Draw/Blitz modes, PnL sharing, leaderboards, streaks | Micro-influencers, viral clips, ambassador program |
+| 4 | **Aptos ecosystem** | All Aptos regional community groups, ecosystem projects, and executives | No fast binary trading dapp native to Aptos | Full Aptos integration — native APT support, executive-level distribution | Direct outreach to Aptos Foundation, all Aptos ecosystem projects |
+| 5 | **Chain ecosystem communities** | SOL, SUI, NEAR, STRK, XLM, XTZ, INIT native communities | No unified multi-chain trading experience | Native token support across 12 chains from one UI | Chain foundation grants, ecosystem hackathons, Twitter Spaces |
 
-### GTM Phases
+---
 
-```
-Phase 0 — Stealth Beta (Now)
-  ├── Invite-only access codes
-  ├── Core loop validated on SOL + BNB
-  ├── Collect: session length, bet frequency, deposit-to-play conversion
-  └── Fix: settlement edge cases, fee routing, balance bugs
+### GTM Phase Plan
 
-Phase 1 — Community Seeding (Next 30 days)
-  ├── Public demo mode live — no wallet required
-  ├── Referral program launched (code-based)
-  ├── KOL partnerships: 3–5 crypto trading influencers
-  ├── Chain ecosystem announcements (SOL, SUI, NEAR ecosystems)
-  └── Target: 1,000 registered wallets, $50K deposit volume
+#### Phase 0 — Stealth Beta ✅ `(Complete)`
 
-Phase 2 — Growth Loop (60–90 days)
-  ├── Leaderboard + trader profiles live
-  ├── Blitz tournaments (scheduled, promoted events)
-  ├── Telegram/Discord bot notifications for Blitz windows
-  ├── Chain grant applications: Solana Foundation, Sui Foundation, NEAR Horizon
-  └── Target: 10,000 wallets, $500K monthly volume
+| Action | Result |
+|--------|--------|
+| Invite-only testing on SOL | Core loop validated end-to-end |
+| Bug bash — fee routing, settlement, balance edge cases | All P0 bugs resolved |
+| PostHog instrumentation | Funnels live: landing → demo → deposit → bet |
+| Community pre-launch | **2,000+ members across X, Telegram, Discord in 3 days — before live link** |
 
-Phase 3 — Scale (90–180 days)
-  ├── P2P mode reduces house risk → enables larger payouts
-  ├── More assets: forex, stocks, commodities via Pyth
-  ├── Mobile-first redesign
-  └── Target: $5M monthly volume, top-5 multi-chain trading dapp
-```
+#### Phase 1 — Public Launch `(Now)`
+
+| Action | Detail | Budget | Success Metric |
+|--------|--------|--------|---------------|
+| **Viral X launch — Euphoria Fi playbook** | Host a giveaway at launch moment; word-of-mouth spreads across X organically — same strategy used by Euphoria Fi on MegaETH | Prize pool | 10K+ impressions day 1 |
+| **Aptos ecosystem blitz** | Reach every Aptos regional community group; request retweets from all Aptos executives and official Aptos accounts; pitch every Aptos ecosystem project for integration | $0 | Aptos Foundation official support |
+| **Micro-influencer campaign** | Partner with 100 creators (1K–20K followers) in trading, crypto, and Web3 niches — each posts live gameplay clip or PnL screenshot | $5K–$15K total | 5M+ combined reach |
+| **PnL & streak clips on X/Telegram** | Short-form trade clips, PnL screenshots, and Blitz streak highlights engineered for virality | $0 | 50+ organic reposts per clip |
+| **Referral program launch** | Perpetual fee share — referrer earns % of referee's platform fees forever; deep links into Classic and Box modes | $0 (self-funding) | 25% of signups via referral |
+| **Launch partner integrations** | Early integrations with wallets, analytics dashboards, and trader communities | BD | 5 partners at launch |
+| **Target** | | | **5,000 wallets · $200K deposit volume** |
+
+#### Phase 2 — Community Depth `(Days 30–90)`
+
+| Action | Detail | Budget | Success Metric |
+|--------|--------|--------|---------------|
+| **Bynomo Ambassador Program** | Regional ambassador groups, trading tutorials, local language content | $10K–$20K | 20 active regional ambassadors |
+| **Weekly Podcast / AMA on X** | Live X Spaces with top-tier traders every week — massive visibility for the brand | $0–$5K/episode | 5K+ live listeners per episode |
+| **Blitz tournament events** | Scheduled Blitz windows with community prize pools, promoted across all channels | $10K–$20K pool | 1,000 participants per event |
+| **Leaderboard + trader profiles** | Public shareable trader pages — top PnL, streaks, win rate | $0 | 40% of users share their profile |
+| **Telegram/Discord Blitz bot** | Notifies all subscribers 5 min before each Blitz window | $0 | 2,000 bot subscribers |
+| **Chain foundation grants** | Apply: Solana Foundation, Sui Foundation, NEAR Horizon, Starknet, Aptos Foundation | $0 | $100K–$300K in ecosystem grants |
+| **Target** | | | **20,000 wallets · $1M monthly volume** |
+
+#### Phase 3 — Scale `(Days 91–180)`
+
+| Action | Detail | Budget | Success Metric |
+|--------|--------|--------|---------------|
+| P2P mode launch | Shift Classic from P2T → P2P — reduces house risk, enables larger payouts | Engineering | P2P beta live |
+| 200+ new assets | Forex, stocks, commodities, indices via Pyth | Engineering | 50+ new tradeable pairs |
+| Mobile-first redesign | Dedicated mobile UI + PWA | Engineering | 60% mobile session share |
+| Affiliate / white-label | Communities embed Bynomo with revenue share | BD | 5 affiliate partners |
+| CEX/wallet deep integrations | In-app entry from Phantom, MetaMask, Trust Wallet, Nightly | BD + Eng | 3 integrations live |
+| Regional expansion | Southeast Asia, MENA, LatAm — highest binary options retail density globally | Localisation | 3 regional markets active |
+| **Target** | | | **$5M monthly volume · top-5 multi-chain trading dapp** |
+
+---
 
 ### Growth Mechanics
 
-- **Referral system** — refer a trader, earn % of their platform fees
-- **Leaderboard virality** — public rankings drive competition and sharing
-- **Blitz FOMO** — scheduled 1-min windows create urgency and return visits
-- **Demo mode funnel** — zero-friction entry converts curious visitors into depositors
-- **Chain-native communities** — each supported chain is a distinct acquisition channel
+| Mechanic | How It Works | Why It Compounds |
+|----------|-------------|-----------------|
+| **Viral X launch** | Giveaway at launch + organic word-of-mouth — Euphoria Fi playbook | Single moment creates a cascade of reposts and new signups |
+| **Perpetual referral fee share** | Refer a trader → earn % of their fees forever; deep links into Classic + Box | Every depositor becomes a permanent distributor |
+| **PnL & streak virality** | Trade clips, PnL screenshots, Blitz streak highlights shared on X/Telegram | Zero-cost impressions; social proof that pulls in new traders |
+| **Micro-influencer network** | 100 creators (1K–20K followers) → combined reach > macro KOLs at fraction of cost | Authentic niche audiences convert better than broad audiences |
+| **Aptos ecosystem distribution** | Executive tweets + all ecosystem projects → built-in captive audience | One integration announcement = tens of thousands of impressions |
+| **Weekly X Podcast / AMA** | Top traders live on X Spaces every week → authority + recurring attention | Builds a loyal returning audience week over week |
+| **Ambassador program** | Regional ambassadors run local groups + tutorials in native language | Global coverage with local trust — impossible to replicate with ads |
+| **Blitz FOMO** | 1-min active windows on a repeating cycle — urgency drives daily return visits | High retention mechanic baked into the core product loop |
+| **Demo → real funnel** | Full game, no wallet required → one-click upgrade to real | Zero-friction top-of-funnel; removes the biggest crypto onboarding barrier |
+| **Chain flywheel** | Each new chain = new community = new independent acquisition channel | 12 chains = 12 parallel growth engines running simultaneously |
+
+---
 
 ### Unit Economics
 
-| Metric | Estimate |
-|--------|----------|
-| Platform fee | 10% on deposit + 10% on withdrawal |
-| Blitz entry fee (SOL) | 1 SOL per window |
-| Average deposit (est.) | 0.5–2 SOL equivalent |
-| Revenue per active user/month | ~0.1–0.4 SOL equivalent in fees |
-| Marginal cost per user | Near-zero (serverless + Supabase free tier scales) |
+| Metric | Conservative | Base Case | Optimistic |
+|--------|-------------|-----------|------------|
+| Avg deposit per user | $50 | $150 | $400 |
+| Platform fee (deposit) | $5 | $15 | $40 |
+| Avg withdrawal per user | $40 | $120 | $350 |
+| Platform fee (withdrawal) | $4 | $12 | $35 |
+| Blitz entries per user/month | 2 | 5 | 15 |
+| Blitz fee revenue/user/month | ~$2 | ~$5 | ~$15 |
+| **Total revenue per active user/month** | **~$11** | **~$32** | **~$90** |
+| Marginal infra cost per user | <$0.10 | <$0.10 | <$0.10 |
+| CAC (paid) | $15 | $8 | $4 |
+| LTV/CAC | ~0.7× | ~4× | ~22× |
 
 ---
 
 ## Raise
 
-### What We're Raising
-
-Bynomo is raising a **pre-seed round** to fund product scaling, security hardening, liquidity, and growth.
+### Round Overview
 
 | Item | Detail |
 |------|--------|
 | **Round** | Pre-Seed |
-| **Target** | $500K – $1.5M |
-| **Use of funds** | 40% liquidity / treasury · 30% engineering · 20% growth · 10% ops |
-| **Instrument** | SAFE or token warrant |
-| **Lead investor profile** | Crypto-native VC, angel, or ecosystem fund |
+| **Raising** | $500K – $1.5M |
+| **Instrument** | SAFE (post-money cap) or token warrant |
+| **Investor profile** | Crypto-native VC · ecosystem fund · strategic angel |
+| **Use of funds** | Engineering · Growth · Operations (no liquidity allocation) |
+
+---
 
 ### Why Now
 
-- Binary options is a **$30B+ global retail market** with zero credible Web3 incumbent
-- Pyth Hermes sub-1s feeds only reached production maturity in 2025 — the technical blocker is gone
-- 12 chains live — moat is built on multi-chain depth, not a single ecosystem bet
-- Working product with real deposits, real payouts, real on-chain settlement
+| Signal | Detail |
+|--------|--------|
+| **Market** | Binary options is a $30B+ global retail market — zero credible Web3 player |
+| **Technical unlock** | Pyth Hermes sub-1s feeds reached production maturity in 2025 — the blocker that kept this impossible for 5 years is gone |
+| **Multi-chain moat** | 12 chains live — competitors can't replicate this in months |
+| **Working product** | Real deposits, real payouts, real on-chain settlement — not a whitepaper |
+| **Timing** | Crypto retail is back — bull market cycle drives trading volume |
+| **Regulatory gap** | Web2 binary options platforms are banned/restricted globally — demand has nowhere to go |
+
+---
 
 ### Use of Funds
 
-```
-$500K allocation:
-  ├── Treasury / Liquidity depth       $200K  (40%)
-  │     Larger max payouts → attracts higher-value traders
-  ├── Engineering                       $150K  (30%)
-  │     Security audit · P2P mode · mobile · 200+ assets
-  ├── Growth & Marketing                $100K  (20%)
-  │     KOL campaigns · referral incentives · chain grants co-funding
-  └── Operations                         $50K  (10%)
-        Legal · infra · team
-```
+| Category | $500K Round | $1.5M Round | What Gets Built |
+|----------|-------------|-------------|----------------|
+| **Engineering** (50%) | $250K | $750K | Security audit · P2P mode · mobile app · 200+ Pyth assets · smart contract layer |
+| **Growth & Marketing** (35%) | $175K | $525K | KOL campaigns · paid acquisition · Blitz tournament prize pools · referral incentives · chain grant co-funding |
+| **Operations** (15%) | $75K | $225K | Legal entity · compliance review · infra scaling · core team hires |
 
-### Traction
+---
+
+### Milestones Unlocked by Raise
+
+| Milestone | Without Raise | With $500K | With $1.5M |
+|-----------|--------------|------------|------------|
+| Security audit | Deferred | ✅ Complete in 60 days | ✅ Full audit + bug bounty |
+| P2P mode | Backlogged | ✅ Beta in 90 days | ✅ Full launch |
+| Mobile app | No timeline | Partial PWA | ✅ Native app |
+| Paid user acquisition | $0 | $175K deployed | $525K deployed |
+| Chain expansion | Organic only | +3 chains | +8 chains |
+| Team size | Solo / micro | 3–4 people | 6–8 people |
+
+---
+
+### Traction & Progress
+
+> Product is **100% ready**. The following metrics are real, pre-public-launch.
+
+#### On-Chain Stats (Solana)
+
+| Metric | Value |
+|--------|-------|
+| Bets settled | **12,567+** |
+| Total staked volume | **249.89 SOL ($46,258)** |
+| Platform revenue (10% fee) | **~$4,600** |
+| Unique wallets | **76** |
+| Active price feeds | **28** |
+| Avg session time (last 7 days) | **2h 8m** |
+
+#### Growth Analytics (Last 30 Days)
+
+| Metric | Value |
+|--------|-------|
+| Users visited | **3,200+** |
+| Page views | **6,600+** |
+| Traffic growth | **+799%** |
+| Engagement growth | **+774%** |
+
+#### Community (Pre-Launch — 3 Days Organic)
+
+| Platform | Members |
+|----------|---------|
+| X / Twitter | **2,261** |
+| Telegram | **900** |
+| Discord | **260** |
+| **Total** | **3,421+** |
+
+#### Product & Infrastructure
 
 | Signal | Status |
 |--------|--------|
 | Live product | ✅ Deployed on Vercel, 12 chains active |
-| Real on-chain deposits | ✅ SOL, BNB, SUI, XLM, XTZ, NEAR, STRK |
-| Admin dashboard | ✅ Full P&L, fee tracking, ban/unban, withdrawal review |
-| Price feed | ✅ Pyth Hermes — <1s resolution |
-| Fee system | ✅ 10% on deposit + withdrawal, per-chain fee collector wallets |
-| Demo mode | ✅ Full game simulation without wallet |
-| Security | ✅ Signed withdrawal intents, dedup guard, withdrawal cap, RLS |
+| Real on-chain deposits | ✅ SOL · BNB · SUI · XLM · XTZ · NEAR · STRK |
+| Admin dashboard | ✅ Full P&L · fee tracking · ban/unban · withdrawal review queue |
+| Sub-1s price feed | ✅ Pyth Hermes live across all game modes |
+| Fee system | ✅ 10% on deposit + withdrawal · per-chain fee collector wallets |
+| Demo mode | ✅ Full game simulation — no wallet required |
+| Security | ✅ Signed withdrawal intents · dedup guard · withdrawal cap · Supabase RLS |
+| Game modes | ✅ Box · Draw · Classic · Blitz — all live |
+| Inbound ecosystem offers | ✅ 5+ chains offered to deploy Bynomo natively on their chain |
+
+---
 
 ### Contact
 
 - **Email:** bynomo.fun@gmail.com
-- **Demo:** [bynomo.fun/trade](https://bynomo.fun/trade)
+- **Live demo:** [bynomo.fun/trade](https://bynomo.fun/trade)
 - **Deck / data room:** available on request
 
 ---
