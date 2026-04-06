@@ -923,6 +923,232 @@ To report a security issue: see `docs/SECURITY_REPORTING.md` or email bynomo.fun
 
 ---
 
+## User Flow Architecture
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Bynomo UI (Next.js)
+    participant Wallet as User Wallet
+    participant Chain as Blockchain
+    participant API as API Routes (Vercel)
+    participant DB as Supabase
+    participant Pyth as Pyth Hermes
+
+    Note over User,Pyth: 1 — DISCOVERY
+    User->>UI: Visit landing page
+    UI-->>User: Demo Mode — live chart, game modes, no wallet needed
+
+    Note over User,Pyth: 2 — ONBOARDING
+    User->>UI: Click Connect Wallet
+    UI-->>User: Show wallet modal (SOL · BNB · SUI · NEAR · STRK · XLM · XTZ · INIT · OCT · PUSH · 0G · SOMNIA)
+    User->>Wallet: Approve connection
+    Wallet-->>UI: Address + chain returned
+
+    Note over User,Pyth: 3 — DEPOSIT
+    User->>UI: Enter deposit amount
+    UI->>Wallet: Request on-chain transfer
+    Wallet->>Chain: Send tokens → Treasury Wallet
+    Chain-->>UI: tx hash confirmed
+    UI->>API: POST /api/balance/deposit (txHash, amount, currency)
+    API->>Chain: Verify tx on-chain
+    API->>API: Calculate fee (10%) → collectPlatformFeeFromTreasury
+    API->>Chain: Transfer fee → Fee Collector Wallet
+    API->>DB: RPC update_balance_for_deposit (net amount)
+    DB-->>API: new_balance
+    API-->>UI: { success, newBalance }
+    UI-->>User: Bynomo Wallet balance updated
+
+    Note over User,Pyth: 4 — TRADE
+    UI->>Pyth: Subscribe to price feed (<1s updates)
+    Pyth-->>UI: Continuous price stream
+
+    alt Box Mode
+        User->>UI: Select multiplier tile on chart
+    else Draw Mode
+        User->>UI: Draw rectangle on chart → dynamic multiplier shown
+    else Classic Mode
+        User->>UI: Pick UP / DOWN + multiplier
+    end
+
+    User->>UI: Set bet amount + confirm (no wallet signature)
+    UI->>DB: Deduct balance instantly (off-chain)
+    DB-->>UI: Updated balance
+
+    opt Blitz Round active
+        User->>UI: Click Enter Blitz
+        UI->>Wallet: Request on-chain entry fee payment
+        Wallet->>Chain: Send fee → Fee Collector Wallet
+        Chain-->>UI: Confirmed
+        UI-->>User: Blitz access granted (2× multiplier)
+    end
+
+    Note over UI,Pyth: Bet runs until expiry
+    Pyth-->>UI: Price at endTime
+    UI->>UI: Resolve bet (deterministic)
+
+    alt User wins
+        UI->>API: POST /api/balance/win (betId, payout)
+        API->>DB: Dedup check on betId → credit_balance_for_payout
+        DB-->>API: new_balance
+        API-->>UI: Payout credited
+    else User loses
+        UI-->>User: Stake kept by house
+    end
+
+    UI->>API: POST /api/bets/save (bet record)
+    API->>DB: Upsert bet_history
+
+    Note over User,Pyth: 5 — WITHDRAW
+    User->>UI: Request withdrawal amount
+    UI->>Wallet: Sign withdrawal intent (EVM chains)
+    Wallet-->>UI: Signature
+    UI->>API: POST /api/balance/withdraw (amount, currency, signature)
+    API->>DB: Check balance + withdrawal cap (max deposited × 1.08)
+
+    alt Below auto-threshold
+        API->>Chain: Transfer fee → Fee Collector Wallet
+        API->>Chain: Transfer net amount → User Wallet
+        Chain-->>API: tx hash
+        API->>DB: RPC update_balance_for_withdrawal
+        API-->>UI: { txHash, newBalance }
+        UI-->>User: Withdrawal confirmed
+    else Above threshold or frequency flag
+        API->>DB: Insert withdrawal_requests (pending)
+        API-->>UI: { status: pending, requestId }
+        UI-->>User: Queued for admin review
+    end
+```
+
+### Key UX Properties
+
+| Property | Detail |
+|----------|--------|
+| No wallet sig per bet | Bets are instant off-chain balance ops — no popups mid-game |
+| Single UI for 12 chains | Connect once, switch chain from the same interface |
+| Demo mode | Full game with no funds — zero friction to try |
+| Sub-1s price resolution | Pyth Hermes — no waiting for block confirmation |
+| Instant balance feedback | Supabase RPC — balance updates in real time |
+
+---
+
+## Go-To-Market (GTM)
+
+### Target Segments
+
+| Segment | Description | Channel |
+|---------|-------------|---------|
+| **Crypto retail traders** | Active on-chain users already trading perps / spot — familiar with risk | X/Twitter, crypto KOLs, Telegram |
+| **Web2 binary options refugees** | Former Binomo / IQ Option users looking for a transparent alternative | Reddit (r/Forex, r/binaryoptions), SEO |
+| **Degens / Blitz players** | High-frequency, high-risk players drawn to Blitz mode multipliers | Discord, meme culture, referrals |
+| **Chain ecosystem users** | SOL, SUI, NEAR, STRK communities — native chain grants and exposure | Chain foundation grants, ecosystem events |
+| **Institutional / prop desks** | Participants wanting a fast oracle-driven instrument | Direct outreach, VIP tier |
+
+### GTM Phases
+
+```
+Phase 0 — Stealth Beta (Now)
+  ├── Invite-only access codes
+  ├── Core loop validated on SOL + BNB
+  ├── Collect: session length, bet frequency, deposit-to-play conversion
+  └── Fix: settlement edge cases, fee routing, balance bugs
+
+Phase 1 — Community Seeding (Next 30 days)
+  ├── Public demo mode live — no wallet required
+  ├── Referral program launched (code-based)
+  ├── KOL partnerships: 3–5 crypto trading influencers
+  ├── Chain ecosystem announcements (SOL, SUI, NEAR ecosystems)
+  └── Target: 1,000 registered wallets, $50K deposit volume
+
+Phase 2 — Growth Loop (60–90 days)
+  ├── Leaderboard + trader profiles live
+  ├── Blitz tournaments (scheduled, promoted events)
+  ├── Telegram/Discord bot notifications for Blitz windows
+  ├── Chain grant applications: Solana Foundation, Sui Foundation, NEAR Horizon
+  └── Target: 10,000 wallets, $500K monthly volume
+
+Phase 3 — Scale (90–180 days)
+  ├── P2P mode reduces house risk → enables larger payouts
+  ├── More assets: forex, stocks, commodities via Pyth
+  ├── Mobile-first redesign
+  └── Target: $5M monthly volume, top-5 multi-chain trading dapp
+```
+
+### Growth Mechanics
+
+- **Referral system** — refer a trader, earn % of their platform fees
+- **Leaderboard virality** — public rankings drive competition and sharing
+- **Blitz FOMO** — scheduled 1-min windows create urgency and return visits
+- **Demo mode funnel** — zero-friction entry converts curious visitors into depositors
+- **Chain-native communities** — each supported chain is a distinct acquisition channel
+
+### Unit Economics
+
+| Metric | Estimate |
+|--------|----------|
+| Platform fee | 10% on deposit + 10% on withdrawal |
+| Blitz entry fee (SOL) | 1 SOL per window |
+| Average deposit (est.) | 0.5–2 SOL equivalent |
+| Revenue per active user/month | ~0.1–0.4 SOL equivalent in fees |
+| Marginal cost per user | Near-zero (serverless + Supabase free tier scales) |
+
+---
+
+## Raise
+
+### What We're Raising
+
+Bynomo is raising a **pre-seed round** to fund product scaling, security hardening, liquidity, and growth.
+
+| Item | Detail |
+|------|--------|
+| **Round** | Pre-Seed |
+| **Target** | $500K – $1.5M |
+| **Use of funds** | 40% liquidity / treasury · 30% engineering · 20% growth · 10% ops |
+| **Instrument** | SAFE or token warrant |
+| **Lead investor profile** | Crypto-native VC, angel, or ecosystem fund |
+
+### Why Now
+
+- Binary options is a **$30B+ global retail market** with zero credible Web3 incumbent
+- Pyth Hermes sub-1s feeds only reached production maturity in 2025 — the technical blocker is gone
+- 12 chains live — moat is built on multi-chain depth, not a single ecosystem bet
+- Working product with real deposits, real payouts, real on-chain settlement
+
+### Use of Funds
+
+```
+$500K allocation:
+  ├── Treasury / Liquidity depth       $200K  (40%)
+  │     Larger max payouts → attracts higher-value traders
+  ├── Engineering                       $150K  (30%)
+  │     Security audit · P2P mode · mobile · 200+ assets
+  ├── Growth & Marketing                $100K  (20%)
+  │     KOL campaigns · referral incentives · chain grants co-funding
+  └── Operations                         $50K  (10%)
+        Legal · infra · team
+```
+
+### Traction
+
+| Signal | Status |
+|--------|--------|
+| Live product | ✅ Deployed on Vercel, 12 chains active |
+| Real on-chain deposits | ✅ SOL, BNB, SUI, XLM, XTZ, NEAR, STRK |
+| Admin dashboard | ✅ Full P&L, fee tracking, ban/unban, withdrawal review |
+| Price feed | ✅ Pyth Hermes — <1s resolution |
+| Fee system | ✅ 10% on deposit + withdrawal, per-chain fee collector wallets |
+| Demo mode | ✅ Full game simulation without wallet |
+| Security | ✅ Signed withdrawal intents, dedup guard, withdrawal cap, RLS |
+
+### Contact
+
+- **Email:** bynomo.fun@gmail.com
+- **Demo:** [bynomo.fun/trade](https://bynomo.fun/trade)
+- **Deck / data room:** available on request
+
+---
+
 ## Future
 
 Bynomo's ultimate objective is to become the **PolyMarket for Binary Options** — a transparent, fast, multi-chain prediction platform for everything:
