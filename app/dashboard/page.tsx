@@ -1294,101 +1294,100 @@ export default function AdminDashboard() {
 
                                         {/* ── Mode Analytics Panel ─────────────────────────────── */}
                                         {modeAnalytics && (
-                                            <div className="p-6 border-b border-white/5 space-y-5 bg-white/[0.01]">
-                                                <div className="flex items-center gap-3">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-white/60">Game Mode P&amp;L — Real Wallets Only</h3>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 border border-white/10 rounded px-2 py-0.5">
+                                            <div className="px-8 pt-8 pb-6 border-b border-white/5 space-y-6">
+                                                {/* Section header — same style as rest of dashboard */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/30">Game Mode P&amp;L</p>
+                                                        <p className="text-white/60 text-sm">Real wallets only — per-mode house performance</p>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 border border-white/10 rounded px-2 py-1">
                                                         {(modeAnalytics.real ?? []).reduce((s: number, m: any) => s + m.totalBets, 0).toLocaleString()} rounds
                                                     </span>
                                                 </div>
 
-                                                {/* Mode cards */}
+                                                {/* Mode cards — match rounded-2xl border border-white/10 bg-white/[0.02] */}
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     {(['binomo', 'box', 'draw'] as const).map(modeKey => {
                                                         const modeLabels: Record<string, string> = { binomo: 'Classic (Binomo)', box: 'Box Mode', draw: 'Draw Mode' };
-                                                        const modeAccents: Record<string, { border: string; text: string; bg: string; glow: string }> = {
-                                                            binomo: { border: 'border-blue-500/30',   text: 'text-blue-400',   bg: 'bg-blue-500/[0.06]',   glow: 'rgba(59,130,246,0.15)' },
-                                                            box:    { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/[0.06]', glow: 'rgba(168,85,247,0.15)' },
-                                                            draw:   { border: 'border-amber-500/30',  text: 'text-amber-400',  bg: 'bg-amber-500/[0.06]',  glow: 'rgba(245,158,11,0.15)' },
-                                                        };
-                                                        const acc = modeAccents[modeKey];
                                                         const m = (modeAnalytics.real ?? []).find((x: any) => x.mode === modeKey);
 
                                                         if (!m) return (
-                                                            <div key={modeKey} className={`rounded-2xl border ${acc.border} ${acc.bg} p-5 flex flex-col gap-2`}>
-                                                                <p className={`text-xs font-black uppercase tracking-widest ${acc.text}`}>{modeLabels[modeKey]}</p>
-                                                                <p className="text-xs text-white/20 italic">No rounds recorded yet</p>
+                                                            <div key={modeKey} className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex flex-col gap-2">
+                                                                <p className="text-xs font-black uppercase tracking-widest text-white/40">{modeLabels[modeKey]}</p>
+                                                                <p className="text-xs text-white/20">No rounds recorded yet</p>
                                                             </div>
                                                         );
 
                                                         const housePnLPositive = m.housePnL >= 0;
                                                         return (
-                                                            <div key={modeKey} className={`rounded-2xl border ${acc.border} ${acc.bg} p-5 space-y-4`}>
-                                                                {/* Header */}
-                                                                <div className="flex items-center justify-between">
-                                                                    <p className={`text-xs font-black uppercase tracking-widest ${acc.text}`}>{modeLabels[modeKey]}</p>
-                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${housePnLPositive ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/30 text-rose-400 bg-rose-500/10'}`}>
+                                                            <div key={modeKey} className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-5">
+                                                                {/* Card header */}
+                                                                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                                                                    <p className="text-xs font-black uppercase tracking-widest text-white/50">{modeLabels[modeKey]}</p>
+                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${housePnLPositive ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/20 text-rose-400 bg-rose-500/5'}`}>
                                                                         {housePnLPositive ? '▲ House profit' : '▼ House loss'}
                                                                     </span>
                                                                 </div>
 
-                                                                {/* Big numbers */}
-                                                                <div className="grid grid-cols-2 gap-3">
+                                                                {/* Key stats — 2×2 grid matching dashboard stat style */}
+                                                                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                                                                     <div>
-                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Rounds</p>
-                                                                        <p className="text-xl font-black tabular-nums text-white">{m.totalBets.toLocaleString()}</p>
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-1">Rounds</p>
+                                                                        <p className="text-2xl font-black tabular-nums text-white">{m.totalBets.toLocaleString()}</p>
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Win Rate</p>
-                                                                        <p className={`text-xl font-black tabular-nums ${m.winRate > 52.6 ? 'text-rose-400' : 'text-emerald-400'}`}>{m.winRate}%</p>
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-1">Win Rate</p>
+                                                                        <p className={`text-2xl font-black tabular-nums ${m.winRate > 52.6 ? 'text-rose-400' : 'text-emerald-400'}`}>{m.winRate}%</p>
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Wins / Losses</p>
-                                                                        <p className="text-sm font-bold tabular-nums text-white/70">
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-1">Wins / Losses</p>
+                                                                        <p className="text-sm font-bold tabular-nums">
                                                                             <span className="text-emerald-400">{m.wins.toLocaleString()}</span>
                                                                             <span className="text-white/20"> / </span>
                                                                             <span className="text-rose-400">{m.losses.toLocaleString()}</span>
                                                                         </p>
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Avg Multiplier</p>
-                                                                        <p className="text-sm font-bold tabular-nums text-white/70">{m.avgMultiplier}×</p>
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-1">Avg Multiplier</p>
+                                                                        <p className="text-sm font-bold tabular-nums text-white/60">{m.avgMultiplier}×</p>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Win-rate bar */}
-                                                                <div>
-                                                                    <div className="flex justify-between text-[10px] text-white/30 mb-1">
-                                                                        <span>User win rate</span>
-                                                                        <span className={m.winRate > 52.6 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-                                                                            {m.winRate > 52.6 ? `+${(m.winRate - 52.6).toFixed(1)}% above break-even` : `${(52.6 - m.winRate).toFixed(1)}% below break-even`}
+                                                                <div className="space-y-1.5">
+                                                                    <div className="flex justify-between text-[10px] text-white/25">
+                                                                        <span className="font-black uppercase tracking-widest">User win rate</span>
+                                                                        <span className={`font-bold ${m.winRate > 52.6 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                                            {m.winRate > 52.6
+                                                                                ? `+${(m.winRate - 52.6).toFixed(1)}% above break-even`
+                                                                                : `${(52.6 - m.winRate).toFixed(1)}% below break-even`}
                                                                         </span>
                                                                     </div>
-                                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                                    <div className="relative h-1 w-full bg-white/5 rounded-full overflow-visible">
                                                                         <div
-                                                                            className={`h-full rounded-full transition-all ${m.winRate > 52.6 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                                            className={`h-full rounded-full ${m.winRate > 52.6 ? 'bg-rose-500/60' : 'bg-emerald-500/60'}`}
                                                                             style={{ width: `${Math.min(m.winRate, 100)}%` }}
                                                                         />
-                                                                        {/* Break-even marker at 52.6% */}
-                                                                        <div className="relative -mt-1.5 h-1.5" style={{ marginLeft: '52.6%', width: '2px', background: 'rgba(255,255,255,0.3)', borderRadius: '1px' }} />
+                                                                        <div className="absolute top-0 h-full w-px bg-white/25" style={{ left: '52.6%' }} />
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Per-chain P&L (top 3) */}
+                                                                {/* Per-chain P&L */}
                                                                 {Object.keys(m.byChain).length > 0 && (
-                                                                    <div className="space-y-1.5 pt-1 border-t border-white/5">
-                                                                        <p className="text-[10px] text-white/20 uppercase tracking-wider">House P&amp;L by Chain (native units)</p>
+                                                                    <div className="space-y-2 pt-1 border-t border-white/5">
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/25">House P&amp;L by Chain (native units)</p>
                                                                         {Object.entries(m.byChain as Record<string, any>)
                                                                             .sort((a, b) => Math.abs(b[1].housePnL) - Math.abs(a[1].housePnL))
                                                                             .slice(0, 4)
                                                                             .map(([chain, c]) => (
-                                                                                <div key={chain} className="flex items-center justify-between text-xs">
-                                                                                    <span className="text-white/40 font-mono">{chain}</span>
-                                                                                    <span className="font-mono font-bold tabular-nums">
+                                                                                <div key={chain} className="flex items-center justify-between">
+                                                                                    <span className="text-xs font-mono text-white/35">{chain}</span>
+                                                                                    <span className="font-mono text-xs font-bold tabular-nums">
                                                                                         <span className={c.housePnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                                                                                             {c.housePnL >= 0 ? '+' : ''}{c.housePnL.toFixed(4)}
                                                                                         </span>
-                                                                                        <span className="text-white/20 text-[10px] ml-1">
+                                                                                        <span className="text-white/20 text-[10px] ml-1.5">
                                                                                             ({c.wins}/{c.totalBets} wins)
                                                                                         </span>
                                                                                     </span>
@@ -1401,8 +1400,8 @@ export default function AdminDashboard() {
                                                                 {m.topAssets && m.topAssets.length > 0 && (
                                                                     <div className="flex flex-wrap gap-1.5 pt-1 border-t border-white/5">
                                                                         {m.topAssets.map((a: { asset: string; count: number }) => (
-                                                                            <span key={a.asset} className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 text-white/40">
-                                                                                {a.asset} <span className="text-white/20">{a.count}</span>
+                                                                            <span key={a.asset} className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/8 text-white/30">
+                                                                                {a.asset} <span className="text-white/15">{a.count}</span>
                                                                             </span>
                                                                         ))}
                                                                     </div>
@@ -1412,10 +1411,9 @@ export default function AdminDashboard() {
                                                     })}
                                                 </div>
 
-                                                {/* Cross-mode break-even note */}
                                                 <p className="text-[10px] text-white/20 leading-relaxed">
                                                     Break-even win rate at 1.9× multiplier is 52.6%. Rates <span className="text-rose-400">above</span> this mean the house loses money on that mode.
-                                                    P&amp;L values are in each chain's native token — <span className="text-amber-300/70">do not sum across chains.</span>
+                                                    P&amp;L values are in each chain&apos;s native token — <span className="text-white/40">do not sum across chains.</span>
                                                 </p>
                                             </div>
                                         )}
