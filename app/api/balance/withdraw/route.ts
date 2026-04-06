@@ -370,6 +370,19 @@ export async function POST(request: NextRequest) {
 
     const result = data as { success: boolean; error: string | null; new_balance: number };
 
+    // Log the platform fee for admin fee-tracking (non-blocking).
+    if (feeAmount > 0) {
+      supabase.from('balance_audit_log').insert({
+        user_address: dbAddress,
+        currency: currency,
+        operation_type: 'platform_fee',
+        amount: feeAmount,
+        transaction_hash: `fee:withdrawal:${combinedTxHash}`,
+      }).then(({ error: feeErr }) => {
+        if (feeErr) console.warn('[withdraw] fee log failed (non-blocking):', feeErr.message);
+      });
+    }
+
     return NextResponse.json({
       success: true,
       txHash: withdrawTxHash,

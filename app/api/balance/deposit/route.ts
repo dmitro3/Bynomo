@@ -252,6 +252,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log the platform fee so the admin dashboard can track per-wallet fee totals.
+    // Non-blocking — a fee logging failure must never break the deposit.
+    if (feeAmount > 0) {
+      supabase.from('balance_audit_log').insert({
+        user_address: userKey,
+        currency: normalizedCurrency,
+        operation_type: 'platform_fee',
+        amount: feeAmount,
+        transaction_hash: `fee:deposit:${combinedTxHash}`,
+      }).then(({ error: feeErr }) => {
+        if (feeErr) console.warn('[deposit] fee log failed (non-blocking):', feeErr.message);
+      });
+    }
+
     // Return success with new balance
     return NextResponse.json({
       success: true,

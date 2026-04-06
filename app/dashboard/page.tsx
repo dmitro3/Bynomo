@@ -1202,11 +1202,12 @@ export default function AdminDashboard() {
                                                             <SortTh col="net_pnl" label="Player P&L" />
                                                             <SortTh col="total_bets" label="Bets" />
                                                             <SortTh col="total_wagered" label="Wagered" />
+                                                            <SortTh col="total_fees_paid" label="Fees Paid" />
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {loading ? <tr><td colSpan={9} className="px-8 py-10 text-center text-white/20 text-xs">Loading…</td></tr>
-                                                         : sortedPnl.length === 0 ? <tr><td colSpan={9} className="px-8 py-10 text-center text-white/20 text-xs">No player data yet.</td></tr>
+                                                        {loading ? <tr><td colSpan={10} className="px-8 py-10 text-center text-white/20 text-xs">Loading…</td></tr>
+                                                         : sortedPnl.length === 0 ? <tr><td colSpan={10} className="px-8 py-10 text-center text-white/20 text-xs">No player data yet.</td></tr>
                                                          : sortedPnl.map((p, i) => {
                                                             const isWinner = p.net_pnl > 0;
                                                             const isLoser  = p.net_pnl < 0;
@@ -1271,6 +1272,13 @@ export default function AdminDashboard() {
                                                                     </td>
                                                                     {/* Wagered */}
                                                                     <td className="px-8 py-5 font-mono text-white/50 text-sm">{fmt(p.total_wagered)}</td>
+                                                                    {/* Fees Paid */}
+                                                                    <td className="px-8 py-5">
+                                                                        <span className="font-mono text-xs font-bold text-purple-400/80" title="Platform fees collected (10% on deposits + withdrawals). Historical rows are estimated.">
+                                                                            {fmt(p.total_fees_paid)}
+                                                                            {(!p._has_explicit_fee) && <span className="text-white/20 text-[10px] ml-1">~</span>}
+                                                                        </span>
+                                                                    </td>
                                                     </tr>
                                                             );
                                                         })}
