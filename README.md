@@ -378,35 +378,17 @@ Paid once per blitz window directly to the platform fee collector wallet.
 
 ## Tech Stack
 
-| Category | Library / Tool | Version | Purpose |
-|----------|---------------|---------|---------|
-| **Frontend** | Next.js | 16.1.3 | App Router, Turbopack, SSR/SSG |
-| | React + TypeScript | 19.2.3 / 5 | UI framework + type safety |
-| | Tailwind CSS | v4 | Utility-first styling |
-| | Zustand | 5 | Global state — 6 slices |
-| | TanStack React Query | 5 | Server state, caching, refetching |
-| | Framer Motion | latest | Animations & transitions |
-| | Recharts + d3-scale/shape | latest | Live price charts |
-| | Three.js / OGL | latest | Landing page 3D visuals |
-| | Lucide React | latest | Icon system |
-| **Web3 / Wallet** | wagmi + viem + ConnectKit | 3 / 2 | EVM wallets — BSC, Somnia, Push, 0G |
-| | Privy (`@privy-io/react-auth`) | latest | Social login + embedded EVM wallet |
-| | Solana wallet-adapter | latest | Phantom, Backpack, Solflare — SOL / BYNOMO |
-| | Sui dapp-kit (`@mysten/sui`) | latest | Sui Wallet, BlueMove — SUI / USDC / OCT |
-| | NEAR wallet-selector (`near-api-js`) | latest | NEAR wallets — NEAR |
-| | Stellar Wallets Kit | latest | Freighter, LOBSTR — XLM |
-| | Taquito + Beacon SDK | latest | Temple, Kukai — XTZ |
-| | Starknet.js | latest | Argent X, Braavos — STRK |
-| | InterwovenKit (`@initia/interwovenkit-react`) | latest | Initia Interwoven Wallet — INIT |
-| **Backend** | Next.js Route Handlers | 16.1.3 | Serverless API (Node.js on Vercel) |
-| | Supabase (`@supabase/supabase-js`) | latest | Postgres DB + RPC stored procedures |
-| | Pyth Hermes (`@pythnetwork/hermes-client`) | latest | Sub-1s price feeds (1010+ assets) |
-| | ethers | 6 | EVM treasury signing (server-side) |
-| | PostHog (`posthog-js` / `posthog-node`) | latest | Product analytics |
-| **Tooling** | ESLint + eslint-config-next | 9 | Linting |
-| | Jest + Testing Library + fast-check | 30 | Unit tests + property-based tests |
-| | Hardhat + ts-node | 3 | Smart contract development |
-| | Vercel Analytics + Speed Insights | latest | Performance monitoring |
+| 🖥 Frontend | 🔗 Web3 / Wallet | ⚙️ Backend | 🛠 Tooling |
+|------------|-----------------|-----------|-----------|
+| Next.js 16.1.3 — App Router, Turbopack | wagmi 3 + viem 2 + ConnectKit — EVM | Next.js Route Handlers on Vercel | ESLint 9 + eslint-config-next |
+| React 19.2.3 + TypeScript 5 | Privy — social login + embedded EVM wallet | Supabase — Postgres + RPC functions | Jest 30 + Testing Library + fast-check |
+| Tailwind CSS v4 | Solana wallet-adapter — SOL / BYNOMO | Pyth Hermes — sub-1s price feeds | Hardhat 3 + ts-node |
+| Zustand 5 — 6 state slices | Sui dapp-kit — SUI / USDC / OCT | ethers 6 — EVM treasury signing | Vercel Analytics + Speed Insights |
+| TanStack React Query 5 | NEAR wallet-selector — NEAR | PostHog — product analytics | |
+| Framer Motion — animations | Stellar Wallets Kit — XLM | | |
+| Recharts + d3-scale / d3-shape | Taquito + Beacon SDK — XTZ | | |
+| Three.js / OGL — 3D visuals | Starknet.js — STRK | | |
+| Lucide React — icons | InterwovenKit — INIT | | |
 
 ---
 
