@@ -1,527 +1,847 @@
-## Bynomo
+# Bynomo
 
-The first binary options trading dapp on-chain.
+> **The first binary options trading dapp on-chain.**  
+> Fast binary rounds · Pyth oracle pricing · 12 blockchains · Transparent settlement
+
+| | |
+|---|---|
+| **Live** | https://bynomo.fun/ |
+| **Demo video** | https://youtu.be/t76ltZH9XSU |
+| **X / Twitter** | https://x.com/bynomofun |
+| **Telegram** | https://t.me/bynomo |
+| **Discord** | https://discord.gg/5MAHQpWZ7b |
+| **Contact** | bynomo.fun@gmail.com |
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Story & Inspiration](#story--inspiration)
+3. [The Problem](#the-problem)
+4. [The Solution](#the-solution)
+5. [Game Modes](#game-modes)
+6. [Supported Chains & Wallets](#supported-chains--wallets)
+7. [Platform Features](#platform-features)
+8. [Fee Structure](#fee-structure)
+9. [Tech Stack](#tech-stack)
+10. [Architecture](#architecture)
+11. [Supabase Schema](#supabase-schema)
+12. [API Reference](#api-reference)
+13. [Admin Dashboard](#admin-dashboard)
+14. [Directory Structure](#directory-structure)
+15. [Environment Variables](#environment-variables)
+16. [Local Development](#local-development)
+17. [Deployment](#deployment)
+18. [Monetization](#monetization)
+19. [Market Opportunity](#market-opportunity)
+20. [Competitive Landscape](#competitive-landscape)
+21. [Roadmap](#roadmap)
+22. [Security](#security)
 
 ---
 
 ## Overview
 
-Bynomo delivers fast binary options trading with millisecond-resolution price feeds.
-The product is inspired by the shortcomings of Web2 binary options apps (paper-mode bias, opaque settlement, and algorithmic manipulation),
-and rebuilt for Web3 using real-time oracle pricing and a transparent, data-driven trading loop.
+Bynomo delivers fast binary options trading with millisecond-resolution price feeds powered by **Pyth Hermes**. Users deposit native tokens into a per-chain treasury, receive an in-house balance, and trade binary rounds without signing a transaction on every bet. Settlement is fully deterministic and oracle-driven — no opaque algorithms, no trial-mode bias.
 
-| Item | Link |
-|---|---|
-| Live link | https://bynomo.fun/ |
-| X/Twitter | https://x.com/bynomofun |
-| Demo video | https://youtu.be/9jluc7bjvG4|
-| Telegram | https://t.me/bynomo |
-| Discord | https://discord.gg/5MAHQpWZ7b |
-
-Contact: bynomo.fun@gmail.com / amaansayyad2001@gmail.com
+The product is live across **12 blockchains** and supports **300+ assets** (crypto, forex, stocks, metals, commodities).
 
 ---
 
-## Realtime Confirmations
+## Story & Inspiration
 
-Bynomo supports realtime balance/trade UX updates driven by backend and on-chain events.
+In 2021, I saw an advertisement for a forex binary options app called Binomo. It was a mobile app promoted by big influencers. I tried the free (paper) mode and made 10× in a week. Then I put in three months of my savings in real mode — and lost it all.
 
-- Realtime event subscriptions for confirmation feedback
-- Immediate UI balance refresh after deposit/withdraw confirmation
-- Explorer-linked success toasts for verifiable transactions
+Later I found Reddit threads showing that Binomo ran on algorithms that let users win in trial mode and lose in real mode. This happened to millions of traders worldwide.
 
----
-
-## Story / Inspiration
-
-In 2021, I saw an advertisement of a forex option trading app called binomo. It was a mobile app and was promoted by a lot of big influencers.
-
-One day I decided to use it in free mode, which is paper trading mode. Within a week, I made 10x the initial money.
-
-Then I decided to use the real mode and put 3 months of my income, and lost it all.
-
-Later I realised on Reddit that the company was running on algorithms, backdoors manipulators, and completely fake, making the user win in trial mode and lose in real mode.
-This didn't happen only with me; 99% users that were using options trading platform, and the entire Reddit was flooded with it.
-
-That day I decided to build an options trading platform to solve the problem of mine with other millions of traders, but in Web3 the <1s data feeds/ Pyth oracles did not exist back then, and it was impossible to build a high-frequency options trading/ prediction dapp as the tools were limited.
-But waited for 5 years and executed it this year, 2026.
+That day I decided to build a transparent, oracle-driven binary options platform. But in 2021, sub-1-second price feeds didn't exist in Web3. I waited five years, and in 2026 the tools were finally ready. **Bynomo** is the result.
 
 ---
 
 ## The Problem
 
-Today, Binary options trading in the Web3 world does not exist at all
-And apps in the web2 world are broken, fraudulent and algorithmic baised.
-Why?
-- Coz there were no real time data oracles existed that can deliver price feeds in less than 1 second.
-- We have 590 Million Crypto Users and 400 Million Txn happen EVERY SINGLE DAY on the top 200 blockchain.
-- One Big News/ One Big Move/ One Big Crash ~ Oracle's Crash
-This caused huge gap in the existence and reality for a high demand dapp like Bynomo
+- Binary options trading in Web3 doesn't exist at a production level.
+- Web2 platforms (Binomo, IQ Option) are opaque, algorithmically biased, and fraudulent.
+- There were no real-time data oracles that could deliver price feeds in under 1 second — until Pyth Hermes.
+- 590 million crypto users and 400 million daily transactions create a massive latent demand.
+- One big market move → oracle crash → no fast-settlement dapp can function.
 
 ---
 
 ## The Solution
 
-Solution - Bynomo
-- Where every millisecond is tracked by pyth oracles to pull real time data
-- Traders can Trade over 300+ Crypto, 100+ Stocks, 5+ Metals, 10+Forex, Commodities, Bonds every single thing on Real-time price chart
-- Users can Bet unlimited times without signing txn
-- Every user can trade binary options at lightning speed at 5s,10s,15s,30s,1m timeframes
-- Infinite txns, no cap amounts and One Single Treasury
-- Plan is to introduce 1-10x leverage, trade in open crypto markets freely
-And Settlement in <0.001 ms
-Like Binomo of Web2 but 10x better than any other dapp in existence.
+Bynomo solves all of this:
+
+- **Pyth Hermes** delivers sub-1-second price feeds across 300+ assets.
+- **Binary rounds** at 5s / 10s / 15s / 30s / 1m timeframes — no wallet signature per bet.
+- **One single treasury** per chain — infinite bets, no cap, instant house balance settlement.
+- **Fully on-chain verifiable** — every deposit, withdrawal, and payout is logged immutably.
+- **12 blockchains** in a single unified UI.
 
 ---
 
-## Key Features
+## Game Modes
 
-1. Multi-chain wallet experience
-   - Supports multiple networks/wallet integrations in one UI flow.
+### Classic Mode (Binomo-style)
 
-2. Oracle-driven pricing
-   - Outcome resolution is tied to real-time price movement rather than opaque local simulation.
+The foundational mode. Players pick a direction (**UP** or **DOWN**), a multiplier target, and a duration.
 
-3. Instant feedback & short settlement windows
-   - Trading feels like a round-based game with quick resolution.
+- **Strike price** = Pyth feed price at bet time
+- **Settlement** = price at `endTime` vs strike
+- **Win condition:** price > strike for UP; price < strike for DOWN
+- **Timeframes:** 5s, 10s, 15s, 30s, 1m
+- **Multipliers:** configurable grid targets (e.g. 1.9×, 2.0×, 2.5×)
 
-4. Persistent bet history & public leaderboard
-   - Leaderboard and user history are backed by Supabase.
+### Box Mode
 
-5. Referral system
-   - Referral codes and referral leaderboards are integrated into the product.
+Players choose a pre-drawn **price band** (box) from the grid and a time window.
 
----
+- **Win condition:** Pyth price is **inside** `[priceBottom, priceTop]` at `endTime`
+- Higher risk = tighter box = larger multiplier
 
-## Monetization
+### Draw Mode
 
-The platform makes money in two primary ways:
+Players **draw a rectangle** directly on the live chart to define their own price band and time window.
 
-1. Withdrawal fees (treasury take-rate)
-   - Withdrawal requests apply a treasury fee in `POST /api/balance/withdraw`.
-   - The backend computes a fee percent and transfers only the net withdrawal amount.
+- Minimum box size and minimum future start time enforced
+- **Dynamic multiplier** — calculated from box size, distance from current price, and duration
+- Smaller / further / shorter = higher payout
+- **Win condition:** price is inside the drawn band at the drawn end time
 
-2. House edge on bets
-   - When a user places a bet, the system deducts the bet amount.
-   - If the bet is won, the system credits `winAmount = bet.amount * multiplier`; otherwise, payout is zero.
-   - The house edge is driven by the difference between total bet amounts lost and total payouts paid, plus the withdrawal take-rate.
+### Blitz Mode
 
-Estimated earnings (best-effort):
+A time-limited overlay that boosts all multipliers by **2×**.
 
-| Monthly bet volume | Expected monthly earnings range | Notes |
-|---|---|---|
-| About $5M | About $100k to $250k per month | Based on withdrawal take rate plus house edge model assumptions |
-| About $20M | About $400k to $1.0M per month | Depends on cashout behavior and effective fee utilization |
+- **Schedule:** 1 minute active, 2 minutes cooldown — repeating cycle
+- **Entry fee:** one-time per-chain on-chain payment sent directly to the platform fee collector wallet (not the game treasury)
+- **Entry fees by chain:** BNB 0.1 · SOL 1 · SUI 50 · XLM 400 · XTZ 150 · NEAR 50 · STRK 1,500 · Testnets 0.01
+- Once paid, `hasBlitzAccess` is active for the current blitz window
 
-```mermaid
-flowchart LR
-  A[Monthly bet volume] --> B[Scenario]
-  B --> C[About 5M]
-  C --> D[About 100k to 250k earnings per month]
-  B --> E[About 20M]
-  E --> F[About 400k to 1.0M earnings per month]
-  D --> G[Depends on cashout behavior and fee utilization]
-  F --> G
-```
+### Demo Mode
+
+Full simulation with no real funds. Demo bets are prefixed `demo-*`, excluded from Supabase persistence, and tracked separately in admin analytics.
 
 ---
 
-## Market Opportunity
+## Supported Chains & Wallets
 
-| Segment | Market signal | Why it matters for Bynomo |
-|---|---|---|
-| Binary options / prediction | $27.56B (2025) → ~$116B by 2034 (19.8% CAGR) | Validates long-term demand for fast binary outcome trading |
-| Crypto prediction markets | $45B+ annual volume (Polymarket, Kalshi, on-chain) | Shows liquidity appetite for oracle-driven prediction markets |
-| Crypto derivatives volume | $86T+ annually (2025) | Indicates a large spec/trader base willing to move quickly |
-| Crypto users | 590M+ worldwide | Large reachable audience for high-frequency “round” experiences |
-| Bynomo positioning | Built for “fast rounds + verifiable oracle pricing + simple binary outcomes”, without Web2 trial-mode bias or settlement opacity | Defines the product wedge and differentiator |
+| Chain | Token | Wallet(s) | Type |
+|-------|-------|-----------|------|
+| **BNB Chain** | BNB | MetaMask, Trust, WalletConnect (via wagmi + ConnectKit), Privy | Mainnet |
+| **Solana** | SOL, BYNOMO | Phantom, Backpack, Solflare, any wallet-adapter wallet | Mainnet |
+| **Sui** | SUI (native), USDC | Sui Wallet, BlueMove, any Mysten dapp-kit wallet | Mainnet |
+| **OneChain** | OCT | Sui Wallet, BlueMove (Sui-compatible) | Mainnet |
+| **NEAR** | NEAR | MyNearWallet, HereWallet, Bitget Wallet | Mainnet |
+| **Stellar** | XLM | Freighter, Lobster, Trezor (via Stellar Wallets Kit) | Mainnet |
+| **Tezos** | XTZ | Temple, Kukai (Taquito BeaconWallet) | Mainnet |
+| **Starknet** | STRK | Argent X, Braavos (injected `window.starknet`) | Mainnet |
+| **Initia** | INIT | Initia Wallet (InterwovenKit) | Mainnet |
+| **0G Mainnet** | 0G | MetaMask, Trust, any EVM wallet | Mainnet |
+| **Push Chain** | PC | MetaMask, Trust, any EVM wallet | Testnet |
+| **Somnia** | STT | MetaMask, Trust, any EVM wallet | Testnet |
+
+**Social login:** Google, Twitter, Email via **Privy** (creates embedded EVM wallet on BSC).
+
+**Connect Wallet order:** Solana → BNB → OneChain → Sui → NEAR → Starknet → Stellar → Tezos → 0G → Push → Initia → Somnia → Social Login
 
 ---
 
-## Competitive Landscape
+## Platform Features
 
-| Segment | Examples | Limitation vs Bynomo |
-|---|---|---|
-| Web2 Binary Options | Binomo, IQ Option, Quotex | Often opaque settlement/pricing and can be biased in trial modes |
-| Crypto Prediction Markets | Polymarket, Kalshi, Azuro | Outcomes typically resolve over minutes-to-hours, which feels slow for round-based high-frequency traders |
-| Centralized Crypto Derivatives (CEX) | Binance Futures, Bybit, OKX | Powerful but complex (order types, funding, liquidation mechanics) vs a simple binary loop |
-| On-chain Options / DeFi Primitives | Dopex, Lyra, Premia | More complex option mechanics and dependencies reduce “instant feedback” UX |
-| Tap Trading (Derivatives) | Euphoria_fi | Mobile-first “Tap Trading” for options/perps-style speculation; may feel less like a dedicated fast binary outcomes loop |
-| Multi-chain Wallet Trading UX | Wallet + dapp UIs across EVM/Solana/Sui/NEAR | UX fragmentation: users can’t get a unified, multi-chain binary experience in one place |
+### Deposits
+- User sends native tokens on-chain to the treasury wallet
+- Server verifies the transaction (EVM/Initia chains verify on-chain; SOL/SUI/XLM/XTZ/NEAR/STRK verified by tx hash)
+- Platform fee deducted; **net** amount credited to `user_balances` in Supabase via `update_balance_for_deposit` RPC
+- Fee logged as `platform_fee` in `balance_audit_log`
+
+### Withdrawals
+- User requests withdrawal amount ≤ their available balance
+- **Signed intent** required for EVM-like chains (BNB, PUSH, SOMNIA, 0G) — prevents replay attacks
+- **Withdrawal cap:** max `total_deposited × 1.08` on mainnet chains (prevents profit extraction on tiny deposits)
+- After `FREQUENCY_REVIEW_THRESHOLD` withdrawals, routed to manual review queue (`withdrawal_requests`)
+- Platform fee deducted; treasury sends **net** amount on-chain; Supabase balance updated
+
+### Balance System
+- Every wallet has one row per currency in `user_balances`
+- All bet deductions and win credits happen atomically via Supabase RPCs
+- Full audit trail in `balance_audit_log` with `operation_type`: `deposit`, `withdrawal`, `bet_placed`, `bet_won`, `platform_fee`, `admin_balance_wipe`
+
+### Player Tiers
+| Tier | Deposit/Withdrawal Fee |
+|------|----------------------|
+| `free` | 10% |
+| `standard` | 9% |
+| `vip` | 8% |
+
+### Referrals
+- Every user gets a referral code
+- Referrer earns credit when referee deposits; tracked in `user_referrals`
+- Admin dashboard shows referral leaderboard
+
+### Access Codes
+- Invite-only onboarding via access codes stored in `access_codes` table
+- Admin can generate batches and export CSV
+
+### Waitlist
+- Email capture at `/waitlist`
+- Admin dashboard shows full list
+
+### Public Live Stats
+- `GET /api/stats/public` serves aggregate stats (total bets, volume, payouts, win rate, unique wallets)
+- Displayed on the landing page in `LiveStatsSection` with animated counters
+
+### Session Tracking
+- `POST /api/session/ping` keeps dwell-time alive
+- `DELETE /api/session/ping` ends session
+- Stored in `user_sessions` for admin Wallet Intel
+
+### Leaderboard
+- `GET /api/bets/leaderboard` — aggregated per-wallet profit + win rate
+- 60s in-memory cache; 503 fallback to cached snapshot on timeout
+
+### Deduplication & Race Condition Prevention
+- `bet_id` checked against `balance_audit_log` before each payout — duplicate credits blocked server-side
+- Client-side: `resolveBet` in Zustand removes the bet from `activeBets` synchronously before any async API call
+- `userAddress` captured at bet placement time so settlement works even if wallet disconnects mid-round
+
+### Ban System
+- Admin can globally ban a wallet address
+- Banned wallets cannot deposit, withdraw, or bet
+- **Unban action:** removes ban AND zeroes all balances in `user_balances` — player starts completely fresh
+- All balance wipes logged in `balance_audit_log` as `admin_balance_wipe`
+
+---
+
+## Fee Structure
+
+### Platform Fees (Deposit & Withdrawal)
+
+Applied as a percentage of the gross amount. Fee is transferred from the treasury to the platform fee collector wallet (`NEXT_PUBLIC_PLATFORM_FEE_WALLET_*`).
+
+| Tier | Fee |
+|------|-----|
+| free | 10% |
+| standard | 9% |
+| vip | 8% |
+
+The net amount (after fee) is what's credited or sent on withdrawal.
+
+### Blitz Entry Fees (per-chain, flat native amount)
+
+Paid once per blitz window directly to the platform fee collector wallet.
+
+| Chain | Fee |
+|-------|-----|
+| BNB | 0.1 BNB |
+| SOL | 1 SOL |
+| SUI | 50 SUI (native) |
+| XLM | 400 XLM |
+| XTZ | 150 XTZ |
+| NEAR | 50 NEAR |
+| STRK | 1,500 STRK |
+| Testnets (PUSH/STT/0G/OCT/INIT) | 0.01 native |
+
+### House Edge
+
+- Bet multipliers are set below fair-odds parity
+- Break-even user win rate at 1.9× multiplier = **52.6%**
+- Rates above 52.6% mean the house loses on that mode (tracked in the Game Mode P&L admin panel)
 
 ---
 
 ## Tech Stack
 
-- Frontend
-  - Next.js 16 (App Router) + React 19 + TypeScript
-  - Tailwind CSS v4
-  - Zustand (global state)
-  - @tanstack/react-query
-  - Web3/wallet integrations:
-    - wagmi + viem (EVM)
-    - Solana wallet-adapter stack
-    - Sui dapp-kit
-    - NEAR, Stellar, Tezos, Starknet, Push Chain
+### Frontend
+- **Next.js 16.1.3** (App Router, Turbopack)
+- **React 19.2.3** + **TypeScript 5**
+- **Tailwind CSS v4**
+- **Zustand 5** (global state — 6 slices)
+- **TanStack React Query 5**
+- **Framer Motion** (animations)
+- **Recharts** + **d3-scale** / **d3-shape** (charts)
+- **Three.js / OGL** (landing page visuals)
+- **Lucide React** (icons)
 
-- Backend (within Next.js)
-  - Next.js Route Handlers under `app/api/**`
-  - Node.js runtime (Next/Vercel)
+### Web3 / Wallet
+- **wagmi 3 + viem 2 + ConnectKit** — EVM (BSC, Push donut, Somnia, 0G)
+- **Privy** (`@privy-io/react-auth`) — social login + embedded EVM wallet
+- **Solana wallet-adapter** (`@solana/web3.js`, `@solana/spl-token`)
+- **Sui dapp-kit** (`@mysten/dapp-kit`, `@mysten/sui`)
+- **NEAR wallet-selector** (`near-api-js`, `@near-js/*`)
+- **Stellar Wallets Kit** (`@creit.tech/stellar-wallets-kit`, `@stellar/stellar-sdk`)
+- **Taquito** (`@taquito/taquito`, `@airgap/beacon-sdk`) — Tezos
+- **Starknet.js** — Starknet
+- **InterwovenKit** (`@initia/interwovenkit-react`) — Initia
 
-- Database / Services
-  - Supabase (Postgres)
-  - Supabase migrations in `supabase/migrations/**`
-  - Auth/identity: Privy
-  - Analytics: PostHog
-  - Oracle pricing: Pyth Hermes client usage
+### Backend (Next.js Route Handlers)
+- **Node.js runtime** via Vercel serverless functions
+- **Supabase** (`@supabase/supabase-js`) — Postgres + RPC functions
+- **Pyth Hermes** (`@pythnetwork/hermes-client`) — price feeds
+- **ethers 6** — EVM tx signing (treasury)
+- **PostHog** (`posthog-js`, `posthog-node`) — analytics
 
-- Testing
-  - Jest + Testing Library + fast-check
+### Tooling
+- **ESLint 9** + `eslint-config-next`
+- **Jest 30** + Testing Library + fast-check
+- **Hardhat 3** + ts-node (smart contracts)
+- **Vercel Analytics + Speed Insights**
 
-- Linting
-  - ESLint 9
+---
+
+## Architecture
+
+### State Management (Zustand — `lib/store/`)
+
+| Slice | Responsibility |
+|-------|---------------|
+| `walletSlice` | Address, network, account type (real/demo), currency, connect/disconnect |
+| `gameSlice` | Game mode, active/settled bets, Pyth price feed, Blitz state, bet placement/resolution |
+| `balanceSlice` | House balance, deposit/withdraw, demo balance |
+| `historySlice` | Local bet history persistence |
+| `referralSlice` | Referral code sync |
+| `profileSlice` | Username / profile fetch |
+
+All slices are combined into `useOverflowStore` in `lib/store/index.ts`.
+
+### Mermaid Diagrams
+
+#### High-level architecture
+
+```mermaid
+flowchart LR
+  U[User] -->|Open UI| FE[Next.js React App\nApp Router + Components + Zustand]
+  FE -->|Wallet connect| W[Wallet Integrations\nwagmi/viem + Solana adapter + Sui dapp-kit\n+ NEAR/Stellar/Tezos/Starknet/Push/Initia]
+  FE -->|Place bet| API_BET[POST /api/balance/bet]
+  FE -->|Save bet result| API_SAVE[POST /api/bets/save]
+  FE -->|Claim winnings| API_WIN[POST /api/balance/win]
+  FE -->|Withdraw| API_WITH[POST /api/balance/withdraw]
+  FE -->|Leaderboard| API_LB[GET /api/bets/leaderboard]
+
+  API_BET --> SB[(Supabase\nbet_history\nuser_balances\nbalance_audit_log)]
+  API_SAVE --> SB
+  API_WIN --> SB
+  API_WITH --> SB
+  API_LB --> SB
+```
+
+#### Bet lifecycle
+
+```mermaid
+flowchart TD
+  A[User selects target + amount] --> B[Zustand creates active bet in-memory\nuserAddress captured at placement]
+  B --> C[POST /api/balance/bet]
+  C --> D[Supabase RPC deduct_balance_for_bet\natomic balance update + audit log]
+  D --> E[Returns success + remaining balance]
+
+  E --> F[Pyth price feed updates continuously]
+  F --> G[Bet resolves at endTime]
+
+  G --> H{Did user win?}
+  H -- Yes --> I[POST /api/balance/win\nwith dedup guard on betId]
+  I --> J[Supabase RPC credit_balance_for_payout\ncredits balance + audit log]
+  H -- No --> K[No payout]
+
+  G --> L[POST /api/bets/save — real mode only]
+  L --> M[Upsert row in bet_history]
+```
+
+#### Withdrawal flow
+
+```mermaid
+flowchart TD
+  U[User requests withdrawal] --> W[POST /api/balance/withdraw]
+  W --> V[Fetch balance + status from Supabase]
+  V --> X{Valid balance?}
+  X -- No --> Y[Reject 400/403/404]
+  X -- Yes --> CAP{Within withdrawal cap?}
+  CAP -- No --> CAPERR[Reject — exceeds 1.08× deposited]
+  CAP -- Yes --> Z[Apply tier fee\nfree=10% standard=9% vip=8%]
+  Z --> T[netWithdrawAmount = amount - feeAmount]
+  T --> FEE[Transfer feeAmount → fee collector wallet]
+  FEE --> S[Transfer netWithdrawAmount → user wallet\nBNB/SOL/SUI/XLM/XTZ/NEAR/STRK/PUSH/STT/INIT/0G]
+  S --> R[Supabase RPC update_balance_for_withdrawal]
+  R --> OK[Return txHash + newBalance]
+```
+
+---
+
+## Supabase Schema
+
+### Tables
+
+| Table | Purpose |
+|-------|---------|
+| `user_balances` | PK `(user_address, currency)` — balance, tier, status |
+| `balance_audit_log` | Every balance event: deposit, withdrawal, bet_placed, bet_won, platform_fee, admin_balance_wipe |
+| `bet_history` | Settled bets: asset, direction, amount, payout, won, mode, network |
+| `user_profiles` | Username, access_code |
+| `user_referrals` | referral_code, referred_by, referral_count |
+| `access_codes` | Invite codes + usage |
+| `waitlist` | Email capture |
+| `banned_wallets` | Global bans + `is_wallet_globally_banned()` helper |
+| `user_sessions` | Dwell time / ping tracking |
+| `withdrawal_requests` | Manual approval queue |
+
+### RPC Functions
+
+| Function | Purpose |
+|----------|---------|
+| `update_balance_for_deposit` | Atomic deposit credit + audit log |
+| `deduct_balance_for_bet` | Atomic bet deduction + audit log |
+| `credit_balance_for_payout` | Atomic win credit + audit log |
+| `update_balance_for_withdrawal` | Atomic withdrawal deduction + audit log |
+| `increment_referral_count` | Atomic referral counter |
+
+RLS is enforced via migration `004_enable_rls.sql`. All writes from the app use the **service role key** server-side — the anon key is read-only for the client.
+
+Migrations live in `supabase/migrations/`.
+
+---
+
+## API Reference
+
+### Balance
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET` | `/api/balance/[address]` | Fetch all balances for a wallet |
+| `POST` | `/api/balance/deposit` | Record deposit, deduct fee, credit net to house balance |
+| `POST` | `/api/balance/withdraw` | Execute withdrawal, deduct fee, send net on-chain |
+| `POST` | `/api/balance/bet` | Deduct bet amount from house balance |
+| `POST` | `/api/balance/win` | Credit win payout (with dedup guard) |
+| `POST` | `/api/balance/payout` | Alternate payout path |
+
+### Bets
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `POST` | `/api/bets/save` | Upsert resolved bet into `bet_history` |
+| `GET` | `/api/bets/history` | User's bet history |
+| `GET` | `/api/bets/leaderboard` | Aggregated leaderboard (60s cached) |
+
+### User
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET/POST` | `/api/referral` | Fetch/register referral |
+| `POST` | `/api/validate-access-code` | Validate invite code |
+| `POST/DELETE` | `/api/session/ping` | Session tracking start/end |
+| `GET` | `/api/withdrawals` | User's withdrawal request history |
+| `GET` | `/api/initia/balance` | Initia chain balance helper |
+
+### Public Stats
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET` | `/api/stats/public` | Aggregate platform stats (revalidate 300s) |
+
+### Admin
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `POST` | `/api/admin/auth` | Admin login |
+| `POST` | `/api/admin/logout` | Admin logout |
+| `GET` | `/api/admin/stats` | Dashboard stats (real/demo split) |
+| `GET` | `/api/admin/mode-analytics` | Per-game-mode P&L |
+| `GET` | `/api/admin/player-ledger` | Per-wallet financial summary |
+| `GET` | `/api/admin/users` | User list for ledger |
+| `POST` | `/api/admin/users/status` | Update user status (active/frozen/banned) |
+| `GET` | `/api/admin/transactions` | Deposit/withdrawal audit stream |
+| `GET` | `/api/admin/game-history` | Raw bet history rows |
+| `GET` | `/api/admin/treasury-balances` | On-chain treasury balances + USD estimates |
+| `GET` | `/api/admin/wallet-insights` | Deep wallet analytics |
+| `GET/POST/DELETE` | `/api/admin/banned-wallets` | List/add/remove global bans |
+| `POST` | `/api/admin/unban-wallet` | Unban + zero balance (fresh start) |
+| `GET` | `/api/admin/currencies` | Market/asset config |
+| `GET` | `/api/admin/waitlist` | Waitlist email list |
+| `GET/POST` | `/api/admin/access-codes` | List/generate invite codes |
+| `GET` | `/api/admin/withdrawal-requests/pending` | Manual withdrawal queue |
+| `POST` | `/api/admin/withdrawal-requests/[id]/accept` | Approve + execute withdrawal |
+| `POST` | `/api/admin/withdrawal-requests/[id]/reject` | Reject withdrawal request |
+| `GET` | `/api/admin/danger-zone` | Sensitive admin ops |
+
+---
+
+## Admin Dashboard
+
+Located at `/dashboard`. Protected by admin auth (`requireAdminAuth`).
+
+| Tab | What it shows |
+|-----|--------------|
+| **Wallet Intel** | Look up any address — balances, audit log, bet history, withdrawals, ban status, session dwell time, explorer links |
+| **Ledger** | All users: identity, currency, liquidity |
+| **Player P&L** | Per-wallet: deposited / withdrawn / available balance / net P&L / bets / fees paid / sortable / **Unban button** for banned wallets |
+| **Gameplay** | Game Mode P&L panel (Classic/Box/Draw — win rate, house P&L, by-chain breakdown, top assets) + full bet history with Real/Demo/Chain filters |
+| **Financials** | Deposit/withdrawal stream; pending withdrawal queue with Accept/Reject |
+| **Inventory** | Pyth-fed market asset list |
+| **Referrals** | Referral leaderboard and stats |
+| **Waitlist** | Email capture list |
+| **Access Codes** | Generate batch, view usage, export CSV |
+| **Danger Zone** | High-risk admin operations |
+
+### Player P&L — Unban Flow
+
+When you click **↑ Unban** on a banned player row:
+1. Removes the wallet from `banned_wallets`
+2. Sets `user_balances.balance = 0` across all currencies via Supabase `UPDATE` — effective immediately everywhere in the system
+3. Sets `status = 'active'` — deposits and bets re-enabled
+4. Writes an `admin_balance_wipe` entry to `balance_audit_log` for full audit trail
+5. Table auto-refreshes
+
+---
+
+## Directory Structure
+
+```
+Bynomo-main/
+├── app/                        # Next.js App Router
+│   ├── page.tsx                # Landing page
+│   ├── trade/                  # Main game UI
+│   ├── dashboard/              # Admin dashboard
+│   ├── leaderboard/            # Public leaderboard
+│   ├── profile/                # User profile
+│   ├── referrals/              # Referral page
+│   ├── waitlist/               # Waitlist signup
+│   ├── withdrawals/            # Withdrawal history
+│   ├── litepaper/              # Litepaper
+│   ├── api/                    # All API route handlers
+│   └── providers.tsx           # Wallet + query providers
+│
+├── components/
+│   ├── game/                   # GameBoard, LiveChart, TierStatusModal
+│   ├── wallet/                 # WalletConnectModal, WalletDiscoveryModal
+│   ├── balance/                # DepositModal, WithdrawModal
+│   ├── landing/                # LiveStatsSection, DemoVideoSection, AdvisorsRevealSection, etc.
+│   └── ui/                     # Shared UI primitives
+│
+├── lib/
+│   ├── store/                  # Zustand slices (wallet, game, balance, history, referral, profile)
+│   ├── fees/                   # platformFee.ts — tier fees + blitz fee logic
+│   ├── bans/                   # walletBan.ts — global ban helpers
+│   ├── admin/                  # computeStats.ts, requireAdminAuth, walletAddressVariants
+│   ├── supabase/               # serviceClient, browserClient
+│   ├── bnb/                    # BNB/EVM client + wagmi config
+│   ├── solana/                 # Solana client + backend-client
+│   ├── sui/                    # Sui client + backend-client
+│   ├── near/                   # NEAR wallet + config
+│   ├── stellar/                # Stellar backend-client
+│   ├── tezos/                  # Tezos client
+│   ├── starknet/               # Starknet wallet + backend-client
+│   ├── push/                   # Push Chain client
+│   ├── somnia/                 # Somnia client
+│   ├── zg/                     # 0G backend-client
+│   ├── onechain/               # OneChain client
+│   ├── initia/                 # Initia client
+│   ├── utils/                  # priceFeed, address utils
+│   └── logging/                # error-logger
+│
+├── hooks/                      # useSessionTracker, etc.
+├── types/                      # Shared TypeScript types
+├── public/                     # Static assets (logos, images)
+├── supabase/                   # migrations/, scripts/, tests
+├── contracts/                  # Solidity / Hardhat project
+├── scripts/                    # Ops scripts (balance sync, reconcile)
+└── docs/                       # ENVIRONMENT.md, CONTRIBUTING.md, SECURITY_REPORTING.md
+```
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in values. See `docs/ENVIRONMENT.md` for the full guide.
+
+### Core
+```env
+NEXT_PUBLIC_APP_NAME=
+NEXT_PUBLIC_ROUND_DURATION=
+NEXT_PUBLIC_PRICE_UPDATE_INTERVAL=
+NEXT_PUBLIC_CHART_TIME_WINDOW=
+```
+
+### Supabase
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+```
+
+### Privy (social login)
+```env
+NEXT_PUBLIC_PRIVY_APP_ID=
+PRIVY_APP_SECRET=
+```
+
+### Admin
+```env
+ADMIN_PASSWORD=
+```
+
+### EVM / BNB
+```env
+NEXT_PUBLIC_TREASURY_ADDRESS=
+NEXT_PUBLIC_BNB_NETWORK=
+NEXT_PUBLIC_BNB_RPC_ENDPOINT=
+BNB_TREASURY_SECRET_KEY=
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+```
+
+### Solana
+```env
+NEXT_PUBLIC_SOLANA_NETWORK=
+NEXT_PUBLIC_SOL_TREASURY_ADDRESS=
+SOL_TREASURY_SECRET_KEY=
+```
+
+### Sui
+```env
+NEXT_PUBLIC_SUI_NETWORK=
+NEXT_PUBLIC_SUI_RPC_ENDPOINT=
+NEXT_PUBLIC_SUI_TREASURY_ADDRESS=
+SUI_TREASURY_SECRET_KEY=
+NEXT_PUBLIC_USDC_TYPE=
+```
+
+### Stellar
+```env
+NEXT_PUBLIC_STELLAR_NETWORK=
+NEXT_PUBLIC_STELLAR_HORIZON_URL=
+NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS=
+STELLAR_TREASURY_SECRET=
+```
+
+### Tezos
+```env
+NEXT_PUBLIC_TEZOS_RPC_URL=
+NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS=
+TEZOS_TREASURY_SECRET_KEY=
+```
+
+### NEAR
+```env
+NEXT_PUBLIC_NEAR_TREASURY_ADDRESS=
+NEAR_TREASURY_ACCOUNT_ID=
+NEAR_TREASURY_PRIVATE_KEY=
+```
+
+### Starknet
+```env
+NEXT_PUBLIC_STARKNET_TREASURY_ADDRESS=
+NEXT_PUBLIC_STARKNET_RPC_URL=
+NEXT_PUBLIC_STARKNET_CHAIN_ID=
+STARKNET_TREASURY_PRIVATE_KEY=
+STARKNET_TREASURY_CAIRO_VERSION=
+```
+
+### Push Chain
+```env
+NEXT_PUBLIC_PUSH_RPC_ENDPOINT=
+NEXT_PUBLIC_PUSH_TREASURY_ADDRESS=
+PUSH_TREASURY_SECRET_KEY=
+```
+
+### Somnia
+```env
+NEXT_PUBLIC_SOMNIA_TESTNET_RPC=
+NEXT_PUBLIC_SOMNIA_TREASURY_ADDRESS=
+SOMNIA_TREASURY_SECRET_KEY=
+```
+
+### 0G Mainnet
+```env
+NEXT_PUBLIC_ZG_MAINNET_RPC=
+NEXT_PUBLIC_ZG_TREASURY_ADDRESS=
+ZG_TREASURY_SECRET_KEY=
+```
+
+### Initia
+```env
+NEXT_PUBLIC_INITIA_RPC_URL=
+NEXT_PUBLIC_INITIA_TREASURY_ADDRESS=
+```
+
+### Platform Fee Collector Wallets
+```env
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_SOL=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_SUI=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_XLM=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_XTZ=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR=
+NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK=
+```
+
+### Analytics
+```env
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=
+```
 
 ---
 
 ## Local Development
 
-### 1) Install dependencies
+### 1. Install dependencies
 
 ```bash
 yarn install
 ```
 
-### 2) Configure environment
-
-Create one runtime env file:
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
+# Fill in required values
 ```
 
-Fill in required values in `.env` (RPC endpoints, Supabase keys, and treasury secrets).  
-`.env.example` is only a template; the app reads `.env`.
+### 3. Run Supabase migrations
 
-For a clean, grouped env setup guide (without secret values), see `docs/ENVIRONMENT.md`.
+```bash
+# Apply migrations to your Supabase project via the dashboard or CLI
+supabase db push
+```
 
-#### Required env keys (current codebase)
-
-Use these exact key names:
-
-- Core
-  - `NEXT_PUBLIC_APP_NAME`
-  - `NEXT_PUBLIC_ROUND_DURATION`
-  - `NEXT_PUBLIC_PRICE_UPDATE_INTERVAL`
-  - `NEXT_PUBLIC_CHART_TIME_WINDOW`
-- Supabase
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_KEY`
-- Privy
-  - `NEXT_PUBLIC_PRIVY_APP_ID`
-  - `PRIVY_APP_SECRET`
-- EVM / BNB / Push / Somnia
-  - `NEXT_PUBLIC_TREASURY_ADDRESS`
-  - `NEXT_PUBLIC_BNB_NETWORK`
-  - `NEXT_PUBLIC_BNB_RPC_ENDPOINT`
-  - `BNB_TREASURY_SECRET_KEY`
-  - `NEXT_PUBLIC_PUSH_RPC_ENDPOINT`
-  - `NEXT_PUBLIC_PUSH_TREASURY_ADDRESS`
-  - `PUSH_TREASURY_SECRET_KEY`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_ID`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_CHAIN_NAME`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_SYMBOL`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_CURRENCY_DECIMALS`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_RPC`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_WS_RPC`
-  - `NEXT_PUBLIC_SOMNIA_TESTNET_EXPLORER`
-  - `NEXT_PUBLIC_SOMNIA_TREASURY_ADDRESS`
-  - `NEXT_PUBLIC_SOMNIA_REACTOR_ADDRESS`
-  - `NEXT_PUBLIC_SOMNIA_REACTIVITY_PRECOMPILE`
-  - `SOMNIA_TREASURY_SECRET_KEY` (optional if BNB key is reused)
-- Other supported chains
-  - `NEXT_PUBLIC_SOLANA_NETWORK`, `NEXT_PUBLIC_SOL_TREASURY_ADDRESS`, `SOL_TREASURY_SECRET_KEY`
-  - `NEXT_PUBLIC_SUI_NETWORK`, `NEXT_PUBLIC_SUI_RPC_ENDPOINT`, `NEXT_PUBLIC_SUI_TREASURY_ADDRESS`, `SUI_TREASURY_SECRET_KEY`, `NEXT_PUBLIC_USDC_TYPE`
-  - `NEXT_PUBLIC_STELLAR_NETWORK`, `NEXT_PUBLIC_STELLAR_HORIZON_URL`, `NEXT_PUBLIC_STELLAR_TREASURY_ADDRESS`, `STELLAR_TREASURY_SECRET`
-  - `NEXT_PUBLIC_TEZOS_RPC_URL`, `NEXT_PUBLIC_TEZOS_TREASURY_ADDRESS`, `TEZOS_TREASURY_SECRET_KEY`
-  - `NEXT_PUBLIC_NEAR_TREASURY_ADDRESS`, `NEAR_TREASURY_ACCOUNT_ID`, `NEAR_TREASURY_PRIVATE_KEY`
-  - `NEXT_PUBLIC_STARKNET_TREASURY_ADDRESS`, `NEXT_PUBLIC_STARKNET_RPC_URL`, `NEXT_PUBLIC_STARKNET_CHAIN_ID`, `STARKNET_TREASURY_PRIVATE_KEY`, `STARKNET_TREASURY_CAIRO_VERSION`
-
-### 3) Run the dev server
+### 4. Start the dev server
 
 ```bash
 yarn dev
 ```
 
-The app should be available at:
-http://localhost:3000
+App runs at `http://localhost:3000`.
+
+### Useful Commands
+
+```bash
+yarn build    # Production build
+yarn lint     # ESLint
+yarn test     # Jest test suite
+```
+
+See `docs/CONTRIBUTING.md` for PR expectations and code standards.
 
 ---
 
-## Useful Commands
+## Deployment
 
-- Build: `yarn build`
-- Lint: `yarn lint`
-- Tests: `yarn test`
+Deployed on **Vercel** (Next.js App Router). 
 
-For contributing (setup, lint/tests, and PR expectations), see `docs/CONTRIBUTING.md`.
-
----
-
-## Security Notes
-
-- Treasury private keys are loaded via server environment variables (do not expose them to the client).
-- The project includes protections against backend overload by caching and timeout behavior in critical endpoints (e.g., leaderboard provider).
-- See `docs/SECURITY_REPORTING.md` for how to report security issues responsibly.
+- `next.config.ts` sets CSP headers, `X-Frame-Options`, COOP, and CORS for `/api/*` routes
+- TypeScript `ignoreBuildErrors: false` — all type errors block deploy
+- Turbopack enabled for dev builds
+- Environment variables set in Vercel Dashboard → Settings → Environment Variables
 
 ---
 
-## Mermaid Diagrams
+## Monetization
 
-### 1) High-level architecture (client + API + Supabase)
+The platform earns in three ways:
 
-```mermaid
-flowchart LR
-  U[User] -->|Open UI| FE[Next.js React App App Router + Components + Zustand]
-  FE -->|Wallet connect| W[Wallet Integrations wagmi/viem + Solana adapter + Sui dapp-kit + NEAR/Stellar/Tezos/Starknet/Push]
-  FE -->|Place bet| API_BET[POST api balance bet Next.js Route Handler]
-  FE -->|Save bet result| API_SAVE[POST api bets save]
-  FE -->|Claim winnings| API_WIN[POST api balance win]
-  FE -->|Withdraw| API_WITH[POST api balance withdraw]
-  FE -->|Leaderboard| API_LB[GET api bets leaderboard limit]
+### 1. Platform Fees (Deposit + Withdrawal)
+10% / 9% / 8% of every on-chain deposit and withdrawal depending on user tier. Fee is transferred from the treasury to the platform fee collector wallet on every transaction.
 
-  API_BET --> SB[Supabase]
-  API_SAVE --> SB
-  API_WIN --> SB
-  API_WITH --> SB
-  API_LB --> SB
+### 2. House Edge on Bets
+Multipliers are set below fair-odds parity. At a 1.9× multiplier, break-even is 52.6% win rate. Modes where users win at higher rates are identified in the Game Mode P&L admin panel.
 
-  SB[(Supabase Tables/Views + RPC bet_history, user_balances, user_profiles)]
-```
+### 3. Blitz Entry Fees
+One-time per-window flat fees paid directly to the fee collector wallet on each chain.
 
-### 2) Trade / bet lifecycle (bet placed -> resolve -> payout + persistence)
+### Revenue Projections
 
-```mermaid
-flowchart TD
-  A[User selects target + amount] --> B[Game engine creates active bet in-memory state]
-  B --> C[UI calls POST api balance bet]
-  C --> D[Supabase RPC deduct_balance_for_bet atomic balance update + audit log]
-  D --> E[Client returns success and remaining balance]
+| Monthly bet volume | Expected monthly earnings |
+|-------------------|--------------------------|
+| ~$5M | $100k – $250k |
+| ~$20M | $400k – $1.0M |
 
-  E --> F[Price feed updates continuously Pyth-based logic in app state]
-  F --> G[Bet resolves when timeframe expires]
-
-  G --> H[Did user win]
-  H -- Yes --> I[Client calls POST api balance win]
-  I --> J[Supabase RPC credit_balance_for_payout credits user balance + audit log]
-  H -- No --> K[No payout credit]
-
-  G --> L[Client always calls POST api bets save]
-  L --> M[Upsert row into bet_history resolved_at + win/loss + payout]
-```
-
-### 3) Withdrawal flow (treasury fee + on-chain/treasury transfer + balance update)
-
-```mermaid
-flowchart TD
-  U[User requests withdrawal] --> W[POST api balance withdraw]
-  W --> V[Fetch user balance + status from Supabase]
-  V --> X[Valid and sufficient balance]
-  X -- No --> Y[Reject 400 403 404]
-  X -- Yes --> Z[Apply treasury fee feePercent = 0.1]
-  Z --> T[netWithdrawAmount = amount - feeAmount]
-
-  T --> S[Transfer from the chain treasury BNB SOL SUI XLM XTZ NEAR STRK PUSH]
-  S --> R[Call Supabase RPC update_balance_for_withdrawal deducts withdrawal amount]
-
-  R --> OK[Return tx hash + newBalance]
-```
-
-### 4) Leaderboard flow with caching + timeout guard
-
-```mermaid
-sequenceDiagram
-  participant FE as Frontend leaderboard page
-  participant API as Admin leaderboard API
-  participant SB as Supabase bet_history and user_profiles
-
-  FE->>API: Fetch leaderboard limit 50
-  API->>API: Check in memory cache TTL 60s
-  alt Cache hit
-    API-->>FE: Return leaderboard cached true
-  else Cache miss
-    API->>SB: Select bet_history fields
-    SB-->>API: bet_history rows
-    API->>API: Aggregate per wallet profit and win rate
-    API->>SB: Select user_profiles for usernames
-    SB-->>API: usernames map
-    API-->>FE: Return leaderboard cached false
-  end
-
-  Note over API: If Supabase times out, serve cached snapshot if available or return 503.
-```
-
-### 5) User flow (connect -> deposit -> bet -> resolve -> persistence)
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant FE as Frontend trade page
-  participant AUTH as Wallet or social login
-  participant API_BET as API place bet
-  participant API_WIN as API credit payout
-  participant API_SAVE as API save bet result
-  participant SB as Supabase
-
-  U->>FE: Open trade page
-  FE->>AUTH: Connect wallet or login
-  AUTH-->>FE: Connected
-
-  FE->>FE: Start price feed from Hermes
-  FE-->>U: Show chart and controls
-
-  U->>FE: Place bet
-  FE->>API_BET: Request bet placement
-  API_BET->>SB: Update balances via RPC
-  SB-->>API_BET: Balance deducted
-  API_BET-->>FE: Bet accepted
-
-  FE->>FE: Resolve bet on timeframe expiry
-
-  alt Win
-    FE->>API_WIN: Request payout credit
-    API_WIN->>SB: Credit payout via RPC
-    SB-->>API_WIN: Payout credited
-    API_WIN-->>FE: Payout credited
-  else Lose
-    FE->>FE: No payout credit
-  end
-
-  FE->>API_SAVE: Save resolved bet result
-  API_SAVE->>SB: Upsert bet history row
-  SB-->>API_SAVE: Bet persisted
-  API_SAVE-->>FE: Persistence complete
-
-  FE-->>U: Chart resolves and balance updates
-```
+*Based on withdrawal take-rate + house edge assumptions.*
 
 ---
 
-## Launch Plan
+## Market Opportunity
 
-### Phase 0: Stability and hardening (in progress)
+| Segment | Signal | Why it matters |
+|---------|--------|----------------|
+| Binary options / prediction | $27.56B (2025) → ~$116B by 2034 (19.8% CAGR) | Long-term demand for fast binary outcome trading |
+| Crypto prediction markets | $45B+ annual volume (Polymarket, Kalshi) | Liquidity appetite for oracle-driven prediction markets |
+| Crypto derivatives volume | $86T+ annually (2025) | Large speculative trader base |
+| Crypto users | 590M+ worldwide | Large reachable audience |
+| Bynomo positioning | Fast rounds + verifiable oracle pricing + simple binary outcomes | Clear product wedge vs Web2 and DeFi alternatives |
 
-1. Finalize core reliability on `/trade`
-   - Reduce first-load latency for chart/price boot.
-   - Keep Hermes timeout + cached fallback behavior stable.
-2. Lock down operational surfaces
-   - Keep admin and waitlist reads server-side and controlled.
-   - Ensure env setup and security reporting docs stay current.
-3. Validate production readiness
-   - Green build/lint/test baseline before each deploy.
+---
 
-### Phase 1: Controlled beta rollout
+## Competitive Landscape
 
-1. Launch with a limited user cohort.
-2. Monitor key health metrics
-   - price feed timeouts
-   - bet settlement correctness
-   - withdrawal success rate
-   - leaderboard latency/error rate
-3. Tighten incident response loop
-   - detect, patch, verify, and document quickly.
+| Category | Examples | Limitation vs Bynomo |
+|----------|----------|---------------------|
+| Web2 Binary Options | Binomo, IQ Option, Quotex | Opaque settlement, algorithmic bias, trial-mode manipulation |
+| Crypto Prediction Markets | Polymarket, Kalshi, Azuro | Minutes-to-hours resolution — too slow for fast rounds |
+| CEX Derivatives | Binance Futures, Bybit, OKX | Complex mechanics — funding, liquidation, order types |
+| On-chain Options | Dopex, Lyra, Premia | Complex option mechanics, no instant UX |
+| Tap Trading | Euphoria_fi | Mobile-first perps, not a dedicated fast binary loop |
+| Multi-chain wallets | Various | UX fragmentation — no unified multi-chain binary experience |
 
-### Phase 2: Public launch
+---
 
-1. Open access progressively after beta stability thresholds are met.
-2. Scale core APIs and observability dashboards.
-3. Expand community growth channels
-   - X/Twitter, Telegram, Discord, referral loops.
+## Roadmap
 
-### Phase 3: Chain-by-chain expansion
+### Phase 0 — Stability & Hardening ✅
+- Core reliability on `/trade`
+- Admin dashboard + analytics
+- Multi-chain deposit/withdrawal
+- Fee system + audit trail
+- Ban/unban system with balance wipe
 
-1. Keep rollout incremental (one chain at a time).
-2. For each new chain:
-   - enable wallet + treasury path
-   - run deposit/withdraw reconciliation checks
-   - validate pricing/settlement behavior end-to-end
-3. Maintain a single operational standard for security and payouts across chains.
+### Phase 1 — Controlled Beta
+- Limited user cohort
+- Monitor: price feed timeouts, settlement correctness, withdrawal success rate
+- Tighten incident response loop
 
-### Launch gates (must pass before each phase transition)
+### Phase 2 — Public Launch
+- Open access progressively after beta thresholds
+- Scale APIs and observability
+- Community growth: X/Twitter, Telegram, Discord, referral campaigns
 
+### Phase 3 — Chain Expansion
+- Add chains incrementally (one at a time)
+- Deposit/withdraw reconciliation per new chain
+- Maintain consistent security and payout standards
+
+### Product Roadmap
+
+- **P2P Mode** — shift Classic from P2T (person-to-treasury) to P2P to reduce house risk
+- **200+ new assets** — more crypto, forex, stocks, commodities via Pyth
+- **Leverage 1–100×** *(optional)*
+- **Trader profiles** — highest P&L, most accurate, biggest risk taker
+- **Tournaments** *(optional)*
+- **Social trading** — follow traders, copy trades, leaderboards *(optional)*
+- **Mobile-first redesign**
+- **Top 50 chain expansion** *(subject to adoption checks)*
+
+### Launch Gates (per phase)
 - 0 critical security findings open
 - Build and TypeScript checks passing
 - Settlement and balance invariants verified
 - Incident playbook and rollback path confirmed
 
-### Marketing Plan (go-to-market)
+---
 
-1. Positioning and narrative
-   - Lead with the core thesis: fast binary rounds + verifiable oracle pricing.
-   - Emphasize trust gap vs legacy Web2 options platforms.
-2. Pre-launch content
-   - Publish short demo clips, product explainers, and architecture snippets.
-   - Share transparent breakdowns of settlement logic and risk controls.
-3. Launch campaigns
-   - Coordinate launch day across X/Twitter, Telegram, and Discord.
-   - Run limited-time onboarding incentives for early users and referrals.
-4. Growth loops
-   - Strengthen referral mechanics (codes, leaderboard visibility, milestone rewards).
-   - Convert waitlist users in waves based on product stability.
-5. Post-launch retention
-   - Track activation, D1/D7 retention, and repeat betting cohorts.
-   - Use product updates and community touchpoints to keep users engaged.
+## Security
 
-### Tech + ecosystem roadmap (requested scope)
+- Treasury private keys are **server-side only** — never exposed to the client
+- Signed withdrawal intents required for EVM chains (replay protection)
+- Withdrawal cap enforced: max `total_deposited × 1.08`
+- Duplicate payout prevention: server-side dedup guard on `betId` in `balance_audit_log`
+- RLS enabled on Supabase — anon key is read-only; all writes use service role key
+- Admin routes protected by `requireAdminAuth` middleware
+- CSP + security headers set in `next.config.ts`
 
-#### 1) Product and tech upgrades
-
-- Add P2P Mode so risk is minimal
-  - Change classic mode from P2T (person to treasury) to P2P.
-  - Reduce treasury risk exposure.
-  - Keep platform revenue from trading fees and user withdrawal fees.
-- Add 200+ new crypto, forex, stocks, and commodities charts for binary trading
-  - Powered by Pyth price feeds.
-- Add mobile-first design improvements.
-- Enable access code + referral mode
-  - Waitlist and invite-only onboarding.
-- Introduce leverage 1-100x *(optional)*.
-- Introduce trader profiles *(optional)*
-  - Highest PnL, most accurate trader, most trades, biggest risk taker.
-- Introduce tournaments *(optional)*.
-- Add social trading *(optional)*
-  - Follow traders, copy trades, see leaderboards, view win rate.
-- Add public dashboard
-  - Total trades, volume, payouts, treasury balance, win/loss ratio.
-- Go multichain by enabling top 50 highest-user chains *(optional)*
-  - Subject to Solana-focused approval and adoption checks after 3 months of public launch.
-
-#### 2) Ecosystem growth, community, and marketing (50%)
-
-- Focus on driving organic adoption.
-- Micro-influencer strategy
-  - Partner with 100 small creators (1k-20k followers) in trading, crypto, and Web3 communities.
-- Public launch on X
-  - Use the same launch pattern inspired by Euphoria Fi on MegaETH.
-  - Run giveaway-led word-of-mouth campaigns to maximize spread.
-- Launch Bynomo Ambassador Program
-  - Regional groups and trading tutorials.
-- Community launch campaign
-  - Invite-only access codes
-  - Referral system
-  - Waitlist onboarding
-- Start weekly podcast / AMA series on X with top traders for visibility *(optional)*.
+To report a security issue: see `docs/SECURITY_REPORTING.md` or email bynomo.fun@gmail.com
 
 ---
 
-## ⚡Future
+## Future
 
-Endless possibilities: anything to everything related to P2P mode:
-Stocks, Forex
-Options
-Derivatives
-Futures
-DEX
+Bynomo's ultimate objective is to become the **PolyMarket for Binary Options** — a transparent, fast, multi-chain prediction platform for everything:
 
-Ultimate Objective: To be the next PolyMarket for Binary Options Predictions
+- Stocks · Forex · Options · Derivatives · Futures · DEX integration
 
+> *Like Binomo of Web2, but 10× better and fully on-chain.*
