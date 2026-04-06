@@ -928,96 +928,36 @@ To report a security issue: see `docs/SECURITY_REPORTING.md` or email bynomo.fun
 ```mermaid
 sequenceDiagram
     actor User
-    participant UI as Bynomo UI (Next.js)
-    participant Wallet as User Wallet
+    participant Wallet as Wallet
     participant Chain as Blockchain
-    participant API as API Routes (Vercel)
-    participant DB as Supabase
+    participant API as API + Supabase
     participant Pyth as Pyth Hermes
 
-    Note over User,Pyth: 1 — DISCOVERY
-    User->>UI: Visit landing page
-    UI-->>User: Demo Mode — live chart, game modes, no wallet needed
+    Note over User,Pyth: 1 · DISCOVER
+    User->>API: Visit → Demo Mode (no wallet)
 
-    Note over User,Pyth: 2 — ONBOARDING
-    User->>UI: Click Connect Wallet
-    UI-->>User: Show wallet modal (SOL · BNB · SUI · NEAR · STRK · XLM · XTZ · INIT · OCT · PUSH · 0G · SOMNIA)
-    User->>Wallet: Approve connection
-    Wallet-->>UI: Address + chain returned
+    Note over User,Pyth: 2 · CONNECT
+    User->>Wallet: Connect (SOL/BNB/SUI/NEAR/STRK/XLM/XTZ/INIT/OCT...)
+    Wallet-->>API: Address confirmed
 
-    Note over User,Pyth: 3 — DEPOSIT
-    User->>UI: Enter deposit amount
-    UI->>Wallet: Request on-chain transfer
-    Wallet->>Chain: Send tokens → Treasury Wallet
-    Chain-->>UI: tx hash confirmed
-    UI->>API: POST /api/balance/deposit (txHash, amount, currency)
-    API->>Chain: Verify tx on-chain
-    API->>API: Calculate fee (10%) → collectPlatformFeeFromTreasury
-    API->>Chain: Transfer fee → Fee Collector Wallet
-    API->>DB: RPC update_balance_for_deposit (net amount)
-    DB-->>API: new_balance
-    API-->>UI: { success, newBalance }
-    UI-->>User: Bynomo Wallet balance updated
+    Note over User,Pyth: 3 · DEPOSIT
+    User->>Chain: Send tokens → Treasury
+    Chain->>API: Verify tx · deduct 10% fee · credit net balance
 
-    Note over User,Pyth: 4 — TRADE
-    UI->>Pyth: Subscribe to price feed (<1s updates)
-    Pyth-->>UI: Continuous price stream
-
-    alt Box Mode
-        User->>UI: Select multiplier tile on chart
-    else Draw Mode
-        User->>UI: Draw rectangle on chart → dynamic multiplier shown
-    else Classic Mode
-        User->>UI: Pick UP / DOWN + multiplier
+    Note over User,Pyth: 4 · TRADE
+    Pyth-->>API: Live price feed <1s
+    User->>API: Pick mode (Box / Draw / Classic) · set amount
+    API-->>User: Balance deducted instantly — no wallet sig
+    API->>Pyth: Resolve at expiry
+    alt Win
+        Pyth-->>API: Payout credited (dedup-guarded)
+    else Lose
+        Pyth-->>API: Stake kept by house
     end
 
-    User->>UI: Set bet amount + confirm (no wallet signature)
-    UI->>DB: Deduct balance instantly (off-chain)
-    DB-->>UI: Updated balance
-
-    opt Blitz Round active
-        User->>UI: Click Enter Blitz
-        UI->>Wallet: Request on-chain entry fee payment
-        Wallet->>Chain: Send fee → Fee Collector Wallet
-        Chain-->>UI: Confirmed
-        UI-->>User: Blitz access granted (2× multiplier)
-    end
-
-    Note over UI,Pyth: Bet runs until expiry
-    Pyth-->>UI: Price at endTime
-    UI->>UI: Resolve bet (deterministic)
-
-    alt User wins
-        UI->>API: POST /api/balance/win (betId, payout)
-        API->>DB: Dedup check on betId → credit_balance_for_payout
-        DB-->>API: new_balance
-        API-->>UI: Payout credited
-    else User loses
-        UI-->>User: Stake kept by house
-    end
-
-    UI->>API: POST /api/bets/save (bet record)
-    API->>DB: Upsert bet_history
-
-    Note over User,Pyth: 5 — WITHDRAW
-    User->>UI: Request withdrawal amount
-    UI->>Wallet: Sign withdrawal intent (EVM chains)
-    Wallet-->>UI: Signature
-    UI->>API: POST /api/balance/withdraw (amount, currency, signature)
-    API->>DB: Check balance + withdrawal cap (max deposited × 1.08)
-
-    alt Below auto-threshold
-        API->>Chain: Transfer fee → Fee Collector Wallet
-        API->>Chain: Transfer net amount → User Wallet
-        Chain-->>API: tx hash
-        API->>DB: RPC update_balance_for_withdrawal
-        API-->>UI: { txHash, newBalance }
-        UI-->>User: Withdrawal confirmed
-    else Above threshold or frequency flag
-        API->>DB: Insert withdrawal_requests (pending)
-        API-->>UI: { status: pending, requestId }
-        UI-->>User: Queued for admin review
-    end
+    Note over User,Pyth: 5 · WITHDRAW
+    User->>API: Request amount · sign intent (EVM)
+    API->>Chain: Transfer net → User wallet (fee deducted)
 ```
 
 ### Key UX Properties
