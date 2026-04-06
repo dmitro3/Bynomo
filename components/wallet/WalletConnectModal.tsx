@@ -220,6 +220,27 @@ export const WalletConnectModal: React.FC = () => {
 
                     {/* Options */}
                     <div className="p-4 sm:p-6 space-y-2 sm:space-y-3 overflow-y-auto no-scrollbar">
+                        {/* Solana Option */}
+                        <button
+                            onClick={handleSolanaConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 via-teal-500/5 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/solana-sol-logo.png"
+                                alt="Solana"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Solana</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-teal-500/20 text-teal-500 font-bold uppercase tracking-wider">Fast</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Phantom, Backpack, etc.</p>
+                            </div>
+                            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-teal-500 transition-colors" />
+                        </button>
+
                         {/* BNB Wagmi Option */}
                         <button
                             onClick={handleWagmiConnect}
@@ -239,27 +260,6 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, etc.</p>
                             </div>
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-yellow-500 transition-colors" />
-                        </button>
-
-                        {/* Somnia Option */}
-                        <button
-                            onClick={handleSomniaConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/somnia.jpg"
-                                alt="Somnia"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">Somnia</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">STT</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">EVM-like (wagmi)</p>
-                            </div>
-                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-purple-300 transition-colors" />
                         </button>
 
                         {/* OneChain Option */}
@@ -287,77 +287,6 @@ export const WalletConnectModal: React.FC = () => {
                             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                         </button>
 
-                        {/* Initia Option */}
-                        <button
-                            onClick={handleInitiaConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/initia.png"
-                                alt="Initia"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
-                                }}
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">Initia</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-red-500/20 text-red-400 font-bold uppercase tracking-wider">INIT</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Initia Wallet (InterwovenKit)</p>
-                            </div>
-                            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-red-400 transition-colors" />
-                        </button>
-
-                        {/* 0G Mainnet Option */}
-                        <button
-                            onClick={handleZGConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/0g.png"
-                                alt="0G"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
-                                }}
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">0G Mainnet</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-wider">0G</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, any EVM wallet</p>
-                            </div>
-                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-emerald-400 transition-colors" />
-                        </button>
-
-                        {/* Solana Option */}
-                        <button
-                            onClick={handleSolanaConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 via-teal-500/5 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/solana-sol-logo.png"
-                                alt="Solana"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">Solana</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-teal-500/20 text-teal-500 font-bold uppercase tracking-wider">Fast</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Phantom, Backpack, etc.</p>
-                            </div>
-                            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-teal-500 transition-colors" />
-                        </button>
-
                         {/* Sui Option */}
                         <button
                             onClick={handleSuiConnect}
@@ -377,48 +306,6 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Sui Wallet, BlueMove, etc.</p>
                             </div>
                             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
-                        </button>
-
-                        {/* Stellar Option */}
-                        <button
-                            onClick={handleStellarConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/stellar-xlm-logo.png"
-                                alt="Stellar"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">Stellar</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-blue-400/20 text-blue-400 font-bold uppercase tracking-wider">XLM</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Freighter, Lobster, etc.</p>
-                            </div>
-                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
-                        </button>
-
-                        {/* Tezos Option */}
-                        <button
-                            onClick={handleTezosConnect}
-                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <img
-                                src="/logos/tezos-xtz-logo.png"
-                                alt="Tezos"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
-                            />
-                            <div className="flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-sm sm:text-base">Tezos</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-indigo-500/20 text-indigo-500 font-bold uppercase tracking-wider">XTZ</span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Temple, Kukai, etc.</p>
-                            </div>
-                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-indigo-500 transition-colors" />
                         </button>
 
                         {/* NEAR Option */}
@@ -463,6 +350,73 @@ export const WalletConnectModal: React.FC = () => {
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-indigo-300 transition-colors" />
                         </button>
 
+                        {/* Stellar Option */}
+                        <button
+                            onClick={handleStellarConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/stellar-xlm-logo.png"
+                                alt="Stellar"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Stellar</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-blue-400/20 text-blue-400 font-bold uppercase tracking-wider">XLM</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Freighter, Lobster, etc.</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                        </button>
+
+                        {/* Tezos Option */}
+                        <button
+                            onClick={handleTezosConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/tezos-xtz-logo.png"
+                                alt="Tezos"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Tezos</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-indigo-500/20 text-indigo-500 font-bold uppercase tracking-wider">XTZ</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Temple, Kukai, etc.</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-indigo-500 transition-colors" />
+                        </button>
+
+                        {/* 0G Mainnet Option */}
+                        <button
+                            onClick={handleZGConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/0g.png"
+                                alt="0G"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
+                                }}
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">0G Mainnet</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-wider">0G</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, any EVM wallet</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-emerald-400 transition-colors" />
+                        </button>
+
                         {/* Push Chain Option */}
                         <button
                             onClick={handlePushConnect}
@@ -483,6 +437,52 @@ export const WalletConnectModal: React.FC = () => {
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">MetaMask, Trust, any EVM wallet</p>
                             </div>
                             <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-pink-400 transition-colors" />
+                        </button>
+
+                        {/* Initia Option */}
+                        <button
+                            onClick={handleInitiaConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/initia.png"
+                                alt="Initia"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/logos/ethereum-eth-logo.png';
+                                }}
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Initia</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-red-500/20 text-red-400 font-bold uppercase tracking-wider">INIT</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-green-500/20 text-green-400 font-bold uppercase tracking-wider">New</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Initia Wallet (InterwovenKit)</p>
+                            </div>
+                            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-red-400 transition-colors" />
+                        </button>
+
+                        {/* Somnia Option */}
+                        <button
+                            onClick={handleSomniaConnect}
+                            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img
+                                src="/logos/somnia.jpg"
+                                alt="Somnia"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
+                            />
+                            <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm sm:text-base">Somnia</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">STT</span>
+                                </div>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">EVM-like (wagmi)</p>
+                            </div>
+                            <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-purple-300 transition-colors" />
                         </button>
 
                         {/* Privy Social Option */}
