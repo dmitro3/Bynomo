@@ -192,7 +192,7 @@ export async function buildSuiNativeTransferTransaction(
   const coins = await client.getCoins({ owner: fromAddress, coinType: '0x2::sui::SUI' });
   if (coins.data.length === 0) throw new Error('No SUI coins found in wallet');
 
-  const totalBalance = coins.data.reduce((s, c) => s + BigInt(c.balance), 0n);
+  const totalBalance = coins.data.reduce((s, c) => s + BigInt(c.balance), BigInt(0));
   if (totalBalance < amountMist) {
     throw new Error(`Insufficient SUI. Have: ${Number(totalBalance) / SUI_MIST}, Need: ${amountSui}`);
   }
