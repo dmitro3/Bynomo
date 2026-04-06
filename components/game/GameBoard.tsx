@@ -274,14 +274,18 @@ export const GameBoard: React.FC = () => {
         console.log("0G Blitz payment tx:", hash);
       } else if (network === 'OCT') {
         if (!suiAccount) throw new Error('Sui-compatible wallet not connected');
-        const { buildOCTDepositTransaction } = await import('@/lib/onechain/client');
+        const { buildOCTTransferTransaction } = await import('@/lib/onechain/client');
+        const octFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_OCT;
+        if (!octFeeWallet) throw new Error('OCT fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} OCT Blitz Entry...`);
-        const tx = await buildOCTDepositTransaction(blitzEntryFee, address!);
+        const tx = await buildOCTTransferTransaction(blitzEntryFee, address!, octFeeWallet);
         const result = await signAndExecuteSui({ transaction: tx as any });
         console.log("OneChain Blitz payment tx:", result.digest);
       } else if (network === 'INIT') {
-        const { buildInitiaDepositTxRequest } = await import('@/lib/initia/client');
-        const txRequest = buildInitiaDepositTxRequest(address!, blitzEntryFee);
+        const { buildInitiaTransferTxRequest } = await import('@/lib/initia/client');
+        const initFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_INIT;
+        if (!initFeeWallet) throw new Error('INIT fee collector wallet not configured');
+        const txRequest = buildInitiaTransferTxRequest(address!, initFeeWallet, blitzEntryFee);
         toast.info(`Confirming ${blitzEntryFee} INIT Blitz Entry...`);
         const result = await requestInitiaTx(txRequest);
         console.log("Initia Blitz payment hash:", result.transactionHash);

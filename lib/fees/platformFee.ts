@@ -48,21 +48,28 @@ export function getPlatformFeeWalletAddress(normalizedCurrency: string): string 
     normalizedCurrency === 'PC' ||
     normalizedCurrency === 'SOMNIA' ||
     normalizedCurrency === 'STT' ||
-    normalizedCurrency === 'OCT' ||
     normalizedCurrency === '0G'
   ) {
     return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM');
+  }
+
+  // OCT is Sui-compatible — needs a Sui-format address, not an EVM address
+  if (normalizedCurrency === 'OCT') {
+    return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_OCT');
   }
 
   if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
     return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_SOL');
   }
 
-  if (normalizedCurrency === 'SUI') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_SUI');
+  if (normalizedCurrency === 'SUI' || normalizedCurrency === 'USDC') {
+    return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_SUI');
+  }
   if (normalizedCurrency === 'XLM') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_XLM');
   if (normalizedCurrency === 'XTZ') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_XTZ');
   if (normalizedCurrency === 'NEAR') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR');
   if (normalizedCurrency === 'STRK') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK');
+  if (normalizedCurrency === 'INIT') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_INIT');
 
   return null;
 }
@@ -123,6 +130,11 @@ export async function collectPlatformFeeFromTreasury(
   }
 
   if (normalizedCurrency === 'SUI') {
+    const { transferSUIFromTreasury } = await import('@/lib/sui/backend-client');
+    return transferSUIFromTreasury(feeWallet, feeAmount);
+  }
+
+  if (normalizedCurrency === 'USDC') {
     const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
     return transferUSDCFromTreasury(feeWallet, feeAmount);
   }
@@ -145,6 +157,11 @@ export async function collectPlatformFeeFromTreasury(
   if (normalizedCurrency === 'STRK') {
     const { transferSTRKFromTreasury } = await import('@/lib/starknet/backend-client');
     return transferSTRKFromTreasury(feeWallet, feeAmount);
+  }
+
+  if (normalizedCurrency === 'INIT') {
+    const { transferINITFromTreasury } = await import('@/lib/initia/backend-client');
+    return transferINITFromTreasury(feeWallet, feeAmount);
   }
 
   throw new Error(`Unsupported currency for fee transfer: ${normalizedCurrency}`);

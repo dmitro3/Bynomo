@@ -26,12 +26,22 @@ export function buildInitiaDepositTxRequest(
   fromAddress: string,
   amountINIT: number,
 ): InitiaDepositTxRequest {
-  const { treasuryAddress, denom } = getInitiaConfig();
-
+  const { treasuryAddress } = getInitiaConfig();
   if (!treasuryAddress) {
     throw new Error('NEXT_PUBLIC_INITIA_TREASURY_ADDRESS is not configured');
   }
+  return buildInitiaTransferTxRequest(fromAddress, treasuryAddress, amountINIT);
+}
 
+/**
+ * Build a generic INIT transfer request to any recipient (e.g. fee collector wallet).
+ */
+export function buildInitiaTransferTxRequest(
+  fromAddress: string,
+  toAddress: string,
+  amountINIT: number,
+): InitiaDepositTxRequest {
+  const { denom } = getInitiaConfig();
   const amountInUinit = toUinit(amountINIT);
 
   return {
@@ -40,7 +50,7 @@ export function buildInitiaDepositTxRequest(
         typeUrl: '/cosmos.bank.v1beta1.MsgSend',
         value: {
           fromAddress,
-          toAddress: treasuryAddress,
+          toAddress,
           amount: [{ denom, amount: amountInUinit }],
         },
       },

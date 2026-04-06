@@ -43,19 +43,19 @@
 
 ## Overview
 
-Bynomo delivers fast binary options trading with millisecond-resolution price feeds powered by **Pyth Hermes**. Users deposit native tokens into a per-chain treasury, receive an in-house balance, and trade binary rounds without signing a transaction on every bet. Settlement is fully deterministic and oracle-driven — no opaque algorithms, no trial-mode bias.
+Bynomo delivers fast binary options trading with millisecond-resolution price feeds powered by **Pyth Hermes**. Users deposit native tokens into a per-chain EOA treasury, receive an in-house balance, and trade binary rounds without signing transaction on every bet. Settlement is fully deterministic and oracle-driven — no opaque algorithms, no trial-mode bias.
 
-The product is live across **12 blockchains** and supports **300+ assets** (crypto, forex, stocks, metals, commodities).
+The product is live across **12 blockchains** and supports **1010+ assets** (crypto, forex, stocks, metals, commodities).
 
 ---
 
 ## Story & Inspiration
 
-In 2021, I saw an advertisement for a forex binary options app called Binomo. It was a mobile app promoted by big influencers. I tried the free (paper) mode and made 10× in a week. Then I put in three months of my savings in real mode — and lost it all.
+In 2021, I saw an advertisement of a forex binary options app called Binomo. It was a mobile app promoted by big influencers. I tried the free (paper) mode and made 10× in a week. Then I put in three months of my savings in real mode — and lost it all.
 
 Later I found Reddit threads showing that Binomo ran on algorithms that let users win in trial mode and lose in real mode. This happened to millions of traders worldwide.
 
-That day I decided to build a transparent, oracle-driven binary options platform. But in 2021, sub-1-second price feeds didn't exist in Web3. I waited five years, and in 2026 the tools were finally ready. **Bynomo** is the result.
+That day I decided to build a transparent, oracle-driven binary options platform. But in 2021, sub-1-second price feeds didn't exist in Web3. I waited 5 years, and in 2026 the tools were finally ready. **Bynomo** is the result.
 
 ---
 
@@ -73,7 +73,7 @@ That day I decided to build a transparent, oracle-driven binary options platform
 
 Bynomo solves all of this:
 
-- **Pyth Hermes** delivers sub-1-second price feeds across 300+ assets.
+- **Pyth Hermes** delivers sub-1-second price feeds across 1010+ assets.
 - **Binary rounds** at 5s / 10s / 15s / 30s / 1m timeframes — no wallet signature per bet.
 - **One single treasury** per chain — infinite bets, no cap, instant house balance settlement.
 - **Fully on-chain verifiable** — every deposit, withdrawal, and payout is logged immutably.
@@ -81,46 +81,186 @@ Bynomo solves all of this:
 
 ---
 
-## Game Modes
+## Detailed Game Mechanics
 
-### Classic Mode (Binomo-style)
+### 3-Step User Journey
 
-The foundational mode. Players pick a direction (**UP** or **DOWN**), a multiplier target, and a duration.
+```
+Step 1 — Fund
+  Connect any wallet on any supported chain
+  → Send mainnet tokens to the Bynomo treasury (on-chain deposit)
+  → Bynomo Wallet balance credited instantly (off-chain, Supabase)
 
-- **Strike price** = Pyth feed price at bet time
-- **Settlement** = price at `endTime` vs strike
-- **Win condition:** price > strike for UP; price < strike for DOWN
-- **Timeframes:** 5s, 10s, 15s, 30s, 1m
-- **Multipliers:** configurable grid targets (e.g. 1.9×, 2.0×, 2.5×)
+Step 2 — Configure
+  Pick a game mode: Box / Draw / Classic
+  Set your bet amount (from Bynomo Wallet balance)
+  Set expiry time (5s / 10s / 15s / 30s / 1m)
+
+Step 3 — Bet & Settle
+  Bet placed — balance deducted instantly, no wallet signature needed
+  Pyth Hermes price feed resolves the outcome at expiry
+  Win → payout credited to Bynomo Wallet balance
+  Lose → bet amount stays with the house
+```
+
+> **P&L is updated via off-chain state (Supabase) for instant UX. Settlement logic is deterministic and oracle-driven — all deposits, withdrawals, and payouts are verified and logged on-chain or in an immutable audit trail.**
+
+---
 
 ### Box Mode
 
-Players choose a pre-drawn **price band** (box) from the grid and a time window.
+**How to play:** The live chart displays a grid of pre-drawn tiles. Each tile represents a **price band** at a specific multiplier. Select a tile and place your bet.
 
-- **Win condition:** Pyth price is **inside** `[priceBottom, priceTop]` at `endTime`
-- Higher risk = tighter box = larger multiplier
+**Win condition:**  
+The **tip of the live price line must touch the left edge (start) of the selected tile** while within its price band.
+
+```
+Each tile defines:
+  priceBottom  (lower bound)
+  priceTop     (upper bound)
+  startTime    (left edge of the tile — the trigger moment)
+  multiplier   (payout if win)
+
+WIN if priceBottom ≤ price(startTime) ≤ priceTop
+     i.e. the price line tip is inside the band when it reaches the tile's start
+```
+
+**Key mechanic:** The live price line moves forward in real time. The moment its tip crosses the left edge of the tile, the price must be within the tile's price band — that single moment is the entire win/loss determination.
+
+**Risk/reward:** Tighter price band = higher multiplier. Wider band = safer but lower payout. Lower the probability of the price line touching the extreme corner boxes the higher the multipler.
+
+---
 
 ### Draw Mode
 
-Players **draw a rectangle** directly on the live chart to define their own price band and time window.
+**How to play:** Draw a rectangle directly on the live price chart. The rectangle defines your own custom price band and time window. A dynamic multiplier is calculated and displayed immediately.
 
-- Minimum box size and minimum future start time enforced
-- **Dynamic multiplier** — calculated from box size, distance from current price, and duration
-- Smaller / further / shorter = higher payout
-- **Win condition:** price is inside the drawn band at the drawn end time
+**Win condition:**  
+The **price line must pass end-to-end through the drawn square** — meaning the price must remain continuously within the drawn band for the full duration of the rectangle, from its left edge (start time) to its right edge (end time).
+
+```
+Drawn rectangle defines:
+  priceBottom  (bottom edge of rectangle)
+  priceTop     (top edge of rectangle)
+  startTime    (left edge — must be in the future)
+  endTime      (right edge)
+
+WIN if price stays within [priceBottom, priceTop]
+     from startTime through endTime (price traverses the full box)
+```
+
+**Dynamic multiplier formula:**  
+```
+Higher multiplier when:
+  ✦ Smaller box (tighter price band)
+  ✦ Box is further away from current price
+  ✦ Shorter duration
+  ✦ Less probable outcome = higher reward
+```
+
+**Constraints:**
+- Rectangle must start to the right of the current price tip (can only draw into the future)
+- Minimum box size enforced to prevent impossibly small targets
+- Maximum look-ahead time enforced
+
+---
+
+### Classic Mode
+
+**How to play:** Select UP or DOWN, choose a multiplier tile, set expiry time, place bet.
+
+**Win condition:**  
+The Pyth price at `endTime` must be **higher** than the strike price (price at bet placement) for an **UP** bet, or **lower** for a **DOWN** bet.
+
+```
+Strike price = Pyth feed price at the moment the bet is placed
+
+  UP bet   → WIN if price(endTime) > strikePrice
+  DOWN bet → WIN if price(endTime) < strikePrice
+```
+
+**Multipliers:** Grid of fixed targets (1.9×, 2.0×, 2.5×, etc.)  
+**Timeframes:** 5s · 10s · 15s · 30s · 1m  
+**Risk profile:** Binary — simple directional prediction
+
+---
 
 ### Blitz Mode
 
-A time-limited overlay that boosts all multipliers by **2×**.
+**How to play:** Pay a one-time entry fee on-chain (sent to the platform fee collector wallet). During the active Blitz window, all multipliers are boosted by **2×**.
 
-- **Schedule:** 1 minute active, 2 minutes cooldown — repeating cycle
-- **Entry fee:** one-time per-chain on-chain payment sent directly to the platform fee collector wallet (not the game treasury)
-- **Entry fees by chain:** BNB 0.1 · SOL 1 · SUI 50 · XLM 400 · XTZ 150 · NEAR 50 · STRK 1,500 · Testnets 0.01
-- Once paid, `hasBlitzAccess` is active for the current blitz window
+**Schedule:**
+```
+[──── BLITZ ACTIVE (1 min) ────][──── COOLDOWN (2 min) ────][── BLITZ ACTIVE ──] ...
+```
+
+**Entry fees (paid once per window, direct to fee collector):**
+
+| Chain | Fee |
+|-------|-----|
+| BNB | 0.1 BNB |
+| SOL | 1 SOL |
+| SUI | 50 SUI |
+| XLM | 400 XLM |
+| XTZ | 150 XTZ |
+| NEAR | 50 NEAR |
+| STRK | 1,500 STRK |
+| Testnets | 0.01 native |
+
+**Effect:** `blitzMultiplier = 2.0×` applied on top of the base multiplier for all modes.
+
+---
 
 ### Demo Mode
 
-Full simulation with no real funds. Demo bets are prefixed `demo-*`, excluded from Supabase persistence, and tracked separately in admin analytics.
+Full simulation of all game modes with no real funds at risk.
+
+- Demo bets use a separate local balance (not Supabase)
+- Bet IDs prefixed with `demo-*` — excluded from `bet_history`
+- Fully playable without a wallet connection
+- Stats tracked separately in admin analytics (real vs demo split)
+
+---
+
+### Settlement Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  OFF-CHAIN (Supabase)                                       │
+│  ┌────────────────────┐    ┌──────────────────────────────┐ │
+│  │  user_balances     │    │  balance_audit_log           │ │
+│  │  balance per chain │◄───│  every debit / credit event  │ │
+│  └────────────────────┘    └──────────────────────────────┘ │
+│  ┌────────────────────┐    ┌──────────────────────────────┐ │
+│  │  bet_history       │    │  user_sessions               │ │
+│  │  all settled bets  │    │  dwell time / pings          │ │
+│  └────────────────────┘    └──────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+         ▲                            ▲
+         │ balance updates (RPC)      │ session pings
+         │                            │
+┌────────┴────────────────────────────┴────────────────────────┐
+│  CLIENT (Next.js + Zustand)                                  │
+│  Price feed: Pyth Hermes (<1s updates)                       │
+│  Bet state: in-memory activeBets / settledBets               │
+│  Resolution: deterministic at endTime                        │
+└──────────────────────────────────────────────────────────────┘
+         ▲
+         │ deposits / withdrawals (on-chain txns)
+┌────────┴─────────────────────────────────────────────────────┐
+│  ON-CHAIN (12 blockchains)                                   │
+│  Treasury wallets hold deposited funds                       │
+│  Every deposit and withdrawal is a real blockchain txn       │
+│  Fee collector wallets receive platform + blitz fees         │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Key properties:**
+- **No wallet signature per bet** — bets are instant off-chain balance operations
+- **Oracle-driven** — Pyth Hermes price at `endTime` is the single source of truth
+- **Deduplication** — server checks `bet_id` in `balance_audit_log` before every payout (no double credits)
+- **Immutable audit trail** — every balance event logged with `operation_type`, `amount`, and `transaction_hash`
+- **Race condition protection** — bet removed from `activeBets` synchronously before any async settlement call
 
 ---
 
@@ -205,12 +345,6 @@ Full simulation with no real funds. Demo bets are prefixed `demo-*`, excluded fr
 - Client-side: `resolveBet` in Zustand removes the bet from `activeBets` synchronously before any async API call
 - `userAddress` captured at bet placement time so settlement works even if wallet disconnects mid-round
 
-### Ban System
-- Admin can globally ban a wallet address
-- Banned wallets cannot deposit, withdraw, or bet
-- **Unban action:** removes ban AND zeroes all balances in `user_balances` — player starts completely fresh
-- All balance wipes logged in `balance_audit_log` as `admin_balance_wipe`
-
 ---
 
 ## Fee Structure
@@ -241,14 +375,6 @@ Paid once per blitz window directly to the platform fee collector wallet.
 | NEAR | 50 NEAR |
 | STRK | 1,500 STRK |
 | Testnets (PUSH/STT/0G/OCT/INIT) | 0.01 native |
-
-### House Edge
-
-- Bet multipliers are set below fair-odds parity
-- Break-even user win rate at 1.9× multiplier = **52.6%**
-- Rates above 52.6% mean the house loses on that mode (tracked in the Game Mode P&L admin panel)
-
----
 
 ## Tech Stack
 
@@ -379,7 +505,6 @@ flowchart TD
 | `user_referrals` | referral_code, referred_by, referral_count |
 | `access_codes` | Invite codes + usage |
 | `waitlist` | Email capture |
-| `banned_wallets` | Global bans + `is_wallet_globally_banned()` helper |
 | `user_sessions` | Dwell time / ping tracking |
 | `withdrawal_requests` | Manual approval queue |
 
@@ -451,8 +576,6 @@ Migrations live in `supabase/migrations/`.
 | `GET` | `/api/admin/game-history` | Raw bet history rows |
 | `GET` | `/api/admin/treasury-balances` | On-chain treasury balances + USD estimates |
 | `GET` | `/api/admin/wallet-insights` | Deep wallet analytics |
-| `GET/POST/DELETE` | `/api/admin/banned-wallets` | List/add/remove global bans |
-| `POST` | `/api/admin/unban-wallet` | Unban + zero balance (fresh start) |
 | `GET` | `/api/admin/currencies` | Market/asset config |
 | `GET` | `/api/admin/waitlist` | Waitlist email list |
 | `GET/POST` | `/api/admin/access-codes` | List/generate invite codes |
@@ -479,17 +602,6 @@ Located at `/dashboard`. Protected by admin auth (`requireAdminAuth`).
 | **Waitlist** | Email capture list |
 | **Access Codes** | Generate batch, view usage, export CSV |
 | **Danger Zone** | High-risk admin operations |
-
-### Player P&L — Unban Flow
-
-When you click **↑ Unban** on a banned player row:
-1. Removes the wallet from `banned_wallets`
-2. Sets `user_balances.balance = 0` across all currencies via Supabase `UPDATE` — effective immediately everywhere in the system
-3. Sets `status = 'active'` — deposits and bets re-enabled
-4. Writes an `admin_balance_wipe` entry to `balance_audit_log` for full audit trail
-5. Table auto-refreshes
-
----
 
 ## Directory Structure
 
@@ -749,8 +861,8 @@ One-time per-window flat fees paid directly to the fee collector wallet on each 
 
 | Monthly bet volume | Expected monthly earnings |
 |-------------------|--------------------------|
-| ~$5M | $100k – $250k |
-| ~$20M | $400k – $1.0M |
+| ~$5M | $250k - $500k |
+| ~$20M | $400k – $2.0M |
 
 *Based on withdrawal take-rate + house edge assumptions.*
 
@@ -788,7 +900,6 @@ One-time per-window flat fees paid directly to the fee collector wallet on each 
 - Admin dashboard + analytics
 - Multi-chain deposit/withdrawal
 - Fee system + audit trail
-- Ban/unban system with balance wipe
 
 ### Phase 1 — Controlled Beta
 - Limited user cohort
@@ -826,7 +937,6 @@ One-time per-window flat fees paid directly to the fee collector wallet on each 
 
 ## Security
 
-- Treasury private keys are **server-side only** — never exposed to the client
 - Signed withdrawal intents required for EVM chains (replay protection)
 - Withdrawal cap enforced: max `total_deposited × 1.08`
 - Duplicate payout prevention: server-side dedup guard on `betId` in `balance_audit_log`

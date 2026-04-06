@@ -44,26 +44,36 @@ export async function buildOCTDepositTransaction(
   amount: number,
   userAddress: string,
 ): Promise<Transaction> {
-  const { octCoinType, treasuryAddress, decimals } = getOneChainConfig();
+  const { treasuryAddress } = getOneChainConfig();
   if (!treasuryAddress) throw new Error('OneChain treasury address not configured');
+  return buildOCTTransferTransaction(amount, userAddress, treasuryAddress);
+}
+
+/**
+ * Build a generic OCT transfer to any recipient (e.g. fee collector wallet).
+ */
+export async function buildOCTTransferTransaction(
+  amount: number,
+  fromAddress: string,
+  toAddress: string,
+): Promise<Transaction> {
+  const { decimals } = getOneChainConfig();
 
   const amountInSmallestUnit = Math.floor(amount * Math.pow(10, decimals));
 
-  // Balance check
-  const balance = await getOCTBalance(userAddress);
-  const GAS_RESERVE = 0.05; // 0.05 OCT reserved for gas
+  const balance = await getOCTBalance(fromAddress);
+  const GAS_RESERVE = 0.05;
   if (balance < amount + GAS_RESERVE) {
     throw new Error(
       `Insufficient OCT balance. Have: ${balance}, Need: ${amount} + ${GAS_RESERVE} for gas`,
     );
   }
 
-  // OCT is the native token — use tx.gas (same as SUI pattern on Sui network)
   const tx = new Transaction();
   const [payCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInSmallestUnit)]);
-  tx.transferObjects([payCoin], tx.pure.address(treasuryAddress));
-  tx.setSender(userAddress);
-  tx.setGasBudget(50_000_000); // 0.05 OCT
+  tx.transferObjects([payCoin], tx.pure.address(toAddress));
+  tx.setSender(fromAddress);
+  tx.setGasBudget(50_000_000);
 
   return tx;
 }
