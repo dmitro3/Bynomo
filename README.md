@@ -571,7 +571,6 @@ Migrations live in `supabase/migrations/`.
 | `GET` | `/api/admin/mode-analytics` | Per-game-mode P&L |
 | `GET` | `/api/admin/player-ledger` | Per-wallet financial summary |
 | `GET` | `/api/admin/users` | User list for ledger |
-| `POST` | `/api/admin/users/status` | Update user status (active/frozen/banned) |
 | `GET` | `/api/admin/transactions` | Deposit/withdrawal audit stream |
 | `GET` | `/api/admin/game-history` | Raw bet history rows |
 | `GET` | `/api/admin/treasury-balances` | On-chain treasury balances + USD estimates |
@@ -592,9 +591,9 @@ Located at `/dashboard`. Protected by admin auth (`requireAdminAuth`).
 
 | Tab | What it shows |
 |-----|--------------|
-| **Wallet Intel** | Look up any address — balances, audit log, bet history, withdrawals, ban status, session dwell time, explorer links |
+| **Wallet Intel** | Look up any address — balances, audit log, bet history, withdrawals, session dwell time, explorer links |
 | **Ledger** | All users: identity, currency, liquidity |
-| **Player P&L** | Per-wallet: deposited / withdrawn / available balance / net P&L / bets / fees paid / sortable / **Unban button** for banned wallets |
+| **Player P&L** | Per-wallet: deposited / withdrawn / available balance / net P&L / bets / fees paid / sortable|
 | **Gameplay** | Game Mode P&L panel (Classic/Box/Draw — win rate, house P&L, by-chain breakdown, top assets) + full bet history with Real/Demo/Chain filters |
 | **Financials** | Deposit/withdrawal stream; pending withdrawal queue with Accept/Reject |
 | **Inventory** | Pyth-fed market asset list |
@@ -630,7 +629,6 @@ Bynomo-main/
 ├── lib/
 │   ├── store/                  # Zustand slices (wallet, game, balance, history, referral, profile)
 │   ├── fees/                   # platformFee.ts — tier fees + blitz fee logic
-│   ├── bans/                   # walletBan.ts — global ban helpers
 │   ├── admin/                  # computeStats.ts, requireAdminAuth, walletAddressVariants
 │   ├── supabase/               # serviceClient, browserClient
 │   ├── bnb/                    # BNB/EVM client + wagmi config
