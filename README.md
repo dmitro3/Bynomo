@@ -857,43 +857,16 @@ One-time per-window flat fees paid directly to the fee collector wallet on each 
 
 ## Competitive Landscape
 
-### Positioning
+Bynomo sits at the intersection of three large markets — binary options, prediction markets, and on-chain derivatives — but is a direct substitute for none of them. It is the only production product offering **oracle-settled binary rounds at 5s–1m timeframes across 12 blockchains in a single UI**.
 
-Bynomo sits at the intersection of three large markets — binary options, prediction markets, and on-chain derivatives — but competes directly with none of them. It is the only product offering **sub-5-second oracle-settled binary rounds across 12 blockchains in a single UI**.
-
-### Feature Comparison
-
-| Feature | Bynomo | Binomo / IQ Option | Polymarket / Kalshi | Binance Futures / Bybit | Dopex / Lyra | Euphoria Fi |
-|---------|--------|-------------------|--------------------|-----------------------|-------------|------------|
-| Settlement speed | ✅ 5s – 1m | ✅ Fast (opaque) | ❌ Hours – days | ✅ Real-time | ❌ Hours – days | ✅ Real-time |
-| On-chain verifiable | ✅ Yes | ❌ No | ✅ Partial | ❌ No | ✅ Yes | ✅ Yes |
-| Oracle-driven (no manipulation) | ✅ Pyth Hermes | ❌ Proprietary algo | ✅ Partial | ❌ Internal | ✅ Yes | ✅ Yes |
-| No liquidation / funding rate | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| No wallet sig per bet | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ❌ No | ✅ Yes |
-| Multi-chain (12 chains) | ✅ 12 chains | ❌ Web2 only | ❌ 1–2 chains | ❌ CEX only | ❌ 1–2 chains | ❌ 1 chain |
-| Custom draw-your-own trade | ✅ Draw Mode | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| Demo mode (no wallet) | ✅ Yes | ✅ Yes | ❌ No | ❌ No | ❌ No | ❌ No |
-| Beginner-friendly UX | ✅ Yes | ✅ Yes | ❌ Complex | ❌ Complex | ❌ Complex | ✅ Yes |
-| Transparent P&L audit trail | ✅ Supabase + on-chain | ❌ No | ✅ On-chain | ❌ No | ✅ On-chain | ❌ No |
-
-### Competitive Moats
-
-| Moat | Detail |
-|------|--------|
-| **Speed** | 5s rounds are impossible without sub-1s oracle feeds — Pyth Hermes only reached production maturity in 2025 |
-| **Multi-chain depth** | 12 chains live with native wallet integrations — months of engineering to replicate |
-| **Draw Mode** | No other binary product lets users draw their own trade rectangle — entirely novel mechanic |
-| **Transparency** | Every balance event logged in an immutable audit trail — Web2 competitors cannot offer this |
-| **Network effects** | Each chain = its own community flywheel; 12 chains running in parallel |
-| **First mover** | No credible Web3 binary options product exists at production level — the category is wide open |
-
-### Why Competitors Can't Copy Quickly
-
-- **Web2 platforms** (Binomo, IQ Option) — can't go on-chain; their business model depends on opacity
-- **Prediction markets** (Polymarket, Kalshi) — built for long-form outcomes; architecture doesn't support 5s resolution
-- **CEX derivatives** (Binance, Bybit) — regulatory overhead, liquidation engines, funding rate complexity baked in
-- **On-chain options** (Dopex, Lyra) — smart-contract-bound, high gas, no instant UX
-- **Single-chain dapps** (Euphoria Fi) — building multi-chain from scratch is 6–12 months of wallet integration work
+| Segment | Examples | Limitation vs Bynomo |
+|---------|----------|---------------------|
+| **Web2 binary options** | Binomo, IQ Option, Quotex | Opaque pricing, algorithmically rigged outcomes, no on-chain settlement; users do not custody their own funds. |
+| **Crypto prediction markets** | Polymarket, Kalshi, Azuro | Event/outcome markets ("Will X happen?"), not sub-minute price binary options; resolution takes hours or days — not 5s–1m. |
+| **Crypto derivatives (CEX)** | Binance Futures, Bybit, OKX | Leveraged perpetuals with funding rates and liquidation risk; no simple fixed-expiry binary product with oracle-bound resolution. |
+| **On-chain options / DeFi** | Dopex, Lyra, Premia | Standard calls/puts with complex UX, high gas overhead, and no "price up/down in 30 seconds" binary product. |
+| **Fast trading dapps** | Euphoria Fi | Mobile-first perps on a single chain — not a dedicated binary options loop; no fixed-expiry timeframes. |
+| **Web3 binary options** | — | No established on-chain binary options dapp exists at production level. Bynomo fills this gap entirely. |
 
 ---
 
