@@ -243,22 +243,34 @@ Bynomo is the only production product offering oracle-settled binary rounds at *
 
 ### GTM Strategy
 
-| Phase | Timeline | Tactic | Goal |
-|-------|----------|--------|------|
-| **Phase 1 — Public Launch** | Now | Viral X giveaway launch — Euphoria Fi / MegaETH playbook; word-of-mouth cascade from day 1 | 10K+ impressions day 1 |
-| | | Per-chain ecosystem blitz — regional community groups + executive retweets + every ecosystem project, across all 12 chains | Foundation-level support per chain |
-| | | 100 micro-influencer campaign (1K–20K followers) in trading, crypto, Web3 niches | 5M+ combined reach |
-| | | Short-form PnL clips + Blitz streak highlights engineered for X/Telegram virality | 50+ organic reposts per clip |
-| | | Perpetual referral fee share — deep links into Classic and Box modes | 25% of signups via referral |
-| **Phase 2 — Community Depth** | Days 30–90 | Bynomo Ambassador Program — regional groups, trading tutorials, local language content | 20 active regional ambassadors |
-| | | Weekly Podcast / AMA Series on X with top traders | 5K+ live listeners/episode |
-| | | Blitz tournament events with community prize pools | 1,000 participants/event |
-| | | Chain foundation grant applications — Solana, Sui, NEAR, Starknet, and others | $100K–$300K in ecosystem grants |
-| **Phase 3 — Scale** | Days 91–180 | P2P mode launch — removes treasury directional risk, enables larger payouts | P2P beta live |
-| | | 200+ new assets via Pyth — forex, stocks, commodities, indices | 50+ new tradeable pairs |
-| | | Mobile app + PWA redesign | 60% mobile session share |
-| | | Affiliate / white-label — communities embed Bynomo with revenue share | 5 affiliate partners |
-| | | Regional expansion — Southeast Asia, MENA, LatAm | 3 regional markets active |
+#### Phase 1 — Public Launch `Now`
+
+| # | Tactic | Goal |
+|---|--------|------|
+| 1 | Viral X giveaway launch — Euphoria Fi / MegaETH playbook; word-of-mouth cascade from day 1 | 10K+ impressions day 1 |
+| 2 | Per-chain ecosystem blitz — regional community groups + executive retweets + every ecosystem project across all 12 chains | Foundation-level support per chain |
+| 3 | 100 micro-influencer campaign (1K–20K followers) in trading, crypto, Web3 niches | 5M+ combined reach |
+| 4 | Short-form PnL clips + Blitz streak highlights engineered for X / Telegram virality | 50+ organic reposts per clip |
+| 5 | Perpetual referral fee share — deep links into Classic and Box modes | 25% of signups via referral |
+
+#### Phase 2 — Community Depth `Days 30–90`
+
+| # | Tactic | Goal |
+|---|--------|------|
+| 1 | Bynomo Ambassador Program — regional groups, trading tutorials, local language content | 20 active regional ambassadors |
+| 2 | Weekly Podcast / AMA Series on X with top traders | 5K+ live listeners / episode |
+| 3 | Blitz tournament events with community prize pools | 1,000 participants / event |
+| 4 | Chain foundation grant applications — Solana, Sui, NEAR, Starknet, and others | $100K–$300K in ecosystem grants |
+
+#### Phase 3 — Scale `Days 91–180`
+
+| # | Tactic | Goal |
+|---|--------|------|
+| 1 | P2P mode — removes treasury directional risk, enables larger payouts | P2P beta live |
+| 2 | 200+ new assets via Pyth — forex, stocks, commodities, indices | 50+ new tradeable pairs |
+| 3 | Mobile app + PWA redesign | 60% mobile session share |
+| 4 | Affiliate / white-label — communities embed Bynomo with revenue share | 5 affiliate partners |
+| 5 | Regional expansion — Southeast Asia, MENA, LatAm | 3 regional markets active |
 
 ---
 
