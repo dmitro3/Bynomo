@@ -159,12 +159,59 @@ P&L off-chain (Supabase) · deposits/withdrawals on-chain
 
 ### Unit Economics
 
-| Metric | Conservative | Base Case | Optimistic |
-|--------|-------------|-----------|------------|
-| Revenue per active user/month | ~$11 | ~$32 | ~$90 |
-| Marginal infra cost per user | <$0.10 | <$0.10 | <$0.10 |
-| CAC (paid) | $15 | $8 | $4 |
-| LTV / CAC | ~0.7× | ~4× | ~22× |
+#### How Revenue Is Generated Per User
+
+```
+User deposits 1 SOL ($185)
+  ├── 10% deposit fee  →  $18.50 to Bynomo                ← Rail 1
+  └── $166.50 credited to Bynomo balance
+
+User plays (house edge ~3% per bet cycle)
+  └── ~$5–15 captured from betting activity              ← Rail 2
+
+User withdraws remaining balance
+  └── 10% withdrawal fee  →  ~$15 to Bynomo               ← Rail 3
+
+Optional: Blitz entry  →  1 SOL flat fee = $185           ← Rail 4
+────────────────────────────────────────────────────
+Total Bynomo revenue (no Blitz):  ~$38  on 1 SOL deposit
+Total Bynomo revenue (with Blitz): ~$223 on 1 SOL deposit
+Infra cost to serve this user:    < $0.10
+```
+
+#### Three User Scenarios
+
+| | Conservative | Base Case | Optimistic |
+|-|-------------|-----------|------------|
+| **Avg deposit** | $50 | $150 | $400 |
+| **Deposit fee (10%)** | $5 | $15 | $40 |
+| **Avg withdrawal** | $40 | $120 | $350 |
+| **Withdrawal fee (10%)** | $4 | $12 | $35 |
+| **House edge captured** | $2 | $5 | $15 |
+| **Revenue / user / month** | **~$11** | **~$32** | **~$90** |
+| **Infra cost / user** | <$0.10 | <$0.10 | <$0.10 |
+| **Gross margin / user** | **~$10.90** | **~$31.90** | **~$89.90** |
+
+#### Acquisition vs Lifetime Value
+
+| | Conservative | Base Case | Optimistic |
+|-|-------------|-----------|------------|
+| **CAC** (cost to acquire 1 user) | $15 | $8 | $4 |
+| **Monthly revenue / user** | $11 | $32 | $90 |
+| **Months to recover CAC** | 1.4 mo | 0.25 mo | <2 weeks |
+| **LTV (12-month active user)** | $132 | $384 | $1,080 |
+| **LTV / CAC** | **~9×** | **~48×** | **~270×** |
+
+> CAC drops toward $0 as the referral flywheel, viral X launch, and per-chain ecosystem blitz generate organic signups. Every organic user is **pure profit from day 1**.
+
+#### Why the Math Gets Better at Scale
+
+| Volume | Monthly Revenue | Key Driver |
+|--------|----------------|------------|
+| 1,000 active users | $11K – $90K | Early adopters, higher CAC |
+| 10,000 active users | $110K – $900K | Referral loops kicking in, CAC falling |
+| 100,000 active users | $1.1M – $9M | Organic flywheel, CAC near $0 |
+| Infra cost at 100K users | ~$10K | Vercel + Supabase serverless — nearly flat |
 
 ---
 
@@ -196,21 +243,22 @@ Bynomo is the only production product offering oracle-settled binary rounds at *
 
 ### GTM Strategy
 
-**Phase 1 — Public Launch (Now)**
-- Viral X launch using the Euphoria Fi / MegaETH giveaway playbook — giveaway + word-of-mouth cascade
-- Per-chain ecosystem blitz — regional community groups + executive retweets + every ecosystem project, repeated across all 12 chains
-- 100 micro-influencer campaign (1K–20K followers) in trading/crypto/Web3 niches
-- Short-form PnL clips + Blitz streak highlights engineered for X/Telegram virality
-- Perpetual referral fee share — deep links into Classic and Box modes
-
-**Phase 2 — Community Depth (Days 30–90)**
-- Bynomo Ambassador Program — regional groups, trading tutorials, local language content
-- Weekly Podcast / AMA Series on X with top traders
-- Blitz tournament events with community prize pools
-- Chain foundation grant applications (Solana, Sui, NEAR, Starknet Foundations)
-
-**Phase 3 — Scale (Days 91–180)**
-- P2P mode, 200+ assets, mobile app, affiliate/white-label, regional expansion
+| Phase | Timeline | Tactic | Goal |
+|-------|----------|--------|------|
+| **Phase 1 — Public Launch** | Now | Viral X giveaway launch — Euphoria Fi / MegaETH playbook; word-of-mouth cascade from day 1 | 10K+ impressions day 1 |
+| | | Per-chain ecosystem blitz — regional community groups + executive retweets + every ecosystem project, across all 12 chains | Foundation-level support per chain |
+| | | 100 micro-influencer campaign (1K–20K followers) in trading, crypto, Web3 niches | 5M+ combined reach |
+| | | Short-form PnL clips + Blitz streak highlights engineered for X/Telegram virality | 50+ organic reposts per clip |
+| | | Perpetual referral fee share — deep links into Classic and Box modes | 25% of signups via referral |
+| **Phase 2 — Community Depth** | Days 30–90 | Bynomo Ambassador Program — regional groups, trading tutorials, local language content | 20 active regional ambassadors |
+| | | Weekly Podcast / AMA Series on X with top traders | 5K+ live listeners/episode |
+| | | Blitz tournament events with community prize pools | 1,000 participants/event |
+| | | Chain foundation grant applications — Solana, Sui, NEAR, Starknet, and others | $100K–$300K in ecosystem grants |
+| **Phase 3 — Scale** | Days 91–180 | P2P mode launch — removes treasury directional risk, enables larger payouts | P2P beta live |
+| | | 200+ new assets via Pyth — forex, stocks, commodities, indices | 50+ new tradeable pairs |
+| | | Mobile app + PWA redesign | 60% mobile session share |
+| | | Affiliate / white-label — communities embed Bynomo with revenue share | 5 affiliate partners |
+| | | Regional expansion — Southeast Asia, MENA, LatAm | 3 regional markets active |
 
 ---
 
