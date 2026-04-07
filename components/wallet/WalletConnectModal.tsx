@@ -30,7 +30,7 @@ export const WalletConnectModal: React.FC = () => {
     const { switchChain } = useSwitchChain();
     const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
     const { openConnect: openInitiaConnect } = useInterwovenKit();
-    const { wallets: aptosWallets, connect: connectAptos } = useAptosWallet();
+    const { wallets: aptosWallets, connect: connectAptos, connected: aptosConnected, disconnect: disconnectAptos, account: aptosAccount } = useAptosWallet();
 
     const handlePrivyConnect = () => {
         setPreferredNetwork('BNB');
@@ -176,15 +176,29 @@ export const WalletConnectModal: React.FC = () => {
         }
     };
     const handleAptosConnect = () => {
+        wagmiDisconnect(); // disconnect EVM wallet so it doesn't override APT sync
         setView('aptos');
     };
 
     const handleAptosWalletClick = async (walletName: any) => {
         try {
+            // If already connected to Aptos, just close modal and set network
+            if (aptosConnected && aptosAccount) {
+                setPreferredNetwork('APT');
+                setOpen(false);
+                return;
+            }
+            
             await connectAptos(walletName);
             setPreferredNetwork('APT');
             setOpen(false);
-        } catch (error) {
+        } catch (error: any) {
+            // If the error is "already connected", treat it as success
+            if (error?.message?.includes('already connected') || error?.toString()?.includes('already connected')) {
+                setPreferredNetwork('APT');
+                setOpen(false);
+                return;
+            }
             console.error("Aptos connection error:", error);
         }
     };

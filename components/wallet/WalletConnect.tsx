@@ -5,6 +5,7 @@ import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { useDisconnectWallet as useSuiDisconnect } from '@mysten/dapp-kit';
 import { useDisconnect as useWagmiDisconnect } from 'wagmi';
 import { useInterwovenKit } from '@initia/interwovenkit-react';
+import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 
 export const WalletConnect: React.FC = () => {
   const { logout: logoutPrivy, authenticated, user, ready } = usePrivy();
@@ -12,6 +13,7 @@ export const WalletConnect: React.FC = () => {
   const { mutate: disconnectSui } = useSuiDisconnect();
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
   const { disconnect: disconnectInitia } = useInterwovenKit();
+  const { disconnect: disconnectAptos } = useAptosWallet();
 
   const { network, address, setConnectModalOpen, disconnect: disconnectStore, setPreferredNetwork } = useOverflowStore();
 
@@ -41,6 +43,8 @@ export const WalletConnect: React.FC = () => {
       disconnectSui();
     } else if (network === 'INIT') {
       disconnectInitia();
+    } else if (network === 'APT') {
+      disconnectAptos();
     }
     // XTZ and NEAR don't need special SDK disconnect
 
@@ -63,6 +67,7 @@ export const WalletConnect: React.FC = () => {
       case 'NEAR': return '/logos/near.png';
       case 'STRK': return '/logos/starknet-strk-logo.svg';
       case 'PUSH': return '/logos/push-logo.png';
+      case 'APT': return '/logos/aptos-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   };
@@ -81,6 +86,7 @@ export const WalletConnect: React.FC = () => {
       case 'NEAR': return 'NEAR';
       case 'STRK': return 'STRK';
       case 'PUSH': return 'PUSH';
+      case 'APT': return 'APT';
       default: return 'Connected';
     }
   };

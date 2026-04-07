@@ -66,7 +66,7 @@ export const GameBoard: React.FC = () => {
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
   const { mutate: disconnectSui } = useSuiDisconnect();
   const { disconnect: disconnectInitia, requestTxBlock: requestInitiaTx } = useInterwovenKit();
-  const { signAndSubmitTransaction: signAndSubmitAptos } = useAptosWallet();
+  const { signAndSubmitTransaction: signAndSubmitAptos, disconnect: disconnectAptos } = useAptosWallet();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   // Default box-mode settings (when user lands on /trade):
@@ -444,6 +444,8 @@ export const GameBoard: React.FC = () => {
 
     try {
       const multiplier = getMultiplier(selectedDuration);
+      let signature: string | undefined;
+
       
       // Track bet placement
       posthog.capture('bet_placed', {
@@ -456,8 +458,8 @@ export const GameBoard: React.FC = () => {
         currency: currencySymbol
       })
       
-      // Special path for SOL and BNB: Send stake transaction first
-      if (network === 'SOL' || network === 'BNB') {
+      // Special path for SOL, BNB and APT: Send stake transaction first
+      if (network === 'SOL' || network === 'BNB' || network === 'APT') {
         toast.info(`Sending ${betAmount} ${currencySymbol} stake...`);
         try {
           if (network === 'SOL' && currencySymbol === 'SOL') {
@@ -466,11 +468,11 @@ export const GameBoard: React.FC = () => {
             const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS_SOL || process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
             if (!treasuryWallet) throw new Error('SOL treasury wallet not configured');
             
-            const transaction = await buildSolTransferTransaction(parseFloat(betAmount), address, treasuryWallet);
-            const signature = await sendSolanaTransaction(transaction, connection);
+            const transaction = await buildSolTransferTransaction(parseFloat(betAmount), address!, treasuryWallet);
+            signature = await sendSolanaTransaction(transaction, connection);
             console.log(`Solana SOL stake payment sig:`, signature);
           } else if (network === 'BNB' && currencySymbol === 'BNB') {
-            const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+            const wallet = wallets.find(w => w.address.toLowerCase() === address!.toLowerCase());
             if (!wallet) throw new Error("Active wallet not found in session");
             const ethereumProvider = await wallet.getEthereumProvider();
             const provider = new ethers.BrowserProvider(ethereumProvider);
@@ -483,6 +485,24 @@ export const GameBoard: React.FC = () => {
             });
             console.log("BNB stake payment tx:", txResponse.hash);
             await txResponse.wait();
+            signature = txResponse.hash;
+          } else if (network === 'APT' && (currencySymbol === 'APT' || currencySymbol === 'Aptos')) {
+            const { getAptosClient } = await import('@/lib/aptos/client');
+            const client = getAptosClient();
+            const treasuryWallet = process.env.NEXT_PUBLIC_APTOS_TREASURY_ADDRESS;
+            if (!treasuryWallet) throw new Error('APT treasury wallet not configured');
+            
+            const response = await signAndSubmitAptos({
+              data: {
+                function: "0x1::aptos_account::transfer",
+                typeArguments: [],
+                functionArguments: [treasuryWallet, (BigInt(Math.floor(parseFloat(betAmount) * 1e8))).toString()],
+              }
+            });
+            
+            console.log("Aptos stake payment hash:", response.hash);
+            await client.getSDK().waitForTransaction({ transactionHash: response.hash });
+            signature = response.hash;
           }
         } catch (txErr: any) {
           console.error("Stake transaction failed:", txErr);
@@ -490,6 +510,7 @@ export const GameBoard: React.FC = () => {
           return;
         }
       }
+
 
       await placeBetFromHouseBalance(
         betAmount,
@@ -929,6 +950,7 @@ export const GameBoard: React.FC = () => {
                           if (s.network === 'PUSH' || s.network === 'BNB' || s.network === 'SOMNIA' || s.network === 'ZG') wagmiDisconnect();
                           else if (s.network === 'SUI' || s.network === 'OCT') disconnectSui();
                           else if (s.network === 'INIT') disconnectInitia();
+                          else if (s.network === 'APT') disconnectAptos();
                           s.setPreferredNetwork(null);
                           s.disconnect();
                         }}

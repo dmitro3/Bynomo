@@ -35,30 +35,277 @@ interface CellBet {
 }
 
 // Component to safely display asset logos with fallback
-const AssetIcon = ({ src, asset, className }: { src: string; asset: string; className: string }) => {
-  const [error, setError] = useState(false);
+const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: string; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks'; decimals: number }> = {
+  BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto', decimals: 2 },
+  ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: '/logos/ethereum-eth-logo.png', category: 'Crypto', decimals: 2 },
+  SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: '/logos/solana-sol-logo.png', category: 'Crypto', decimals: 2 },
+  SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', logo: '/logos/sui-logo.png', category: 'Crypto', decimals: 3 },
+  TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', logo: '/logos/tron-trx-logo.png', category: 'Crypto', decimals: 4 },
+  XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', logo: '/logos/xrp-xrp-logo.png', category: 'Crypto', decimals: 4 },
+  DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto', decimals: 5 },
+  ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', logo: '/logos/cardano-ada-logo.png', category: 'Crypto', decimals: 4 },
+  BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto', decimals: 2 },
+  BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', logo: '/logos/bnb-bnb-logo.png', category: 'Crypto', decimals: 2 },
+  XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', logo: '/logos/stellar-xlm-logo.png', category: 'Crypto', decimals: 4 },
+  XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', logo: '/logos/tezos-xtz-logo.png', category: 'Crypto', decimals: 3 },
+  NEAR: { name: 'Near Protocol', symbol: 'NEAR', pair: 'NEAR/USD', logo: '/logos/near.png', category: 'Crypto', decimals: 3 },
+  APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', logo: '/logos/aptos-logo.png', category: 'Crypto', decimals: 2 },
+  
+  // Metals
+  GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'XAU/USD', logo: '/logos/gold.jpg', category: 'Metals', decimals: 2 },
+  SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'XAG/USD', logo: '/logos/silver.avif', category: 'Metals', decimals: 3 },
+  
+  // Forex
+  EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', logo: '/logos/euro.png', category: 'Forex', decimals: 4 },
+  GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', logo: '/logos/uk.png', category: 'Forex', decimals: 4 },
+  JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'USD/JPY', logo: '/logos/japan.jpg', category: 'Forex', decimals: 2 },
+  AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', logo: '/logos/australia.png', category: 'Forex', decimals: 4 },
+  CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'USD/CAD', logo: '/logos/canada.png', category: 'Forex', decimals: 4 },
+  
+  // Stocks
+  AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', logo: '/logos/apple.png', category: 'Stocks', decimals: 2 },
+  GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', logo: '/logos/google.png', category: 'Stocks', decimals: 2 },
+  AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', logo: '/logos/amazon.png', category: 'Stocks', decimals: 2 },
+  MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', logo: '/logos/microsoft.png', category: 'Stocks', decimals: 2 },
+  NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', logo: '/logos/nvidia.png', category: 'Stocks', decimals: 2 },
+  TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', logo: '/logos/tesla.png', category: 'Stocks', decimals: 2 },
+  META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', logo: '/logos/meta.png', category: 'Stocks', decimals: 2 },
+  NFLX: { name: 'Netflix', symbol: 'NFLX', pair: 'NFLX/USD', logo: '/logos/netflix.png', category: 'Stocks', decimals: 2 },
+  AMD: { name: 'AMD', symbol: 'AMD', pair: 'AMD/USD', logo: 'https://logo.clearbit.com/amd.com', category: 'Stocks', decimals: 2 },
+  BABA: { name: 'Alibaba', symbol: 'BABA', pair: 'BABA/USD', logo: 'https://logo.clearbit.com/alibaba.com', category: 'Stocks', decimals: 2 },
+  DIS: { name: 'Walt Disney', symbol: 'DIS', pair: 'DIS/USD', logo: 'https://logo.clearbit.com/disney.com', category: 'Stocks', decimals: 2 },
+  JPM: { name: 'JP Morgan', symbol: 'JPM', pair: 'JPM/USD', logo: 'https://logo.clearbit.com/jpmorgan.com', category: 'Stocks', decimals: 2 },
+  V: { name: 'Visa Inc.', symbol: 'V', pair: 'V/USD', logo: 'https://logo.clearbit.com/visa.com', category: 'Stocks', decimals: 2 },
+  MA: { name: 'Mastercard', symbol: 'MA', pair: 'MA/USD', logo: 'https://logo.clearbit.com/mastercard.com', category: 'Stocks', decimals: 2 },
+  PYPL: { name: 'PayPal', symbol: 'PYPL', pair: 'PYPL/USD', logo: 'https://logo.clearbit.com/paypal.com', category: 'Stocks', decimals: 2 },
+  COIN: { name: 'Coinbase', symbol: 'COIN', pair: 'COIN/USD', logo: 'https://logo.clearbit.com/coinbase.com', category: 'Stocks', decimals: 2 },
+  MSTR: { name: 'MicroStrategy', symbol: 'MSTR', pair: 'MSTR/USD', logo: 'https://logo.clearbit.com/microstrategy.com', category: 'Stocks', decimals: 2 },
+  UBER: { name: 'Uber Tech', symbol: 'UBER', pair: 'UBER/USD', logo: 'https://logo.clearbit.com/uber.com', category: 'Stocks', decimals: 2 },
+  PLTR: { name: 'Palantir', symbol: 'PLTR', pair: 'PLTR/USD', logo: 'https://logo.clearbit.com/palantir.com', category: 'Stocks', decimals: 2 },
+  CRM: { name: 'Salesforce', symbol: 'CRM', pair: 'CRM/USD', logo: 'https://logo.clearbit.com/salesforce.com', category: 'Stocks', decimals: 2 },
+  INTC: { name: 'Intel', symbol: 'INTC', pair: 'INTC/USD', logo: 'https://logo.clearbit.com/intel.com', category: 'Stocks', decimals: 2 },
+  TSM: { name: 'TSMC', symbol: 'TSM', pair: 'TSM/USD', logo: 'https://logo.clearbit.com/tsmc.com', category: 'Stocks', decimals: 2 },
+  SPX: { name: 'S&P 500', symbol: 'SPX', pair: 'SPX/USD', logo: 'https://logo.clearbit.com/spglobal.com', category: 'Stocks', decimals: 2 },
+  NDX: { name: 'Nasdaq 100', symbol: 'NDX', pair: 'NDX/USD', logo: 'https://logo.clearbit.com/nasdaq.com', category: 'Stocks', decimals: 2 },
+  DJI: { name: 'Dow Jones', symbol: 'DJI', pair: 'DJI/USD', logo: 'https://logo.clearbit.com/spglobal.com', category: 'Stocks', decimals: 2 },
+  
+  // Custom
+  BYNOMO: { name: 'Bynomo Token', symbol: 'BYNOMO', pair: 'BYNOMO/SOL', logo: 'https://ucarecdn.com/7a6858e8-6e54-473c-b6df-7f938d28a38c/-/preview/256x256/', category: 'Crypto', decimals: 6 },
 
-  if (error || !src) {
-    return <span className="font-black text-sm">{asset[0]}</span>;
+  // Added Assets
+  LINK: { name: 'Chainlink', symbol: 'LINK', pair: 'LINK/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png', category: 'Crypto', decimals: 3 },
+  AVAX: { name: 'Avalanche', symbol: 'AVAX', pair: 'AVAX/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png', category: 'Crypto', decimals: 2 },
+  DOT: { name: 'Polkadot', symbol: 'DOT', pair: 'DOT/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polkadot/info/logo.png', category: 'Crypto', decimals: 2 },
+  LTC: { name: 'Litecoin', symbol: 'LTC', pair: 'LTC/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/litecoin/info/logo.png', category: 'Crypto', decimals: 2 },
+  UNI: { name: 'Uniswap', symbol: 'UNI', pair: 'UNI/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png', category: 'Crypto', decimals: 2 },
+  PEPE: { name: 'Pepe', symbol: 'PEPE', pair: 'PEPE/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6982508145454Ce325dDbE47a25d4ec3d2311933/logo.png', category: 'Crypto', decimals: 8 },
+  SHIB: { name: 'Shiba Inu', symbol: 'SHIB', pair: 'SHIB/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE/logo.png', category: 'Crypto', decimals: 8 },
+  ATOM: { name: 'Cosmos', symbol: 'ATOM', pair: 'ATOM/USD', logo: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png', category: 'Crypto', decimals: 2 },
+  RENDER: { name: 'Render', symbol: 'RENDER', pair: 'RENDER/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6De037ef9aD2725EB40118Bb1702EBb51e8aA4621/logo.png', category: 'Crypto', decimals: 2 },
+  TAO: { name: 'Bittensor', symbol: 'TAO', pair: 'TAO/USD', logo: 'https://assets.coingecko.com/coins/images/31120/standard/tao.png', category: 'Crypto', decimals: 2 },
+  INJ: { name: 'Injective', symbol: 'INJ', pair: 'INJ/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xe28b3B32B6c345A34Ff64674606124Dd5Aceca30/logo.png', category: 'Crypto', decimals: 2 },
+  KAS: { name: 'Kaspa', symbol: 'KAS', pair: 'KAS/USD', logo: 'https://assets.coingecko.com/coins/images/25751/standard/bugytty1_400x400.png', category: 'Crypto', decimals: 4 },
+  FET: { name: 'Fetch.ai', symbol: 'FET', pair: 'FET/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xaea46A60368A7bD060eec7DF8CBa43b7EF41Ad85/logo.png', category: 'Crypto', decimals: 3 },
+  FIL: { name: 'Filecoin', symbol: 'FIL', pair: 'FIL/USD', logo: 'https://assets.coingecko.com/coins/images/12817/standard/filecoin.png', category: 'Crypto', decimals: 2 },
+  AR: { name: 'Arweave', symbol: 'AR', pair: 'AR/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arweave/info/logo.png', category: 'Crypto', decimals: 2 },
+  STX: { name: 'Stacks', symbol: 'STX', pair: 'STX/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/stacks/info/logo.png', category: 'Crypto', decimals: 2 },
+  HBAR: { name: 'Hedera', symbol: 'HBAR', pair: 'HBAR/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/hedera/info/logo.png', category: 'Crypto', decimals: 4 },
+  ICP: { name: 'Internet Computer', symbol: 'ICP', pair: 'ICP/USD', logo: 'https://assets.coingecko.com/coins/images/14495/standard/Internet_Computer_logo.png', category: 'Crypto', decimals: 2 },
+  VET: { name: 'VeChain', symbol: 'VET', pair: 'VET/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/vechain/info/logo.png', category: 'Crypto', decimals: 4 },
+  OP: { name: 'Optimism', symbol: 'OP', pair: 'OP/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x4200000000000000000000000000000000000042/logo.png', category: 'Crypto', decimals: 3 },
+  BONK: { name: 'Bonk', symbol: 'BONK', pair: 'BONK/USD', logo: 'https://assets.coingecko.com/coins/images/28600/standard/bonk.png', category: 'Crypto', decimals: 8 },
+  ARB: { name: 'Arbitrum', symbol: 'ARB', pair: 'ARB/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png', category: 'Crypto', decimals: 3 },
+  SNX: { name: 'Synthetix', symbol: 'SNX', pair: 'SNX/USD', logo: 'https://assets.coingecko.com/coins/images/3406/standard/SNX.png', category: 'Crypto', decimals: 2 },
+  AAVE: { name: 'Aave', symbol: 'AAVE', pair: 'AAVE/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/logo.png', category: 'Crypto', decimals: 2 },
+  GRT: { name: 'The Graph', symbol: 'GRT', pair: 'GRT/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xc944E90C64B2c07662A292be6244BDf05Cda44a7/logo.png', category: 'Crypto', decimals: 4 },
+  THETA: { name: 'Theta Network', symbol: 'THETA', pair: 'THETA/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/theta/info/logo.png', category: 'Crypto', decimals: 3 },
+  ALGO: { name: 'Algorand', symbol: 'ALGO', pair: 'ALGO/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/algorand/info/logo.png', category: 'Crypto', decimals: 4 },
+  EGLD: { name: 'MultiversX', symbol: 'EGLD', pair: 'EGLD/USD', logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/elrond/info/logo.png', category: 'Crypto', decimals: 2 },
+  FLOW: { name: 'Flow', symbol: 'FLOW', pair: 'FLOW/USD', logo: 'https://assets.coingecko.com/coins/images/13446/standard/flow.png', category: 'Crypto', decimals: 3 },
+  
+  // Commodities
+  WTI: { name: 'Crude Oil WTI', symbol: 'WTI', pair: 'WTI/USD', logo: 'https://assets.coingecko.com/coins/images/51680/standard/oil.png', category: 'Metals', decimals: 2 },
+  BRENT: { name: 'Crude Oil Brent', symbol: 'BRENT', pair: 'BRENT/USD', logo: 'https://assets.coingecko.com/coins/images/51680/standard/oil.png', category: 'Metals', decimals: 2 },
+  CORN: { name: 'Corn', symbol: 'CORN', pair: 'CORN/USD', logo: 'https://cdn-icons-png.flaticon.com/512/7606/7606171.png', category: 'Metals', decimals: 3 },
+  WHEAT: { name: 'Wheat', symbol: 'WHEAT', pair: 'WHEAT/USD', logo: 'https://cdn-icons-png.flaticon.com/512/1583/1583326.png', category: 'Metals', decimals: 3 },
+};
+
+
+// Stock logo sources with fallback order
+const LOGO_SOURCES = {
+  // Clearbit API (primary - high quality company logos)
+  CLEARBIT: (domain: string) => `https://logo.clearbit.com/${domain}`,
+  
+  // Google Favicon service (reliable fallback)
+  GOOGLE: (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  
+  // CoinCap CDN (Very stable for crypto)
+  COINCAP: (symbol: string) => `https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`,
+
+  // Binance CDN
+  BINANCE: (symbol: string) => `https://bin.bnbstatic.com/static/images/coins/icon/${symbol.toLowerCase()}.png`,
+
+  // Local logos
+  LOCAL: (symbol: string) => `/logos/${symbol.toLowerCase()}.png`,
+};
+
+// Enhanced stock domain mapping
+const STOCK_DOMAIN_MAP: Record<string, string> = {
+  // Individual Stocks
+  AAPL: 'apple.com',
+  GOOGL: 'abc.xyz',
+  AMZN: 'amazon.com',
+  MSFT: 'microsoft.com',
+  NVDA: 'nvidia.com',
+  TSLA: 'tesla.com',
+  META: 'meta.com',
+  NFLX: 'netflix.com',
+  AMD: 'amd.com',
+  BABA: 'alibaba.com',
+  DIS: 'disney.com',
+  JPM: 'jpmorgan.com',
+  V: 'visa.com',
+  MA: 'mastercard.com',
+  PYPL: 'paypal.com',
+  COIN: 'coinbase.com',
+  MSTR: 'microstrategy.com',
+  UBER: 'uber.com',
+  PLTR: 'palantir.com',
+  CRM: 'salesforce.com',
+  INTC: 'intel.com',
+  TSM: 'tsmc.com',
+  
+  // Market Indices
+  SPX: 'spglobal.com',           // S&P 500 - managed by S&P Global
+  NDX: 'nasdaq.com',             // NASDAQ 100 - managed by NASDAQ
+  DJI: 'spglobal.com',           // Dow Jones - managed by S&P Global (CME Group also)
+  VIX: 'spglobal.com',           // VIX Volatility Index
+  DAX: 'deutsche-boerse.com',    // German DAX Index
+  N225: 'nikkei.com',            // Nikkei 225
+  HSI: 'hkex.com.hk',            // Hang Seng Index
+  FTSE: 'ftserussell.com',       // FTSE 100
+  CAC: 'euronext.com',           // CAC 40
+};
+
+// Component to safely display asset logos with multiple fallback sources
+const AssetIcon = ({ src, asset, className }: { src: string; asset: string; className: string }) => {
+
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [attemptIndex, setAttemptIndex] = useState(0);
+  const [showFallback, setShowFallback] = useState(false);
+
+  // Reset state when asset or src changes
+  useEffect(() => {
+    setCurrentSrc(src);
+    setAttemptIndex(0);
+    setShowFallback(false);
+  }, [src, asset]);
+
+  // Generate all possible logo sources for this asset
+  const getAllSources = (): string[] => {
+    const sources: string[] = [];
+    
+    // 1. Original src (if not already a fallback)
+    if (src && !src.includes('clearbit') && !src.includes('google.com')) {
+      sources.push(src);
+    }
+
+    // 2. Clearbit with known domain
+    const domain = STOCK_DOMAIN_MAP[asset];
+    if (domain) {
+      sources.push(LOGO_SOURCES.CLEARBIT(domain));
+    }
+
+    // 3. Google Favicon with known domain
+    if (domain) {
+      sources.push(LOGO_SOURCES.GOOGLE(domain));
+    }
+
+    // 4. Try common domain variations with Clearbit
+    if (!domain) {
+      const variations = [
+        `${asset.toLowerCase()}.com`,
+        `${asset.toLowerCase()}.io`,
+        `${asset.toLowerCase()}.co`,
+        `${asset.toLowerCase()}.org`,
+      ];
+      variations.forEach(d => {
+        sources.push(LOGO_SOURCES.CLEARBIT(d));
+        sources.push(LOGO_SOURCES.GOOGLE(d));
+      });
+    }
+
+    // 5. Crypto CDNs (CoinCap, Binance)
+    const cryptoMapping: Record<string, string> = {
+      'RENDER': 'rndr',
+      'EGLD': 'egld',
+      'KAS': 'kas',
+    };
+    const cryptoSymbol = cryptoMapping[asset] || asset;
+    sources.push(LOGO_SOURCES.COINCAP(cryptoSymbol));
+    sources.push(LOGO_SOURCES.BINANCE(cryptoSymbol));
+
+    // 6. Local logo
+    sources.push(LOGO_SOURCES.LOCAL(asset));
+
+    return sources;
+  };
+
+  const allSources = getAllSources();
+
+  // Handle image load error - try next source
+  const handleImageError = () => {
+    const nextIndex = attemptIndex + 1;
+    
+    if (nextIndex < allSources.length) {
+      // Try next source
+      setCurrentSrc(allSources[nextIndex]);
+      setAttemptIndex(nextIndex);
+    } else {
+      // All sources failed - show first letter fallback
+      setShowFallback(true);
+    }
+  };
+
+  // Show first letter as final fallback
+  if (showFallback || allSources.length === 0) {
+    return (
+      <div className={`relative flex items-center justify-center w-full h-full ${className}`}>
+        <span className="font-black text-sm">{asset[0]}</span>
+      </div>
+    );
   }
 
-  // Special handling for different asset types to make them circular and hide white backgrounds
+  // Special handling for different asset types
   const isMetal = asset === 'GOLD' || asset === 'SILVER';
   const isNear = asset === 'NEAR';
   const isForex = ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(asset);
 
-  // Clean className to avoid conflicts when we want object-cover
   const finalImageClass = (isMetal || isForex)
     ? className.replace('object-contain', '').trim() + ' scale-[1.5] object-cover'
     : `${className} object-contain`;
 
+  const bgColor = isMetal 
+    ? 'bg-gradient-to-br from-yellow-400/20 to-black' 
+    : isForex 
+    ? 'bg-black/40' 
+    : 'bg-white/5';
+
+  const borderColor = isMetal 
+    ? 'border-yellow-400/50' 
+    : isForex 
+    ? 'border-white/20' 
+    : 'border-white/10';
+
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full ${isMetal ? 'rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(234,179,8,0.3)] bg-gradient-to-br from-yellow-400/20 to-black' : ''} ${isForex ? 'rounded-full border border-white/20 bg-black/40' : ''} ${isNear ? 'bg-white rounded-full scale-90' : ''}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden w-full h-full rounded-full ${bgColor} ${borderColor} border ${isNear ? 'bg-white rounded-full scale-90' : ''}`}>
       <img
-        src={src}
+        key={`${asset}-${attemptIndex}`}
+        src={currentSrc}
         alt={asset}
         className={finalImageClass}
-        onError={() => setError(true)}
+        onError={handleImageError}
+        {...(!currentSrc.includes('clearbit') && !currentSrc.includes('google.com') ? { crossOrigin: 'anonymous' } : {})}
       />
     </div>
   );
@@ -90,7 +337,69 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const lastResult = useStore((state) => state.lastResult);
   const network = useStore((state) => state.network);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [now, setNow] = useState(Date.now());
+  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
+  const assetSelectorRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+  // Loading state for price feed
+  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
+
+  // Track resolved (past) cells
+  const [resolvedCells, setResolvedCells] = useState<ResolvedCell[]>([]);
+  const resolvedDrawBetIdsRef = useRef<Set<string>>(new Set());
+
+  // Local state for tracking cell bets
+  const [cellBets, setCellBets] = useState<Map<string, CellBet>>(new Map());
+
+  // --- Draw mode state ---
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  interface PendingDrawBox {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    priceTop: number;
+    priceBottom: number;
+    durationSeconds: number;
+    multiplier: number;
+    startTime: number;
+  }
+  const [pendingBox, setPendingBox] = useState<PendingDrawBox | null>(null);
+
+  // Warning state for insufficient funds
+  const [showInsufficientFunds, setShowInsufficientFunds] = useState(false);
+
+  // Asset search and category filtering
+  const [assetSearchQuery, setAssetSearchQuery] = useState('');
+  const [watchlist, setWatchlist] = useState<AssetType[]>([]);
+  const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks'>('All');
+
+  // Bet results for visual feedback
+  interface BetResult {
+    id: string;
+    won: boolean;
+    amount: number;
+    payout: number;
+    multiplier: number;
+    timestamp: number;
+    x: number;
+    y: number;
+  }
+  const [betResults, setBetResults] = useState<BetResult[]>([]);
+  
+  const activeIndicators = useStore((state) => state.activeIndicators);
+  const isIndicatorsOpen = useStore((state) => state.isIndicatorsOpen);
+  const setIsIndicatorsOpen = useStore((state) => state.setIsIndicatorsOpen);
+  const toggleIndicator = useStore((state) => state.toggleIndicator);
+
   const currencySymbol = useMemo(() => {
+
     switch (network) {
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
@@ -110,165 +419,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
   }, [network]);
 
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [now, setNow] = useState(Date.now());
-  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
-  const assetSelectorRef = useRef<HTMLButtonElement>(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
-
-
-  // Loading state for price feed
-  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
-
-  // Track resolved (past) cells - cells that have been "hit" by the chart
-  const [resolvedCells, setResolvedCells] = useState<ResolvedCell[]>([]);
-  const resolvedDrawBetIdsRef = useRef<Set<string>>(new Set());
-
-  // Local state for tracking cell bets (cells with active bets)
-  const [cellBets, setCellBets] = useState<Map<string, CellBet>>(new Map());
-
-  // --- Draw mode state (third mode) ---
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
-  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
-
-  interface PendingDrawBox {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    priceTop: number;
-    priceBottom: number;
-    durationSeconds: number;
-    multiplier: number;
-    startTime: number;
-  }
-
-  const [pendingBox, setPendingBox] = useState<PendingDrawBox | null>(null);
-
-
-  // Warning state for insufficient funds
-  const [showInsufficientFunds, setShowInsufficientFunds] = useState(false);
-
-  // Asset search and category filtering
-  const [assetSearchQuery, setAssetSearchQuery] = useState('');
-  const [watchlist, setWatchlist] = useState<AssetType[]>([]);
-  const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks'>('All');
-
-  // Bet results for visual feedback (win/lose notifications)
-  interface BetResult {
-    id: string;
-    won: boolean;
-    amount: number;
-    payout: number;
-    multiplier: number;
-    timestamp: number;
-    x: number;
-    y: number;
-  }
-  const [betResults, setBetResults] = useState<BetResult[]>([]);
-  const activeIndicators = useStore((state) => state.activeIndicators);
-  const isIndicatorsOpen = useStore((state) => state.isIndicatorsOpen);
-  const setIsIndicatorsOpen = useStore((state) => state.setIsIndicatorsOpen);
-  const toggleIndicator = useStore((state) => state.toggleIndicator);
-
-
-  // Auto-remove bet results after 3 seconds
-  useEffect(() => {
-    if (betResults.length === 0) return;
-    const timer = setTimeout(() => {
-      setBetResults(prev => prev.filter((r: BetResult) => Date.now() - r.timestamp < 3000));
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [betResults, now]);
-
-  // Sync cellBets from store's activeBets (important when switching modes or assets)
-  useEffect(() => {
-    const boxBets = activeBets.filter((bet: any) =>
-      bet.mode === 'box' &&
-      bet.asset === selectedAsset &&
-      bet.status === 'active' &&
-      bet.cellId
-    );
-
-    setCellBets(prev => {
-      const newMap = new Map();
-      boxBets.forEach((bet: any) => {
-        newMap.set(bet.cellId, {
-          cellId: bet.cellId,
-          betId: bet.id,
-          amount: bet.amount,
-          multiplier: bet.multiplier,
-          direction: bet.direction
-        });
-      });
-      return newMap;
-    });
-  }, [activeBets, selectedAsset]);
-
-  // Clear draw UI state when leaving draw mode
-  useEffect(() => {
-    if (gameMode !== 'draw') {
-      setIsDrawing(false);
-      setDrawStart(null);
-      setDrawCurrent(null);
-      setPendingBox(null);
-    }
-  }, [gameMode]);
-
-
-
-  // Asset display configuration
-  const assetConfig: Record<AssetType, { name: string; symbol: string; pair: string; decimals: number; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' }> = {
-    BYNOMO: { name: 'Bynomo Token', symbol: 'BYNOMO', pair: 'BYNOMO/USD', decimals: 6, logo: '/overflowlogo.png', category: 'Crypto' },
-    BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', decimals: 2, logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto' },
-    ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', decimals: 2, logo: '/logos/ethereum-eth-logo.png', category: 'Crypto' },
-    SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', decimals: 2, logo: '/logos/solana-sol-logo.png', category: 'Crypto' },
-    TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', decimals: 4, logo: '/logos/tron-trx-logo.png', category: 'Crypto' },
-    XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', decimals: 4, logo: '/logos/xrp-xrp-logo.png', category: 'Crypto' },
-    DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', decimals: 5, logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto' },
-    ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', decimals: 4, logo: '/logos/cardano-ada-logo.png', category: 'Crypto' },
-    BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', decimals: 2, logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto' },
-    BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', decimals: 2, logo: '/logos/bnb-bnb-logo.png', category: 'Crypto' },
-    SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
-    XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
-    XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
-    NEAR: { name: 'NEAR', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 2, logo: '/logos/near.png', category: 'Crypto' },
-    APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', decimals: 2, logo: '/logos/aptos-logo.png', category: 'Crypto' },
-    // Metals
-    GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
-    SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
-    // FX
-    EUR: { name: 'Euro', symbol: 'EUR', pair: 'EUR/USD', decimals: 5, logo: '/logos/euro.png', category: 'Forex' },
-    GBP: { name: 'British Pound', symbol: 'GBP', pair: 'GBP/USD', decimals: 5, logo: '/logos/uk.png', category: 'Forex' },
-    JPY: { name: 'Japanese Yen', symbol: 'JPY', pair: 'JPY/USD', decimals: 3, logo: '/logos/japan.jpg', category: 'Forex' },
-    AUD: { name: 'Australian Dollar', symbol: 'AUD', pair: 'AUD/USD', decimals: 5, logo: '/logos/australia.png', category: 'Forex' },
-    CAD: { name: 'Canadian Dollar', symbol: 'CAD', pair: 'CAD/USD', decimals: 5, logo: '/logos/canada.png', category: 'Forex' },
-    // Stocks
-    AAPL: { name: 'Apple Inc.', symbol: 'AAPL', pair: 'AAPL/USD', decimals: 2, logo: '/logos/apple.png', category: 'Stocks' },
-    GOOGL: { name: 'Alphabet Inc.', symbol: 'GOOGL', pair: 'GOOGL/USD', decimals: 2, logo: '/logos/google.png', category: 'Stocks' },
-    AMZN: { name: 'Amazon.com', symbol: 'AMZN', pair: 'AMZN/USD', decimals: 2, logo: '/logos/amazon.png', category: 'Stocks' },
-    MSFT: { name: 'Microsoft', symbol: 'MSFT', pair: 'MSFT/USD', decimals: 2, logo: '/logos/microsoft.png', category: 'Stocks' },
-    NVDA: { name: 'NVIDIA', symbol: 'NVDA', pair: 'NVDA/USD', decimals: 2, logo: '/logos/nvidia.png', category: 'Stocks' },
-    TSLA: { name: 'Tesla Inc.', symbol: 'TSLA', pair: 'TSLA/USD', decimals: 2, logo: '/logos/tesla.png', category: 'Stocks' },
-    META: { name: 'Meta Platforms', symbol: 'META', pair: 'META/USD', decimals: 2, logo: '/logos/meta.png', category: 'Stocks' },
-    NFLX: { name: 'Netflix Inc.', symbol: 'NFLX', pair: 'NFLX/USD', decimals: 2, logo: '/logos/netflix.png', category: 'Stocks' },
-  };
-
-
-
-  const currentAssetConfig = assetConfig[selectedAsset] || assetConfig.BTC;
+  const currentAssetConfig = ASSET_CONFIG[selectedAsset] || ASSET_CONFIG.BTC;
 
   // Filtered assets based on search and category
   const filteredAssets = useMemo(() => {
-    return (Object.keys(assetConfig) as AssetType[]).filter(assetId => {
+    return (Object.keys(ASSET_CONFIG) as AssetType[]).filter(assetId => {
       // Push-only rollout: hide the BYNOMO token from the asset picker for now.
       if (assetId === 'BYNOMO') return false;
 
-      const asset = assetConfig[assetId];
+      const asset = ASSET_CONFIG[assetId];
       const matchesSearch = asset.name.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
         asset.symbol.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
         asset.pair.toLowerCase().includes(assetSearchQuery.toLowerCase());
@@ -317,6 +476,20 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     setWatchlist((prev) => prev.includes(asset) ? prev.filter((a) => a !== asset) : [...prev, asset]);
   };
 
+  // Auto-remove bet results after 3 seconds
+  useEffect(() => {
+    if (betResults.length === 0) return;
+    const interval = setInterval(() => {
+      const nowTime = Date.now();
+      setBetResults(prev => {
+        const filtered = prev.filter((r: BetResult) => nowTime - r.timestamp < 3000);
+        return filtered.length === prev.length ? prev : filtered;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [betResults.length]);
+
   // Hide loading when price data arrives
   useEffect(() => {
     if (currentPrice > 0 && priceHistory.length >= 2) {
@@ -351,11 +524,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     const animate = () => {
       const currentTime = Date.now();
-      // Throttle to ~20fps for better performance
-      if (currentTime - lastTime > 50) {
+      // Throttle to ~15fps (64ms) for significantly better performance
+      if (currentTime - lastTime > 64) {
         setNow(currentTime);
         lastTime = currentTime;
       }
+
       frameId = requestAnimationFrame(animate);
     };
     frameId = requestAnimationFrame(animate);
@@ -381,14 +555,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     // DYNAMIC RANGE: Tighter ranges = More visual volatility (zoom in)
     const baseRange = (
-      ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0007 : // Forex: Moderate zoom
-        ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(selectedAsset) ? 0.0008 : // Stocks: Tight
-          ['GOLD', 'SILVER'].includes(selectedAsset) ? 0.0012 : // Metals: Medium
-            selectedAsset === 'BTC' ? 0.0015 :
-              selectedAsset === 'ETH' ? 0.0018 :
-                selectedAsset === 'SOL' ? 0.0025 :
-                  0.0020 // Default
+      ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0006 : // Forex: High zoom
+      ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX', 'AMD', 'BABA', 'DIS', 'JPM', 'V', 'MA', 'PYPL', 'COIN', 'MSTR', 'UBER', 'PLTR', 'CRM', 'INTC', 'TSM', 'SPX', 'NDX', 'DJI'].includes(selectedAsset) ? 0.0007 : // Stocks/Indices: High zoom
+      ['GOLD', 'SILVER', 'WTI', 'BRENT', 'CORN', 'WHEAT'].includes(selectedAsset) ? 0.0010 : // Metals/Commodities: Medium zoom
+      selectedAsset === 'BTC' ? 0.0015 :
+      selectedAsset === 'ETH' ? 0.0018 :
+      selectedAsset === 'SOL' ? 0.0025 :
+      0.0020 // Default
     );
+
 
     const mobileZoomFactor = isMobile ? 1.8 : 1.0;
     const rangePercent = ((gameMode === 'box' || gameMode === 'draw') ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
@@ -617,11 +792,17 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     // Don't render if no scales or no price data yet
     if (!scales || currentPrice <= 0) return '';
 
+    const pixelsPerSec = pixelsPerSecond;
+    const thresholdMs = ((-100 - scales.tipX) / pixelsPerSec) * 1000;
+    const minTimestamp = now + thresholdMs;
+    const maxTimestamp = now + ((10 / pixelsPerSec) * 1000);
+
     // Filter points that are actually visible on screen to speed up rendering
+    // Optimized: Calculate timestamp thresholds once instead of calling xScale for every point
     const visiblePoints = priceHistory.filter((p: any) => {
-      const x = scales.xScale(p.timestamp);
-      return x > -100 && x <= scales.tipX + 10;
+      return p.timestamp > minTimestamp && p.timestamp <= now + 1000; // Buffer for tip
     });
+
 
     // Ensure we have at least history or current point
     const pointsToRender = [...visiblePoints];
@@ -638,7 +819,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       const lineGenerator = line<{ timestamp: number, price: number }>()
         .x((d) => scales.xScale(d.timestamp))
         .y((d) => scales.yScale(d.price))
-        .curve(curveCatmullRom.alpha(0.35));
+        .curve(curveMonotoneX);
 
       return lineGenerator(pointsToRender) || '';
     } catch (err) {
@@ -647,11 +828,12 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
   }, [scales, priceHistory, currentPrice, now]);
 
+
   // TECHNICAL INDICATORS CALCULATION
   const indicatorPaths = useMemo(() => {
     if (!scales) return null;
 
-    const paths: Record<string, string | string[]> = {};
+    const paths: Record<string, any> = {};
     const points = [...priceHistory, { timestamp: now, price: currentPrice }];
 
     // 1. Moving Average (SMA 20)
@@ -762,8 +944,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           rsiPoints.push({ timestamp: points[i].timestamp, rsi: rsiValue });
         }
       }
-      paths.rsi = JSON.stringify(rsiPoints);
+      paths.rsi = rsiPoints;
     }
+
 
     return paths;
   }, [scales, priceHistory, now, currentPrice, activeIndicators]);
@@ -791,8 +974,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     else priceStep = 10 * magnitude;
 
 
-    // Calculate visible price range with large buffer (2x viewport)
-    const viewPadding = (scales.maxY - scales.minY) * 1.5;
+    // Calculate visible price range with buffer (0.8x viewport)
+    const viewPadding = (scales.maxY - scales.minY) * 0.8;
+
 
     const gridMaxY = scales.maxY + viewPadding;
     const gridMinY = scales.minY - viewPadding;
@@ -823,8 +1007,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         const rowPriceCenter = (rowPriceTop + rowPriceBottom) / 2;
         const priceLevelIndex = Math.round(rowPriceTop / priceStep);
 
-        // Convert price to Y position using the scale
         const y = scales.yScale(rowPriceTop);
+
         const cellBottom = scales.yScale(rowPriceBottom);
         const rowHeight = cellBottom - y;
 
@@ -1655,7 +1839,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                     {/* RSI Advanced Visualization */}
                     {activeIndicators['rsi'] && indicatorPaths.rsi && (() => {
                       try {
-                        const rsiPoints = JSON.parse(indicatorPaths.rsi as string);
+                        const rsiPoints = indicatorPaths.rsi as any[];
+
                         const rsiLine = line<{ timestamp: number, rsi: number }>()
                           .x(d => scales.xScale(d.timestamp))
                           .y(d => dimensions.height - 40 - (d.rsi / 100) * 80)
@@ -2007,20 +2192,21 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${selectedAsset === asset ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'}`}>
                       <AssetIcon
-                        src={assetConfig[asset].logo}
+                        src={ASSET_CONFIG[asset].logo}
                         asset={asset}
                         className="w-7 h-7 object-contain"
                       />
                     </div>
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
-                        <p className="text-white text-sm font-black tracking-tight">{assetConfig[asset].name}</p>
-                        {assetConfig[asset].category === 'Crypto' && (
+                        <p className="text-white text-sm font-black tracking-tight">{ASSET_CONFIG[asset].name}</p>
+                        {ASSET_CONFIG[asset].category === 'Crypto' && (
                           <span className="text-[8px] px-1 bg-blue-500/20 text-blue-400 rounded-sm font-bold uppercase">Crypto</span>
                         )}
                       </div>
-                      <p className="text-[10px] text-gray-500 font-bold font-mono">{assetConfig[asset].pair}</p>
+                      <p className="text-[10px] text-gray-500 font-bold font-mono">{ASSET_CONFIG[asset].pair}</p>
                     </div>
+
                     <span
                       onClick={(e) => {
                         e.stopPropagation();

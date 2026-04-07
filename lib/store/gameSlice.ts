@@ -110,8 +110,9 @@ export interface GameState {
 
 
 
-// Maximum price history points (5 minutes at 1 second intervals)
-const MAX_PRICE_HISTORY = 300;
+// Maximum price history points (reduced for performance)
+const MAX_PRICE_HISTORY = 200;
+
 
 // Default target cells configuration
 const DEFAULT_TARGET_CELLS: TargetCell[] = [
@@ -522,11 +523,21 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       
       // Get volatility multiplier based on asset type
       const getVolatilityMultiplier = (a: AssetType) => {
-        if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 12.0;
-        if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 12.0;
-        if (['GOLD', 'SILVER'].includes(a)) return 4.0;
-        return 2.0;
+        // High volatility for Forex and Stocks/Indices to make them tradable on short timeframes
+        if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 15.0;
+        
+        // Stocks and Indices
+        const stockSymbols = ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX', 'AMD', 'BABA', 'DIS', 'JPM', 'V', 'MA', 'PYPL', 'COIN', 'MSTR', 'UBER', 'PLTR', 'CRM', 'INTC', 'TSM', 'SPX', 'NDX', 'DJI'];
+        if (stockSymbols.includes(a)) return 18.0;
+        
+        // Commodities/Metals
+        const commoditySymbols = ['GOLD', 'SILVER', 'WTI', 'BRENT', 'CORN', 'WHEAT'];
+        if (commoditySymbols.includes(a)) return 10.0;
+        
+        // Default for Crypto (already volatile)
+        return 2.5;
       };
+
 
       const multiplier = getVolatilityMultiplier(assetKey);
       const lastRawPrice = updatedRawPrices[assetKey] || price;
