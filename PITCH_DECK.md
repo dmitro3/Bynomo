@@ -308,11 +308,34 @@ Bynomo is the only production product offering oracle-settled binary rounds at *
 
 ### Use of Funds
 
-| Category | $500K | $1.5M | What Gets Built |
-|----------|-------|-------|----------------|
-| **Engineering** (50%) | $250K | $750K | Security audit · P2P mode · mobile app · 200+ Pyth assets · smart contract layer |
-| **Growth & Marketing** (35%) | $175K | $525K | KOL campaigns · paid acquisition · Blitz tournament prize pools · referral incentives · chain grants co-funding |
-| **Operations** (15%) | $75K | $225K | Legal entity · compliance · infra scaling · core team hires |
+> Marketing and token distribution drive user acquisition. Tech is already built and live.
+
+#### At $500K Raise
+
+| Category | Allocation | Amount | Line Items |
+|----------|-----------|--------|------------|
+| **Marketing & Growth** | 45% | $225K | 100 micro-KOL deals · X / Telegram paid amplification · launch giveaway · PnL clip production · per-chain ecosystem blitz (12 chains) · regional community managers |
+| **Token & Community** | 25% | $125K | BYNOMO token liquidity seeding · airdrop campaigns · Blitz tournament prize pools · referral reward reserve · ambassador incentives |
+| **Product & Infra** | 20% | $100K | Mobile PWA · 50+ new Pyth assets · multi-chain hardening · audit |
+| **Operations** | 10% | $50K | Growth lead hire · legal / compliance · 6-month infra runway |
+
+#### At $1.5M Raise
+
+| Category | Allocation | Amount | Line Items |
+|----------|-----------|--------|------------|
+| **Marketing & Growth** | 45% | $675K | Tier-1 KOL partnerships · 3 regional Blitz championship events ($50K prize pools each) · Southeast Asia / MENA / LatAm expansion · affiliate & white-label partner network · paid social at scale |
+| **Token & Community** | 25% | $375K | CEX listing fees + market making · expanded airdrop campaigns · Blitz mega-tournament prize pools ($100K+ pools) · ecosystem grant co-funding · ambassador program at scale |
+| **Product & Infra** | 20% | $300K | 200+ Pyth assets (forex, stocks, commodities) · native mobile app · P2P mode · white-label SDK · 3 more chain integrations |
+| **Operations** | 10% | $150K | 4 full-time hires (BD · community · growth · ops) · legal entity · compliance advisory · 12-month infra runway |
+
+#### User Growth Targets (tied to capital deployed)
+
+| Capital Deployed | Active Users | MRR | Key Driver |
+|-----------------|-------------|-----|------------|
+| $80K | 500 | ~$16K | Organic + referral flywheel |
+| $250K | 2,500 | ~$80K | KOL + ecosystem blitz |
+| $750K | 10,000 | ~$320K | Regional expansion + token incentives |
+| $1.5M | 40,000+ | ~$1.3M | CEX listing + tournament virality |
 
 ### Why Now
 
@@ -327,11 +350,55 @@ Bynomo is the only production product offering oracle-settled binary rounds at *
 
 ## Slide 13 — Team
 
-> Available on request — bynomo.fun@gmail.com
+> We are builders, traders, and growth operators who have shipped a live multi-chain product before raising a single dollar.
+
+| Person | Role | Background |
+|--------|------|------------|
+| **Founder / CEO** | Product · Strategy · Vision | Built Bynomo end-to-end — product design, multi-chain architecture, game mechanics, and go-to-market. Previously backed by Bagsapp ($4M funding). Operator mindset: product live before raise. |
+| **Co-founder / CTO** | Full-stack · Web3 · Infra | Architected the Next.js 16 + Supabase backend, 12-chain wallet integrations, Pyth oracle pipeline, and treasury settlement engine. Ships fast — entire platform built in months, not years. |
+| **Head of Growth** | Marketing · Community · KOLs | Runs the per-chain ecosystem blitz, KOL pipeline, and referral programs. Community grew to 3,421 members organically before public launch. |
+| **BD / Partnerships** | Chain Ecosystems · Grants | Manages ecosystem relationships across Solana, Sui, NEAR, Starknet, Initia, and others. 5+ chains inbound-requesting Bynomo deployment. |
+
+### Why This Team Wins
+
+| | Signal |
+|---|--------|
+| **Shipped first** | Live product with real users, real deposits, real on-chain payouts — before raising |
+| **Capital efficient** | $4M Bagsapp backing proves ability to build and grow with limited capital |
+| **Operator DNA** | No slides-only founders — every team member has a live, working deliverable |
+| **Chain-native** | Deep ecosystem relationships across 12 chains before Series A |
 
 ---
 
-## Slide 14 — Contact & Links
+## Slide 14 — Future
+
+### 6-Month Roadmap
+
+| Quarter | Milestone | Impact |
+|---------|-----------|--------|
+| **Q2 2026** | Public launch across all 12 chains · Blitz tournament season 1 | First 2,500 active users · $80K MRR |
+| **Q2 2026** | BYNOMO token liquidity seeding · airdrop campaign · CEX listing pipeline | Token holders = built-in user base |
+| **Q2 2026** | 200+ Pyth assets live (forex · stocks · commodities · indices) | 5× more tradeable markets |
+| **Q3 2026** | Native mobile app + PWA launch | 60%+ mobile session share |
+| **Q3 2026** | P2P mode — players trade against each other, not the house | Removes treasury directional risk · enables unlimited payout size |
+| **Q3 2026** | Blitz Championship Season 2 — $100K+ prize pools | Viral growth event · regional media coverage |
+| **Q4 2026** | White-label SDK — ecosystems + communities embed Bynomo | 5+ affiliate partners · revenue share model |
+| **Q4 2026** | Southeast Asia · MENA · LatAm regional expansion | 3 new high-volume retail markets |
+| **Q4 2026** | 10,000 active users · $320K MRR | Series A ready |
+
+### Where Bynomo Goes From Here
+
+| Vision | Detail |
+|--------|--------|
+| **The Robinhood of Web3 trading** | Simple, fast, on-chain — accessible to any retail user on any chain |
+| **P2P layer** | Remove house risk entirely — Bynomo becomes a pure platform fee business |
+| **Token economy** | BYNOMO stakers get fee rebates, Blitz access, and governance — aligning power users with the protocol |
+| **Cross-chain liquidity** | Single account, single balance, trade on any of 12+ chains — the first truly chain-agnostic binary options platform |
+| **Institutional desk** | Custom Blitz events, white-label deployments, and OTC prize pool funding for DAOs, trading communities, and hedge funds |
+
+---
+
+## Slide 15 — Contact & Links
 
 | | |
 |---|---|
