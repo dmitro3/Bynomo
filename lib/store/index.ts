@@ -55,8 +55,10 @@ export const initializeStore = async (): Promise<void> => {
       await store.fetchBalance(store.address);
     }
 
-    // Start price feed polling
-    const stopPriceFeed = store.startGlobalPriceFeed(store.updateAllPrices);
+    // Start price feed polling with explicit binding
+    const stopPriceFeed = store.startGlobalPriceFeed((prices) => {
+      store.updateAllPrices(prices);
+    });
 
     // Store cleanup function for later use
     (window as any).__overflowCleanup = () => {

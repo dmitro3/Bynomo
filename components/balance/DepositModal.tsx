@@ -15,6 +15,7 @@ import { getSuiConfig } from '@/lib/sui/config';
 import { buildDepositTransaction as buildSuiDepositTransaction, buildNativeSuiDepositTransaction } from '@/lib/sui/client';
 
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { useWalletClient, useAccount } from 'wagmi';
 import { parseEther } from 'viem';
@@ -47,6 +48,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const { mutateAsync: signAndExecuteSui } = useSignAndExecuteTransaction();
   const suiAccount = useCurrentAccount();
 
+  // Aptos Hook
+  const { signAndSubmitTransaction: signAndSubmitAptos, connected: isAptosConnected } = useAptosWallet();
+
   // wagmi wallet client — already authorized, no eth_requestAccounts needed
   const { data: walletClient } = useWalletClient();
   const { connector } = useAccount();
@@ -60,8 +64,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
   const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
   const suiToken = network === 'SUI' ? (selectedCurrency === 'USDC' ? 'USDC' : 'SUI') : null;
-  const currencySymbol = network === 'SUI' ? (suiToken ?? 'SUI') : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
-  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : network === 'OCT' ? 'OneChain' : network === 'ZG' ? '0G Mainnet' : network === 'INIT' ? 'Initia Mainnet' : 'BNB Chain';
+  const currencySymbol = network === 'SUI' ? (suiToken ?? 'SUI') : network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'APT' ? 'APT' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
+  const networkName = network === 'SUI' ? 'Sui Network' : network === 'SOL' ? 'Solana' : network === 'APT' ? 'Aptos Mainnet' : network === 'XLM' ? 'Stellar' : network === 'XTZ' ? 'Tezos' : network === 'NEAR' ? 'NEAR Protocol' : network === 'STRK' ? 'Starknet Mainnet' : network === 'PUSH' ? 'Push Chain Donut' : network === 'SOMNIA' ? 'Somnia Testnet' : network === 'OCT' ? 'OneChain' : network === 'ZG' ? '0G Mainnet' : network === 'INIT' ? 'Initia Mainnet' : 'BNB Chain';
 
   // Quick select amounts
   const quickAmounts = network === 'SUI' ? (suiToken === 'USDC' ? [1, 5, 10, 25] : [0.5, 1, 2, 5]) : [0.1, 0.5, 1, 5];
@@ -112,7 +116,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const handleMaxClick = () => {
     if (walletBalance > 0) {
       // Leave a small amount for gas (native SUI needs buffer; USDC on SUI doesn't)
-      const gasBuffer = network === 'SUI' ? (suiToken === 'SUI' ? 0.01 : 0) : network === 'SOL' ? 0.001 : 0.005;
+      const gasBuffer = network === 'SUI' ? (suiToken === 'SUI' ? 0.01 : 0) : network === 'SOL' ? 0.001 : network === 'APT' ? 0.001 : 0.005;
       const maxAmount = Math.max(0, walletBalance - gasBuffer);
       setAmount(maxAmount.toFixed(4));
       setError(null);
@@ -323,6 +327,23 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         toast.info('Please confirm the transaction in your Initia wallet...');
         const result = await requestInitiaTx(txRequest);
         txHash = result.transactionHash;
+      } else if (network === 'APT') {
+        if (!isAptosConnected) throw new Error('Aptos wallet not connected');
+        const { getAptosConfig } = await import('@/lib/aptos/config');
+        const aptosConfig = getAptosConfig();
+        
+        toast.info('Please confirm the transaction in your Aptos wallet...');
+        
+        // Build transaction payload for APT transfer
+        const result = await signAndSubmitAptos({
+          data: {
+            function: "0x1::aptos_account::transfer",
+            typeArguments: [],
+            functionArguments: [aptosConfig.treasuryAddress, Math.floor(depositAmount * 100_000_000)], // 8 decimals for APT
+          },
+        });
+        
+        txHash = result.hash;
       } else {
         // BNB (EVM) — support both wagmi wallets (MetaMask) and Privy embedded wallets.
         const bnbConfig = getBNBConfig();
@@ -435,6 +456,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/bnb-bnb-logo.png'; }} />}
             {walletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

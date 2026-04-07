@@ -2,11 +2,16 @@
 
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import * as d3Shape from 'd3-shape';
+import { line, curveCatmullRom, curveMonotoneX } from 'd3-shape';
 import { useStore } from '@/lib/store';
 import { AssetType } from '@/lib/utils/priceFeed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playWinSound, playLoseSound } from '@/lib/utils/sounds';
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import { useWallets } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
+import { getAddress } from 'viem';
+import { useToast } from '@/lib/hooks/useToast';
 
 interface LiveChartProps {
   betAmount: string;
@@ -63,6 +68,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const priceHistory = useStore((state) => state.priceHistory);
   const currentPrice = useStore((state) => state.currentPrice);
   const selectedAsset = useStore((state) => state.selectedAsset);
+  const toast = useToast();
+  const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
+  const { wallets } = useWallets();
   const userTier = useStore((state) => state.userTier);
   const setSelectedAsset = useStore((state) => state.setSelectedAsset);
   const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
@@ -228,7 +236,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', decimals: 3, logo: '/logos/sui-logo.png', category: 'Crypto' },
     XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', decimals: 5, logo: '/logos/stellar-xlm-logo.png', category: 'Crypto' },
     XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', decimals: 4, logo: '/logos/tezos-xtz-logo.png', category: 'Crypto' },
-    NEAR: { name: 'NEAR Protocol', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 4, logo: '/logos/near.png', category: 'Crypto' },
+    NEAR: { name: 'NEAR', symbol: 'NEAR', pair: 'NEAR/USD', decimals: 2, logo: '/logos/near.png', category: 'Crypto' },
+    APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', decimals: 2, logo: '/logos/aptos-logo.png', category: 'Crypto' },
     // Metals
     GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'GOLD/USD', decimals: 2, logo: '/logos/gold.jpg', category: 'Metals' },
     SILVER: { name: 'Silver', symbol: 'SILVER', pair: 'SILVER/USD', decimals: 3, logo: '/logos/silver.avif', category: 'Metals' },
@@ -604,33 +613,38 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
   }, [lastResult, gameMode, scales, currentPrice, playWinSound, playLoseSound]);
 
-  // Chart Path
   const chartPath = useMemo(() => {
-    // Don't render if no valid price data or price is 0
-    if (!scales || priceHistory.length < 2 || currentPrice === 0) return '';
+    // Don't render if no scales or no price data yet
+    if (!scales || currentPrice <= 0) return '';
 
+    // Filter points that are actually visible on screen to speed up rendering
     const visiblePoints = priceHistory.filter((p: any) => {
       const x = scales.xScale(p.timestamp);
-      return x > -50 && x <= scales.tipX + 5;
+      return x > -100 && x <= scales.tipX + 10;
     });
 
-    // Need at least 2 visible points
-    if (visiblePoints.length < 2) return '';
-
+    // Ensure we have at least history or current point
     const pointsToRender = [...visiblePoints];
-
-    // Only add current live point if we have history and valid price
-    // This prevents drawing a line from old asset price to new asset price
-    if (priceHistory.length >= 2 && currentPrice > 0) {
+    
+    // Always include current live point
+    if (currentPrice > 0) {
       pointsToRender.push({ timestamp: now, price: currentPrice });
     }
 
-    const lineGenerator = d3Shape.line<{ timestamp: number, price: number }>()
-      .x((d) => scales.xScale(d.timestamp))
-      .y((d) => scales.yScale(d.price))
-      .curve(d3Shape.curveCatmullRom.alpha(0.35));
+    // Need at least 2 points for a line
+    if (pointsToRender.length < 2) return '';
 
-    return lineGenerator(pointsToRender) || '';
+    try {
+      const lineGenerator = line<{ timestamp: number, price: number }>()
+        .x((d) => scales.xScale(d.timestamp))
+        .y((d) => scales.yScale(d.price))
+        .curve(curveCatmullRom.alpha(0.35));
+
+      return lineGenerator(pointsToRender) || '';
+    } catch (err) {
+      console.error("Chart line generation error:", err);
+      return '';
+    }
   }, [scales, priceHistory, currentPrice, now]);
 
   // TECHNICAL INDICATORS CALCULATION
@@ -650,10 +664,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         const avg = slice.reduce((sum, p) => sum + p.price, 0) / slice.length;
         maPoints.push({ timestamp: points[i].timestamp, price: avg });
       }
-      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+      const lineGen = line<{ timestamp: number, price: number }>()
         .x(d => scales.xScale(d.timestamp))
         .y(d => scales.yScale(d.price))
-        .curve(d3Shape.curveMonotoneX);
+        .curve(curveMonotoneX);
       paths.ma = lineGen(maPoints) || '';
     }
 
@@ -679,10 +693,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         midPoints.push({ timestamp: points[i].timestamp, price: avg });
       }
 
-      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+      const lineGen = line<{ timestamp: number, price: number }>()
         .x(d => scales.xScale(d.timestamp))
         .y(d => scales.yScale(d.price))
-        .curve(d3Shape.curveMonotoneX);
+        .curve(curveMonotoneX);
 
       paths.bollinger = [
         lineGen(topPoints) || '',
@@ -704,13 +718,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
         return sma;
       };
 
-      const lineGen = d3Shape.line<{ timestamp: number, price: number }>()
+      const lineGen = line<{ timestamp: number, price: number }>()
         .x(d => scales.xScale(d.timestamp))
         .y(d => scales.yScale(d.price))
-        .curve(d3Shape.curveMonotoneX);
+        .curve(curveMonotoneX);
 
       paths.alligator = [
         lineGen(calculateDynamicSMA(13)) || '', // Jaw
+        lineGen(calculateDynamicSMA(8)) || '',  // Teeth
+        lineGen(calculateDynamicSMA(5)) || '',  // Lips
       ];
     }
 
@@ -762,6 +778,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
     // Calculate a stable price step based on the current range to ensure the grid "slides" correctly
     const rawStep = (scales.maxY - scales.minY) / 10;
+    // Safety check: rawStep must be positive and meaningful
+    if (isNaN(rawStep) || rawStep <= 0) return [];
+    
     // Snap to "nice" numbers (e.g., 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100...)
     const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     const normalized = rawStep / magnitude;
@@ -890,7 +909,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     }
 
     return cells;
-  }, [scales, now, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset, isBlitzActive, hasBlitzAccess, blitzMultiplier]);
+  }, [scales, currentPrice, dimensions, gameMode, timeframeSeconds, selectedAsset, isBlitzActive, hasBlitzAccess, blitzMultiplier]);
 
 
 
@@ -1118,11 +1137,49 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
                 try {
                   const targetId = `${cell.isUp ? 'UP' : 'DOWN'}-${cell.multiplier}-${timeframeSeconds}`;
+                  
+                  let signature: string | undefined;
+
+                  // Special path for SOL and BNB: Send stake transaction first
+                  if ((network === 'SOL' && currencySymbol === 'SOL') || (network === 'BNB' && currencySymbol === 'BNB')) {
+                    toast.info(`Sending ${betAmount} ${currencySymbol} stake...`);
+                    try {
+                      if (network === 'SOL' && currencySymbol === 'SOL') {
+                        const { getSolanaConnection, buildSolTransferTransaction } = await import('@/lib/solana/client');
+                        const connection = getSolanaConnection();
+                        const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS_SOL || process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
+                        if (!treasuryWallet) throw new Error('SOL treasury wallet not configured');
+                        
+                        const transaction = await buildSolTransferTransaction(parseFloat(betAmount), userAddress, treasuryWallet);
+                        signature = await sendSolanaTransaction(transaction, connection);
+                      } else if (network === 'BNB' && currencySymbol === 'BNB') {
+                        const wallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
+                        if (!wallet) throw new Error("Active wallet not found in session");
+                        const ethereumProvider = await wallet.getEthereumProvider();
+                        const provider = new ethers.BrowserProvider(ethereumProvider);
+                        const signer = await provider.getSigner();
+                        const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
+                        if (!treasuryWallet) throw new Error('BNB treasury wallet not configured');
+                        const txResponse = await signer.sendTransaction({
+                          to: getAddress(treasuryWallet),
+                          value: ethers.parseEther(betAmount),
+                        });
+                        await txResponse.wait();
+                        signature = txResponse.hash;
+                      }
+                    } catch (txErr: any) {
+                      console.error("Stake transaction failed:", txErr);
+                      toast.error(txErr.message || "Failed to send stake transaction");
+                      return;
+                    }
+                  }
+
                   const result = await placeBetFromHouseBalance(
                     betAmount,
                     targetId,
                     userAddress,
-                    cell.id
+                    cell.id,
+                    { txHash: signature }
                   );
 
                   if (result && result.bet) {
@@ -1599,10 +1656,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                     {activeIndicators['rsi'] && indicatorPaths.rsi && (() => {
                       try {
                         const rsiPoints = JSON.parse(indicatorPaths.rsi as string);
-                        const rsiLine = d3Shape.line<{ timestamp: number, rsi: number }>()
+                        const rsiLine = line<{ timestamp: number, rsi: number }>()
                           .x(d => scales.xScale(d.timestamp))
                           .y(d => dimensions.height - 40 - (d.rsi / 100) * 80)
-                          .curve(d3Shape.curveMonotoneX);
+                          .curve(curveMonotoneX);
 
                         const panelHeight = 100;
                         const panelY = dimensions.height - panelHeight - 20;
@@ -1623,10 +1680,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
                             {/* RSI Line */}
                             <path
-                              d={d3Shape.line<{ timestamp: number, rsi: number }>()
+                              d={line<{ timestamp: number, rsi: number }>()
                                 .x(d => scales.xScale(d.timestamp))
                                 .y(d => panelHeight - (d.rsi / 100) * panelHeight)
-                                .curve(d3Shape.curveMonotoneX)(rsiPoints) || ''}
+                                .curve(curveMonotoneX)(rsiPoints) || ''}
                               fill="none"
                               stroke="#a855f7"
                               strokeWidth="2"

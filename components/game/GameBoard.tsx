@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { LiveChart } from './';
 import { BalanceDisplay } from '@/components/balance';
 import { startPriceFeed } from '@/lib/store/gameSlice';
@@ -65,6 +66,7 @@ export const GameBoard: React.FC = () => {
   const { disconnect: wagmiDisconnect } = useWagmiDisconnect();
   const { mutate: disconnectSui } = useSuiDisconnect();
   const { disconnect: disconnectInitia, requestTxBlock: requestInitiaTx } = useInterwovenKit();
+  const { signAndSubmitTransaction: signAndSubmitAptos } = useAptosWallet();
 
   const [betAmount, setBetAmount] = useState<string>('0.1');
   // Default box-mode settings (when user lands on /trade):
@@ -86,7 +88,7 @@ export const GameBoard: React.FC = () => {
   const [addressCopied, setAddressCopied] = useState(false);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : network === 'APT' ? 'APT' : 'BNB';
   // Per-chain blitz entry fees (paid to the platform fee collector wallet, not treasury).
   const BLITZ_FEES: Record<string, number> = {
     BNB:    0.1,
@@ -102,6 +104,7 @@ export const GameBoard: React.FC = () => {
     ZG:     0.01,
     OCT:    0.01,
     INIT:   0.01,
+    APT:    0.1,
   };
   const blitzEntryFee = (network ? BLITZ_FEES[network] : undefined) ?? 0.01;
 
@@ -289,6 +292,25 @@ export const GameBoard: React.FC = () => {
         toast.info(`Confirming ${blitzEntryFee} INIT Blitz Entry...`);
         const result = await requestInitiaTx(txRequest);
         console.log("Initia Blitz payment hash:", result.transactionHash);
+      } else if (network === 'APT') {
+        const { getAptosClient } = await import('@/lib/aptos/client');
+        const { signAndSubmitTransaction } = await import('@aptos-labs/wallet-adapter-react');
+        const client = getAptosClient();
+        const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_APT;
+        if (!feeWallet) throw new Error('APT fee collector wallet not configured');
+        
+        toast.info(`Confirming ${blitzEntryFee} APT Blitz Entry...`);
+        
+        const response = await signAndSubmitAptos({
+          data: {
+            function: "0x1::aptos_account::transfer",
+            typeArguments: [],
+            functionArguments: [feeWallet, (BigInt(Math.floor(blitzEntryFee * 1e8))).toString()],
+          }
+        });
+        
+        console.log("Aptos Blitz payment hash:", response.hash);
+        await client.getSDK().waitForTransaction({ transactionHash: response.hash });
       } else {
         throw new Error(`Blitz not supported for network: ${network}`);
       }
@@ -434,10 +456,47 @@ export const GameBoard: React.FC = () => {
         currency: currencySymbol
       })
       
+      // Special path for SOL and BNB: Send stake transaction first
+      if (network === 'SOL' || network === 'BNB') {
+        toast.info(`Sending ${betAmount} ${currencySymbol} stake...`);
+        try {
+          if (network === 'SOL' && currencySymbol === 'SOL') {
+            const { getSolanaConnection, buildSolTransferTransaction } = await import('@/lib/solana/client');
+            const connection = getSolanaConnection();
+            const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS_SOL || process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
+            if (!treasuryWallet) throw new Error('SOL treasury wallet not configured');
+            
+            const transaction = await buildSolTransferTransaction(parseFloat(betAmount), address, treasuryWallet);
+            const signature = await sendSolanaTransaction(transaction, connection);
+            console.log(`Solana SOL stake payment sig:`, signature);
+          } else if (network === 'BNB' && currencySymbol === 'BNB') {
+            const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+            if (!wallet) throw new Error("Active wallet not found in session");
+            const ethereumProvider = await wallet.getEthereumProvider();
+            const provider = new ethers.BrowserProvider(ethereumProvider);
+            const signer = await provider.getSigner();
+            const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
+            if (!treasuryWallet) throw new Error('BNB treasury wallet not configured');
+            const txResponse = await signer.sendTransaction({
+              to: getAddress(treasuryWallet),
+              value: ethers.parseEther(betAmount),
+            });
+            console.log("BNB stake payment tx:", txResponse.hash);
+            await txResponse.wait();
+          }
+        } catch (txErr: any) {
+          console.error("Stake transaction failed:", txErr);
+          toast.error(txErr.message || "Failed to send stake transaction");
+          return;
+        }
+      }
+
       await placeBetFromHouseBalance(
         betAmount,
         `${direction}-${multiplier}-${selectedDuration}`,
-        address
+        address,
+        undefined,
+        { txHash: signature }
       );
     } catch (err) {
       console.error("Failed to place bet:", err);

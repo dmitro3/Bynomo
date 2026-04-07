@@ -83,7 +83,7 @@ export interface GameState {
   setSelectedAsset: (asset: AssetType) => void;
   setTimeframeSeconds: (seconds: number) => void;
   placeBet: (amount: string, targetId: string) => Promise<void>;
-  placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string, metadata?: { priceTop?: number; priceBottom?: number; startTime?: number; endTime?: number }) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
+  placeBetFromHouseBalance: (amount: string, targetId: string, userAddress: string, cellId?: string, metadata?: { priceTop?: number; priceBottom?: number; startTime?: number; endTime?: number; txHash?: string }) => Promise<{ betId: string; remainingBalance: number; bet: ActiveBet } | void>;
   updatePrice: (price: number, asset?: AssetType) => void;
   updateAllPrices: (prices: Record<string, number>) => void;
   startGlobalPriceFeed: (updateAllPrices: (prices: Record<string, number>) => void) => (() => void);
@@ -290,7 +290,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
     targetId: string,
     userAddress: string,
     cellId?: string,
-    metadata?: { priceTop?: number; priceBottom?: number; startTime?: number; endTime?: number }
+    metadata?: { priceTop?: number; priceBottom?: number; startTime?: number; endTime?: number; txHash?: string }
   ) => {
     const { targetCells, currentPrice, addActiveBet, gameMode, timeframeSeconds, selectedAsset } = get();
 
@@ -412,15 +412,17 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: userAddress, // Use the provided address directly
+          userAddress: userAddress,
           betAmount,
           currency: currency,
+          txHash: metadata?.txHash, // Pass transaction hash if provided (SOL/BNB)
           roundId: Date.now(),
           targetPrice: currentPrice,
           isOver: direction === 'UP',
           multiplier: multiplier,
+          asset: selectedAsset,
           targetCell: {
-            id: 9, // Always use 9 for dynamic grid bets
+            id: 9,
             priceChange: target.priceChange,
             direction: direction,
             timeframe: durationSeconds,
@@ -496,115 +498,90 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   },
 
   /**
-   * Update all prices at once
+   * Update all prices at once (Atomic)
    */
   updateAllPrices: (prices: Record<string, number>) => {
-    const { updatePrice } = get();
-    Object.entries(prices).forEach(([asset, price]) => {
-      updatePrice(price, asset as AssetType);
-    });
-  },
-
-  /**
-   * Update current price and add to history
-   * @param price - New price in USD
-   * @param asset - The asset being updated
-   */
-  updatePrice: (price: number, asset?: AssetType) => {
-    const {
-      priceHistory, selectedAsset, assetPrices, rawAssetPrices,
-      activeBets, resolveBet, updateBalance, address, accountType, fetchBalance
+    const { 
+      selectedAsset, activeBets, resolveBet, assetPrices, 
+      assetHistories, rawAssetPrices, address, accountType, 
+      fetchBalance, updateBalance 
     } = get();
-    const currentSelectedAsset = (asset || selectedAsset) as AssetType;
     const now = Date.now();
+    
+    // Create clones of existing collections to modify
+    const updatedAssetPrices = { ...assetPrices };
+    const updatedAssetHistories = { ...assetHistories };
+    const updatedRawPrices = { ...rawAssetPrices };
+    
+    let currentAssetUpdated = false;
+    let nextCurrentPrice = 0;
+    let nextCurrentHistory: PricePoint[] = [];
 
-    // VOLATILITY AMPLIFICATION ENGINE
-    // Increased across all assets so chart motion is more pronounced.
-    const getVolatilityMultiplier = (a: AssetType) => {
-      // Forex pairs
-      if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 12.0;
-      // Stocks
-      if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 12.0;
-      // Metals
-      if (['GOLD', 'SILVER'].includes(a)) return 4.0;
-      // Crypto
-      return 2.0;
+    Object.entries(prices).forEach(([asset, price]) => {
+      const assetKey = asset as AssetType;
+      
+      // Get volatility multiplier based on asset type
+      const getVolatilityMultiplier = (a: AssetType) => {
+        if (['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(a)) return 12.0;
+        if (['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX'].includes(a)) return 12.0;
+        if (['GOLD', 'SILVER'].includes(a)) return 4.0;
+        return 2.0;
+      };
+
+      const multiplier = getVolatilityMultiplier(assetKey);
+      const lastRawPrice = updatedRawPrices[assetKey] || price;
+      const rawDelta = price - lastRawPrice;
+      
+      const jitterSign = Math.random() > 0.5 ? 1 : -1;
+      const jitterAmount = price * (0.00004 + Math.random() * 0.00008) * jitterSign;
+      
+      const amplifiedDelta = (rawDelta * multiplier) + jitterAmount;
+      const previousVirtualPrice = updatedAssetPrices[assetKey] || price;
+      const finalPrice = previousVirtualPrice + amplifiedDelta;
+
+      updatedAssetPrices[assetKey] = finalPrice;
+      updatedRawPrices[assetKey] = price;
+
+      const history = [...(updatedAssetHistories[assetKey] || [])];
+      history.push({ timestamp: now, price: finalPrice });
+      updatedAssetHistories[assetKey] = history.slice(-MAX_PRICE_HISTORY);
+
+      if (assetKey === selectedAsset) {
+        currentAssetUpdated = true;
+        nextCurrentPrice = finalPrice;
+        nextCurrentHistory = updatedAssetHistories[assetKey];
+      }
+
+      // RESOLUTION LOGIC: Check bets for this asset
+      if (activeBets && activeBets.length > 0) {
+        activeBets.forEach((bet: ActiveBet) => {
+          if ((bet.asset || 'BNB') !== assetKey || bet.status !== 'active') return;
+
+          if (bet.mode === 'binomo' && bet.endTime && bet.strikePrice !== undefined && now >= bet.endTime) {
+            const won = bet.direction === 'UP' ? finalPrice > bet.strikePrice : finalPrice < bet.strikePrice;
+            resolveBet(bet.id, won, won ? bet.amount * bet.multiplier : 0);
+          } else if (bet.mode === 'box' && bet.endTime && bet.priceTop !== undefined && bet.priceBottom !== undefined && now >= bet.endTime) {
+            const won = finalPrice <= bet.priceTop && finalPrice >= bet.priceBottom;
+            resolveBet(bet.id, won, won ? bet.amount * bet.multiplier : 0);
+          }
+        });
+      }
+    });
+
+    // Atomic set call for all updates
+    const updateObj: any = {
+      assetPrices: updatedAssetPrices,
+      assetHistories: updatedAssetHistories,
+      rawAssetPrices: updatedRawPrices,
+      error: null
     };
 
-    const multiplier = getVolatilityMultiplier(currentSelectedAsset);
-    const lastRawPrice = rawAssetPrices[currentSelectedAsset] || price;
-    const rawDelta = price - lastRawPrice;
-
-    // Calculate amplified delta
-    let amplifiedDelta = rawDelta * multiplier;
-
-    // Add stronger micro-jitter so feeds never look visually stuck between oracle updates.
-    const jitterSign = Math.random() > 0.5 ? 1 : -1;
-    const jitterAmount = price * (0.000025 + Math.random() * 0.00005) * jitterSign;
-    amplifiedDelta += jitterAmount;
-
-    // The new price to be used in the game state
-    // If it's the first time we see this asset, use raw price
-    const currentVirtualPrice = assetPrices[currentSelectedAsset] || price;
-    const finalPrice = currentVirtualPrice + amplifiedDelta;
-
-    // Update global asset prices
-    const updatedAssetPrices = { ...assetPrices, [currentSelectedAsset]: finalPrice };
-    const updatedRawPrices = { ...rawAssetPrices, [currentSelectedAsset]: price };
-
-    // Primary update for the selected chart asset
-    const newPoint: PricePoint = { timestamp: now, price: finalPrice };
-    const currentAssetHistory = get().assetHistories[currentSelectedAsset] || [];
-    const updatedHistory = [...currentAssetHistory, newPoint].slice(-MAX_PRICE_HISTORY);
-
-    const updatedAssetHistories = {
-      ...get().assetHistories,
-      [currentSelectedAsset]: updatedHistory
-    };
-
-    if (currentSelectedAsset === selectedAsset) {
-      set({
-        currentPrice: finalPrice,
-        priceHistory: updatedHistory,
-        assetPrices: updatedAssetPrices,
-        assetHistories: updatedAssetHistories,
-        rawAssetPrices: updatedRawPrices
-      });
-    } else {
-      set({
-        assetPrices: updatedAssetPrices,
-        assetHistories: updatedAssetHistories,
-        rawAssetPrices: updatedRawPrices
-      });
+    if (currentAssetUpdated) {
+      updateObj.currentPrice = nextCurrentPrice;
+      updateObj.priceHistory = nextCurrentHistory;
     }
 
-    // RESOLUTION LOGIC: Check for expired bets for THIS specific asset
-    if (!activeBets) return;
-
-    activeBets.forEach((bet: ActiveBet) => {
-      // Resolve bet if: asset matches and status is active
-      const betAsset = bet.asset || 'BNB'; // Fallback
-      if (betAsset !== currentSelectedAsset || bet.status !== 'active') return;
-
-      // BINOMO (Classic) Logic
-      if (bet.mode === 'binomo' && bet.endTime && bet.strikePrice !== undefined && now >= bet.endTime) {
-        let won = false;
-        if (bet.direction === 'UP') {
-          won = finalPrice > bet.strikePrice;
-        } else {
-          won = finalPrice < bet.strikePrice;
-        }
-
-        const payout = won ? bet.amount * bet.multiplier : 0;
-        resolveBet(bet.id, won, payout);
-      }
-      // BOX MODE Logic (Instant resolution if metadata present)
-      else if (bet.mode === 'box' && bet.endTime && bet.priceTop !== undefined && bet.priceBottom !== undefined && now >= bet.endTime) {
-        const won = finalPrice <= bet.priceTop && finalPrice >= bet.priceBottom;
-        const payout = won ? bet.amount * bet.multiplier : 0;
-        resolveBet(bet.id, won, payout);
-      }
-    });
+    set(updateObj);
   },
 
 
@@ -833,11 +810,18 @@ export const startGlobalPriceFeed = (
   let stopFeedFn: (() => void) | null = null;
   let isActive = true;
 
+  // Use a more immediate load
   import('@/lib/utils/priceFeed').then(({ startMultiPythPriceFeed }) => {
     if (!isActive) return;
+    
     stopFeedFn = startMultiPythPriceFeed((prices) => {
-      if (isActive) {
-        updateAllPrices(prices);
+      if (isActive && Object.keys(prices).length > 0) {
+        // Wrap in a try-catch to prevent one bad update from freezing the feed
+        try {
+          updateAllPrices(prices);
+        } catch (e) {
+          console.error("Price update error:", e);
+        }
       }
     });
   }).catch(err => {
@@ -846,7 +830,9 @@ export const startGlobalPriceFeed = (
 
   return () => {
     isActive = false;
-    if (stopFeedFn) stopFeedFn();
+    if (stopFeedFn) {
+      stopFeedFn();
+    }
   };
 };
 

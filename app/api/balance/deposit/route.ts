@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana, Sui, Starknet, Stellar, Tezos or NEAR required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui, Aptos, Starknet, Stellar, Tezos or NEAR required)' },
         { status: 400 }
       );
     }
@@ -207,6 +207,26 @@ export async function POST(request: NextRequest) {
         console.error('[deposit] Initia verification failed:', verifyErr);
         return NextResponse.json(
           { error: 'Failed to verify Initia transaction' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Aptos deposit verification
+    if (normalizedCurrency === 'APT') {
+      try {
+        const { verifyAptosDepositTx } = await import('@/lib/aptos/backend-client');
+        const verified = await verifyAptosDepositTx(txHash, userAddress, amount);
+        if (!verified) {
+          return NextResponse.json(
+            { error: 'Aptos deposit transaction could not be verified on-chain' },
+            { status: 400 }
+          );
+        }
+      } catch (verifyErr) {
+        console.error('[deposit] Aptos verification failed:', verifyErr);
+        return NextResponse.json(
+          { error: 'Failed to verify Aptos transaction' },
           { status: 400 }
         );
       }

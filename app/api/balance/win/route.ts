@@ -20,7 +20,10 @@ export async function POST(request: NextRequest) {
     try {
         // Parse request body
         const body: WinRequest = await request.json();
-        const { userAddress, winAmount, currency = 'BNB', betId } = body;
+        const userAddress = body.userAddress;
+        const winAmount = body.winAmount;
+        const currency = (body.currency || 'BNB') as string;
+        const betId = body.betId;
 
         // Validate required fields
         if (!userAddress || winAmount === undefined || winAmount === null) {
@@ -62,6 +65,33 @@ export async function POST(request: NextRequest) {
             if (existing && existing.length > 0) {
                 console.warn(`[balance/win] duplicate payout blocked for betId=${betId}`);
                 return NextResponse.json({ success: true, duplicate: true, winAmount });
+            }
+        }
+
+        // ── NEW: Direct Payout for SOL and BNB ───────────────────────────────
+        if (currency === 'SOL' || currency === 'BNB') {
+            console.log(`[balance/win] Direct payout requested for ${currency}: ${winAmount} to ${userAddress}`);
+            
+            try {
+                if ((currency as string) === 'SOL') {
+                    const { sendSOLFromTreasury } = await import('@/lib/solana/treasury');
+                    const signature = await sendSOLFromTreasury(userAddress, winAmount);
+                    console.log(`[balance/win] SOL Payout Success: ${signature}`);
+                } else if ((currency as string) === 'BNB') {
+                    const { sendBNBFromTreasury } = await import('@/lib/bnb/treasury');
+                    const hash = await sendBNBFromTreasury(userAddress, winAmount);
+                    console.log(`[balance/win] BNB Payout Success: ${hash}`);
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    payoutStatus: 'sent_on_chain',
+                    winAmount: winAmount
+                });
+            } catch (payoutErr: any) {
+                console.error(`[balance/win] Failed to send ${currency} payout:`, payoutErr);
+                // We still want to log the win even if automated payout fails (for manual retry)
+                // Fallback to recording the win in the audit log at least
             }
         }
 

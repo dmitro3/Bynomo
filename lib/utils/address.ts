@@ -29,6 +29,15 @@ export const isValidAddress = async (address: string): Promise<boolean> => {
     // 8. Initia (INIT) - Bech32 init1 prefix
     if (/^init1[a-z0-9]{38}$/.test(address)) return true;
 
+    // 9. Aptos (APT)
+    try {
+        const { AccountAddress } = await import('@aptos-labs/ts-sdk');
+        AccountAddress.from(address);
+        return true;
+    } catch {
+        // Not a valid Aptos address
+    }
+
     // 7. Solana (SOL) - Base58 string
     try {
         const { PublicKey } = await import('@solana/web3.js');

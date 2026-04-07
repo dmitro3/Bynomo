@@ -7,6 +7,7 @@ import { useOverflowStore } from '@/lib/store';
 import { useToast } from '@/lib/hooks/useToast';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWalletClient, useAccount } from 'wagmi';
+import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -32,6 +33,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const { data: walletClient } = useWalletClient();
   const { connector } = useAccount();
 
+  // Aptos Hook
+  const { signMessage: signAptosMessage, connected: isAptosConnected } = useAptosWallet();
+
   const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
   const setSelectedCurrency = useOverflowStore(state => state.setSelectedCurrency);
   const suiToken = network === 'SUI' ? (selectedCurrency === 'USDC' ? 'USDC' : 'SUI') : null;
@@ -41,30 +45,32 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   const currencySymbol =
     network === 'SUI' ? (suiToken ?? 'SUI') :
       network === 'SOL' ? (selectedCurrency || 'SOL') :
-        network === 'XLM' ? 'XLM' :
-          network === 'XTZ' ? 'XTZ' :
-            network === 'NEAR' ? 'NEAR' :
-              network === 'STRK' ? 'STRK' :
-                network === 'PUSH' ? 'PC' :
-                  network === 'SOMNIA' ? 'STT' :
-                    network === 'OCT' ? 'OCT' :
-                      network === 'ZG' ? '0G' :
-                        network === 'INIT' ? 'INIT' :
-                          'BNB';
+        network === 'APT' ? 'APT' :
+          network === 'XLM' ? 'XLM' :
+            network === 'XTZ' ? 'XTZ' :
+              network === 'NEAR' ? 'NEAR' :
+                network === 'STRK' ? 'STRK' :
+                  network === 'PUSH' ? 'PC' :
+                    network === 'SOMNIA' ? 'STT' :
+                      network === 'OCT' ? 'OCT' :
+                        network === 'ZG' ? '0G' :
+                          network === 'INIT' ? 'INIT' :
+                            'BNB';
 
   const networkName =
     network === 'SUI' ? 'Sui Network' :
       network === 'SOL' ? 'Solana' :
-        network === 'XLM' ? 'Stellar' :
-          network === 'XTZ' ? 'Tezos' :
-            network === 'NEAR' ? 'NEAR Protocol' :
-              network === 'STRK' ? 'Starknet Mainnet' :
-                network === 'PUSH' ? 'Push Chain' :
-                  network === 'SOMNIA' ? 'Somnia Testnet' :
-                    network === 'OCT' ? 'OneChain' :
-                      network === 'ZG' ? '0G Mainnet' :
-                        network === 'INIT' ? 'Initia Mainnet' :
-                          'BNB Chain';
+        network === 'APT' ? 'Aptos Mainnet' :
+          network === 'XLM' ? 'Stellar' :
+            network === 'XTZ' ? 'Tezos' :
+              network === 'NEAR' ? 'NEAR Protocol' :
+                network === 'STRK' ? 'Starknet Mainnet' :
+                  network === 'PUSH' ? 'Push Chain' :
+                    network === 'SOMNIA' ? 'Somnia Testnet' :
+                      network === 'OCT' ? 'OneChain' :
+                        network === 'ZG' ? '0G Mainnet' :
+                          network === 'INIT' ? 'Initia Mainnet' :
+                            'BNB Chain';
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -158,6 +164,19 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
         } else {
           throw new Error('Unable to sign withdrawal authorization message for this wallet');
         }
+      } else if (network === 'APT') {
+        if (!isAptosConnected) throw new Error('Aptos wallet not connected');
+        signedAt = Date.now();
+        const message = `BYNOMO withdrawal authorization\naddress:${address}\namount:${withdrawAmount.toFixed(8)}\ncurrency:APT\nsignedAt:${signedAt}`;
+        
+        toast.info('Please sign the withdrawal authorization message in your Aptos wallet...');
+        
+        const response = await signAptosMessage({
+          message: message,
+          nonce: signedAt.toString(),
+        });
+        
+        signature = (response as any).signature;
       }
 
       // Call the withdrawal store action (which calls the backend)
@@ -249,6 +268,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
             {network === 'OCT' && <img src="/logos/onechain.png" alt="OCT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {network === 'INIT' && <img src="/logos/initia.png" alt="INIT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/bnb-bnb-logo.png'; }} />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

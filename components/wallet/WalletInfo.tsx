@@ -49,7 +49,8 @@ export const WalletInfo: React.FC = () => {
                     network === 'OCT' ? 'OCT' :
                       network === 'ZG' ? '0G' :
                         network === 'INIT' ? 'INIT' :
-                          'BNB';
+                          network === 'APT' ? 'APT' :
+                            'BNB';
 
   const networkName =
     network === 'SUI' ? 'Sui Network' :
@@ -63,7 +64,8 @@ export const WalletInfo: React.FC = () => {
                     network === 'OCT' ? 'OneChain' :
                       network === 'ZG' ? '0G Mainnet' :
                         network === 'INIT' ? 'Initia Mainnet' :
-                          'BNB Chain';
+                          network === 'APT' ? 'Aptos Mainnet' :
+                            'BNB Chain';
 
   const networkLogo =
     network === 'SOMNIA' ? '/logos/somnia.jpg' :
@@ -78,7 +80,8 @@ export const WalletInfo: React.FC = () => {
                       network === 'OCT' ? '/logos/onechain.png' :
                         network === 'ZG' ? '/logos/0g.png' :
                           network === 'INIT' ? '/logos/initia.png' :
-                            '/logos/bnb-bnb-logo.png';
+                            network === 'APT' ? '/logos/aptos-logo.png' :
+                              '/logos/bnb-bnb-logo.png';
 
   const balance = walletBalance.toFixed(4);
   const isLoading = false; // Store doesn't have isLoading for wallet balance yet, but fetch is fast

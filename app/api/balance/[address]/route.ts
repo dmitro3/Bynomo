@@ -65,7 +65,7 @@ export async function GET(
 
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid wallet address format (BNB, Solana, Sui, Starknet, Stellar, Tezos or NEAR required)' },
+        { error: 'Invalid wallet address format (BNB, Solana, Sui, Aptos, Starknet, Stellar, Tezos or NEAR required)' },
         { status: 400 }
       );
     }

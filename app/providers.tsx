@@ -25,6 +25,10 @@ import '@mysten/dapp-kit/dist/index.css';
 import { InterwovenKitProvider, MAINNET as INITIA_MAINNET, injectStyles as injectInitiaStyles, useInterwovenKit } from '@initia/interwovenkit-react';
 import interwovenKitStyles from '@initia/interwovenkit-react/styles.js';
 
+// Aptos Imports
+import { AptosWalletAdapterProvider, useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
+import { Network } from '@aptos-labs/ts-sdk';
+
 // Custom Components
 import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
@@ -41,6 +45,7 @@ function WalletSync() {
   const { address: wagmiAddress, isConnected: wagmiConnected, chainId: wagmiChainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const { address: initiaAddress, isConnected: initiaConnected } = useInterwovenKit();
+  const { account: aptosAccount, connected: aptosConnected } = useAptosWallet();
 
   // Fetch PC balance via wagmi (reliable, uses already-established connection)
   const { data: pushBalanceData } = useBalance({
@@ -199,6 +204,19 @@ function WalletSync() {
       return;
     }
 
+    // 2d. Aptos (APT)
+    if (aptosConnected && aptosAccount?.address && preferredNetwork === 'APT') {
+      const aptosAddr = aptosAccount.address.toString();
+      if (address !== aptosAddr || !storeIsConnected || storeNetwork !== 'APT') {
+        setAddress(aptosAddr);
+        setIsConnected(true);
+        setNetwork('APT');
+        refreshWalletBalance();
+        fetchProfile(aptosAddr);
+      }
+      return;
+    }
+
     // 3. Push Chain (via wagmi/ConnectKit on chainId 42101)
     if (preferredNetwork === 'PUSH') {
       if (wagmiConnected && wagmiAddress && wagmiChainId === pushChainDonut.id) {
@@ -336,6 +354,7 @@ function WalletSync() {
     const hasZG = wagmiConnected && !!wagmiAddress && wagmiChainId === zgMainnet.id;
     const hasOCT = preferredNetwork === 'OCT' && !!suiAccount?.address;
     const hasINIT = preferredNetwork === 'INIT' && initiaConnected && !!initiaAddress;
+    const hasAPT = preferredNetwork === 'APT' && aptosConnected && !!aptosAccount?.address;
 
     let shouldClear = false;
     if (isDemoMode) {
@@ -352,7 +371,8 @@ function WalletSync() {
       else if ((preferredNetwork as string) === 'ZG' && !hasZG) shouldClear = true;
       else if (preferredNetwork === 'OCT' && !hasOCT) shouldClear = true;
       else if (preferredNetwork === 'INIT' && !hasINIT) shouldClear = true;
-      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA && !hasZG && !hasOCT && !hasINIT) shouldClear = true;
+      else if (preferredNetwork === 'APT' && !hasAPT) shouldClear = true;
+      else if (!preferredNetwork && !hasBNB && !hasSolana && !hasSui && !hasStellar && !hasTezos && !hasNEAR && !hasSTRK && !hasPUSH && !hasSOMNIA && !hasZG && !hasOCT && !hasINIT && !hasAPT) shouldClear = true;
     }
 
     if (shouldClear && address !== null) {
@@ -497,11 +517,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
                     <WalletProvider autoConnect>
                       <InterwovenKitProvider {...INITIA_MAINNET}>
-                        <WalletSync />
-                        <ReferralSync />
-                        {children}
-                        <WalletConnectModal />
-                        <ToastProvider />
+                        <AptosWalletAdapterProvider autoConnect dappConfig={{ network: Network.MAINNET }}>
+                          <WalletSync />
+                          <ReferralSync />
+                          {children}
+                          <WalletConnectModal />
+                          <ToastProvider />
+                        </AptosWalletAdapterProvider>
                       </InterwovenKitProvider>
                     </WalletProvider>
                   </SuiClientProvider>
