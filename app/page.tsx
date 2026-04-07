@@ -240,7 +240,7 @@ export default function WaitlistPage() {
                                     }
                                 }
                             }}
-                            className="flex flex-nowrap"
+                            className="flex flex-wrap lg:flex-nowrap justify-center lg:justify-start"
                         >
                             {Array.from("BYNOMO").map((letter, index) => (
                                 <motion.h1
@@ -258,7 +258,7 @@ export default function WaitlistPage() {
                                             }
                                         }
                                     }}
-                                    className="text-[14vw] lg:text-[10rem] font-black leading-[0.8] tracking-tighter text-white"
+                                    className="text-[18vw] sm:text-[14vw] lg:text-[10rem] font-black leading-[0.8] tracking-tighter text-white"
                                     style={{ fontFamily: 'var(--font-orbitron)' }}
                                 >
                                     {letter}
@@ -272,7 +272,7 @@ export default function WaitlistPage() {
                         initial={{ x: 100, opacity: 0, filter: "blur(10px)" }}
                         animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
                         transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative z-20 flex flex-col justify-center items-start lg:pl-4 -mt-8 lg:mt-0 gap-6 lg:gap-8"
+                        className="relative z-20 flex flex-col justify-center items-center lg:items-start lg:pl-4 -mt-8 lg:mt-0 gap-6 lg:gap-8 text-center lg:text-left"
                     >
                         <Link
                             href="/litepaper"
@@ -292,7 +292,7 @@ export default function WaitlistPage() {
                         >
                             Predict the next tick.
                         </motion.h2>
-                        <p className="text-sm lg:text-base text-white/45 font-medium max-w-md leading-relaxed">
+                        <p className="text-sm lg:text-base text-white/45 font-medium max-w-md leading-relaxed mx-auto lg:mx-0">
                             BYNOMO is live — connect your wallet, fund your house balance, and trade multi-asset charts with oracle-backed prices.
                         </p>
                         <button

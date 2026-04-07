@@ -369,7 +369,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const gridInterval = ((gameMode === 'box' || gameMode === 'draw') ? timeframeSeconds : 30) * 1000; // ms per column
   const pixelsPerSecond = (gameMode === 'box' || gameMode === 'draw')
     ? Math.max(2, targetColWidthPx / (gridInterval / 1000))
-    : (isMobile ? 25 : 50);
+    : (isMobile ? 35 : 50);
   const numRows = 12; // Standardize for all assets to ensure consistent box size
 
   // Scales
@@ -390,7 +390,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   0.0020 // Default
     );
 
-    const mobileZoomFactor = isMobile ? 5.0 : 1.0;
+    const mobileZoomFactor = isMobile ? 1.8 : 1.0;
     const rangePercent = ((gameMode === 'box' || gameMode === 'draw') ? baseRange * 0.8 : baseRange) * mobileZoomFactor;
 
     const targetMin = currentPrice * (1 - rangePercent);
