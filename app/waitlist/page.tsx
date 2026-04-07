@@ -8,7 +8,6 @@ import TrueFocus from '@/components/ui/TrueFocus';
 import HowItWorksDemo from './HowItWorksDemo';
 import { supabase } from '@/lib/supabase/client';
 import './waitlist.css';
-import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 
 const steps = [
     {
@@ -396,9 +395,6 @@ export default function WaitlistPage() {
             <footer className="py-24 px-10 border-t border-white/5 bg-black relative z-10 w-full overflow-hidden">
                 <div className="huge-footer-logo">BYNOMO</div>
 
-                <div className="footer-product-hunt">
-                    <ProductHuntBadge />
-                </div>
 
                 <div className="footer-meta">
                     <div className="footer-meta-item">2026 © All rights reserved</div>

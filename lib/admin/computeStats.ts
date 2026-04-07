@@ -170,9 +170,10 @@ export async function computePlatformStats(): Promise<PlatformStats> {
   const norm = (a: string) => normalizeWalletForBanKey(String(a));
 
   // Parallel: bets + sessions + balances + referrals + banned + audit
-  const [allBets, balanceData, referralRows, bannedRows, auditRows] = await Promise.all([
+  const [allBets, balanceData, walletAddressRows, referralRows, bannedRows, auditRows] = await Promise.all([
     fetchAllBets(),
     supabase.from('user_balances').select('currency, balance'),
+    supabase.from('user_balances').select('user_address'),
     supabase.from('user_referrals').select('user_address, referral_count'),
     supabase.from('banned_wallets').select('wallet_address'),
     fetchAllAuditLogs(),
@@ -182,13 +183,23 @@ export async function computePlatformStats(): Promise<PlatformStats> {
   const demoBets = allBets.filter(isDemo);
   const realBets = allBets.filter(b => !isDemo(b));
 
-  // ── User sets (include banned wallets for full unique-count) ──────────────
+  // ── User sets ─────────────────────────────────────────────────────────────
+  // Include: wallets from bet_history + all wallets in user_balances (deposited
+  // but not yet bet) + banned wallets — so the count reflects every wallet that
+  // has ever interacted with the platform, not just those that placed a bet.
   const demoUserKeys = new Set(
     demoBets.map(b => b.wallet_address).filter(Boolean).map(norm),
   );
   const realUserKeys = new Set(
     realBets.map(b => b.wallet_address).filter(Boolean).map(norm),
   );
+  // Add all wallets that exist in user_balances (deposited users)
+  for (const row of walletAddressRows.data ?? []) {
+    const w = (row as any).user_address;
+    if (!w) continue;
+    (isDemoWallet(w) ? demoUserKeys : realUserKeys).add(norm(w));
+  }
+  // Add banned wallets
   for (const row of bannedRows.data ?? []) {
     const w = (row as any).wallet_address;
     if (!w) continue;

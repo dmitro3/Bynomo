@@ -275,7 +275,7 @@ const CARDS = [
     accent: '#06b6d4',
     accentSoft: 'rgba(6,182,212,0.13)',
     icon: Users,
-    description: `Distinct wallets that have placed at least one real-money round.`,
+    description: `Distinct wallets that have deposited or placed a real-money round on the platform.`,
   },
 ] as const;
 

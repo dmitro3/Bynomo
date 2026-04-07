@@ -11,7 +11,6 @@ import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSectio
 import { AdvisorsRevealSection } from '@/components/landing/AdvisorsRevealSection';
 import { PartnershipsRevealSection } from '@/components/landing/PartnershipsRevealSection';
 import LiveStatsSection from '@/components/landing/LiveStatsSection';
-import { ProductHuntBadge } from '@/components/landing/ProductHuntBadge';
 import './waitlist/waitlist.css';
 
 const testimonials = [
@@ -310,8 +309,6 @@ export default function WaitlistPage() {
                             </svg>
                         </button>
 
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Featured on Product Hunt</p>
-                        <ProductHuntBadge theme="light" className="drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]" />
                     </motion.div>
 
                 </div>
@@ -494,9 +491,6 @@ export default function WaitlistPage() {
             <footer className="py-24 px-10 border-t border-white/5 bg-black relative z-10 w-full overflow-hidden">
                 <div className="huge-footer-logo">BYNOMO</div>
 
-                <div className="footer-product-hunt">
-                    <ProductHuntBadge />
-                </div>
 
                 <div className="footer-meta">
                     <div className="footer-meta-item">2026 © All rights reserved</div>

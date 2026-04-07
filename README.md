@@ -1174,7 +1174,7 @@ sequenceDiagram
 
 - **Email:** bynomo.fun@gmail.com
 - **Live demo:** [bynomo.fun/trade](https://bynomo.fun/trade)
-- **Deck / data room:** available on request
+- **Deck / data room:** [View Pitch Deck](https://docs.google.com/presentation/d/1kDVnUCeJ-LZ3dfpo_YsSqen6qSzlgzHFWFk79Eodj9A/edit?usp=sharing)
 
 ---
 

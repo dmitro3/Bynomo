@@ -409,7 +409,7 @@ Bynomo is the only production product offering oracle-settled binary rounds at *
 | **Telegram** | [t.me/bynomo](https://t.me/bynomo) |
 | **Discord** | [discord.gg/5MAHQpWZ7b](https://discord.gg/5MAHQpWZ7b) |
 | **Email** | bynomo.fun@gmail.com |
-| **Deck / data room** | Available on request |
+| **Deck / data room** | [View Pitch Deck](https://docs.google.com/presentation/d/1kDVnUCeJ-LZ3dfpo_YsSqen6qSzlgzHFWFk79Eodj9A/edit?usp=sharing) |
 
 ---
 
