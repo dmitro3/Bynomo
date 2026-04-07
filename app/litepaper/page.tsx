@@ -69,10 +69,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'scope',
     title: '3. Scope & Product Surface',
     body: [
-      'Market universe includes crypto, forex, metals, and equities references exposed as short-window directional rounds.',
-      'Execution modes are tuned for fast interaction (classic/box-like quick rounds) with strict round boundaries and deterministic close conditions.',
-      'The protocol monetizes through withdrawal fee bands and house edge calibration in payout multipliers.',
-      'Roadmap extensions include additional strategy surfaces (e.g., bounded leverage variants) while preserving deterministic settlement guarantees.',
+      'Market universe includes 1,010+ references: crypto (BTC, ETH, SOL, SUI, BNB, …), forex (EUR/USD, GBP/USD, …), metals (Gold, Silver), and equities (AAPL, NVDA, TSLA, NFLX, …) via Pyth Hermes feeds. BYNOMO SPL token price is sourced from DexScreener (mint Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS).',
+      'Timeframes: 5s · 10s · 15s · 30s · 60s. Default mode on load: Box, default duration: 5s, default asset: BNB.',
+      'Three execution modes: (1) Box Mode — user selects a pre-drawn multiplier tile on the live grid; win when the price line tip reaches the tile start within [priceBottom, priceTop]; multiplier capped at 10× normally and 20× during Blitz. (2) Draw Mode — user draws a custom rectangle on the live chart (max 20s duration, max 20% chart height); dynamic multiplier from band/distance/duration formula, capped at 15×; win when finalPrice is inside [priceBottom, priceTop] at endTime. (3) Classic Mode (binomo) — directional UP/DOWN prediction; win when finalPrice > strikePrice (UP) or < strikePrice (DOWN).',
+      'Blitz Mode overlay: 60s active window, 120s cooldown, repeating. Multiplier boost: 2×, applied to Box cells where baseMultiplier > 2.2 or matching diagonal pattern; clamp max 20. One-time on-chain entry fee per window, paid directly to the platform fee collector wallet (not treasury).',
+      'The protocol monetizes through four rails: (1) tiered deposit fees (free 10% / standard 9% / VIP 8%), (2) tiered withdrawal fees (same tier structure), (3) Blitz entry fees paid on-chain per chain, and (4) realized house edge from payout multiplier calibration below fair-odds parity.',
+      'Price simulation amplifiers apply to Pyth feed deltas: crypto ×2, metals ×4, forex/stocks ×12, with additive random jitter for chart realism.',
+      'Roadmap extensions: P2P matching for Classic mode (removes treasury directional risk), 200+ additional asset references, leverage surfaces (1×–100×), trader profiles, and tournament infrastructure.',
     ],
   },
   {
@@ -100,28 +103,30 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     body: [
       'Bynomo operates a chain-agnostic core with chain-specific adapter modules. The trade engine and risk engine are shared; signing, transfer semantics, and explorer linkage are delegated to adapters.',
       'Each supported network has an isolated treasury identity and execution backend, reducing cross-chain blast radius and enabling per-chain operational controls.',
-      'Adapters normalize heterogeneous chains (EVM, Solana, Sui, Near, Stellar, Tezos, Starknet, Push, etc.) into a common execution contract: transfer, balance read, tx hash, and finality status.',
+      'Adapters normalize heterogeneous chains (EVM/BNB/PUSH/SOMNIA/0G, Solana, Sui/OCT, NEAR, Stellar, Tezos, Starknet, Initia) into a common execution contract: transfer, balance read, tx hash, and finality status.',
       'This architecture keeps protocol invariants consistent while allowing chain-native transaction paths.',
     ],
     mermaid: `flowchart TB
     CORE[Core Protocol Engine]
     CORE --> CA[Chain Adapter Interface]
 
-    CA --> EVM[EVM Adapter]
-    CA --> SOL[Solana Adapter]
-    CA --> SUI[Sui Adapter]
+    CA --> EVM[EVM Adapter BNB · PUSH · SOMNIA · 0G]
+    CA --> SOL[Solana Adapter SOL · BYNOMO]
+    CA --> SUI[Sui Adapter SUI · USDC · OCT]
     CA --> NEAR[Near Adapter]
     CA --> XLM[Stellar Adapter]
     CA --> XTZ[Tezos Adapter]
     CA --> STRK[Starknet Adapter]
+    CA --> INIT[Initia Adapter]
 
-    EVM --> T1[(EVM Treasury)]
+    EVM --> T1[(EVM Treasuries)]
     SOL --> T2[(Solana Treasury)]
     SUI --> T3[(Sui Treasury)]
     NEAR --> T4[(Near Treasury)]
     XLM --> T5[(Stellar Treasury)]
     XTZ --> T6[(Tezos Treasury)]
-    STRK --> T7[(Starknet Treasury)]`,
+    STRK --> T7[(Starknet Treasury)]
+    INIT --> T8[(Initia Treasury)]`,
   },
   {
     id: 'trade-lifecycle',
@@ -154,10 +159,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'risk-engine',
     title: '7. Risk Engine & Treasury Controls',
     body: [
-      'Treasury risk is controlled through payout calibration, manual-review withdrawal thresholds, and account state gates (active/frozen/banned).',
-      'Withdrawal requests pass a state machine with explicit accept/reject transitions and immutable audit trails.',
-      'Protocol health monitoring focuses on edge drift, payout pressure, and per-asset volatility regimes.',
-      'The risk objective is continuity first: avoid insolvency scenarios while preserving fair payout semantics.',
+      'Treasury risk is controlled through payout multiplier calibration, tiered withdrawal thresholds, withdrawal caps, frequency review gates, and account state controls (active / frozen / banned).',
+      'Withdrawal cap (real accounts, mainnet currencies): maxWithdrawable = totalDeposited × 1.08, computed from balance_audit_log deposits minus withdrawals plus pending withdrawal_requests. Testnet currencies (PUSH, PC, SOMNIA, STT, OCT, 0G) are exempt.',
+      'Auto-approval thresholds (instant execution if amount ≤ threshold and no frequency flag): BNB 0.08 · SOL 0.45 · BYNOMO 0.45 · SUI 45 · USDC 45 · XLM 300 · XTZ 150 · NEAR 40 · STRK 1500 · INIT 5 · testnets ∞. Amounts above threshold enter a manual review queue in the admin dashboard.',
+      'Frequency review gate: if a real-account wallet accumulates ≥ 10 completed + pending withdrawals (across all currencies), the next request is automatically queued for manual review with a FREQUENCY_REVIEW stamp, regardless of amount.',
+      'Oracle freshness control: price snapshots must be within 60 seconds; manual settlement timeout fires at 300 seconds. Both constants are configurable via env.',
+      'Withdrawal requests pass an explicit state machine: pending → accepted → executed (treasury transfer succeeded) or failed → retry path; or pending → rejected. State transitions are authenticated, logged, and irreversible.',
+      'The risk objective is continuity first: avoid insolvency while preserving deterministic payout semantics. Suspicious streaks (≥ 10 consecutive wins) and high-frequency withdrawal patterns surface in the admin Danger Zone.',
     ],
     mermaid: `stateDiagram-v2
     [*] --> Pending
@@ -208,10 +216,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'security',
     title: '10. Security Architecture',
     body: [
-      'Admin endpoints use server-side authentication and short-lived httpOnly signed session cookies.',
-      'Browser hardening includes CSP, anti-clickjacking headers, strict content typing, and scoped permissions policies.',
-      'Database hardening includes RLS on critical tables, privilege revocation for anon/authenticated roles, and service-role-only privileged operations.',
-      'Sensitive state transitions (withdrawals, bans, status mutations) are authenticated, auditable, and constrained by role logic.',
+      'Admin endpoints: HMAC session cookie issued by POST /api/admin/auth against DASHBOARD_PASSWORD env; all admin routes call requireAdminAuth before executing. No root middleware — protection is enforced at the route handler level.',
+      'Withdrawal authorization (EVM-like chains — BNB, PUSH, PC, SOMNIA, STT, 0G): client signs an EIP-191 message containing address, amount, currency, and signedAt timestamp; server verifies signature with ethers.verifyMessage and rejects if age > 5 minutes. Non-EVM chains use treasury-side trust model.',
+      'Address canonicalization: canonicalHouseUserAddress normalizes all wallet address variants before DB writes, preventing duplicate balance rows from case or format differences across chains.',
+      'Database hardening: RLS enabled on all critical tables; anon and authenticated roles have privileges revoked; all privileged writes use the service-role key. Policies are enforce-on-deny-by-default.',
+      'HTTP hardening (next.config.ts): Content-Security-Policy covering script-src, style-src, img-src, connect-src, frame-src (YouTube, Google Slides); X-Frame-Options: DENY; X-Content-Type-Options: nosniff; Referrer-Policy: strict-origin-when-cross-origin; Permissions-Policy scoped; Cross-Origin-Opener-Policy: same-origin. API routes enforce CORS Access-Control-Allow-Origin: https://bynomo.fun.',
+      'Ban system: banned_wallets Supabase table + BANNED_WALLET_ADDRESSES env list; is_wallet_globally_banned checked on deposit, bet, win, and withdrawal paths. Unban atomically zeroes balances and writes admin_balance_wipe audit entries.',
+      'Sensitive state transitions (withdrawals, bans, status mutations) are authenticated, rate-guarded, and produce immutable audit rows keyed by operation type, amount delta, and tx hash.',
     ],
     mermaid: `flowchart TD
     A[Client Request] --> B{Admin Session Cookie Valid}
@@ -255,10 +266,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'economics',
     title: '12. Unit Economics & Revenue Model',
     body: [
-      'Revenue components: (1) withdrawal fee take-rate and (2) realized house edge from payout calibration.',
-      'Protocol-level expected gross take-rate is a function of round volume, win-rate distribution, and multiplier policy.',
-      'Economic tuning must preserve user competitiveness while maintaining treasury solvency across volatility regimes.',
-      'VIP/tiers can reduce withdrawal friction while shifting monetization weight toward sustained volume and retention.',
+      'Revenue rail 1 — Tiered deposit fees: free 10% / standard 9% / VIP 8%. Applied as: fee = floor(amount × tierPercent × 1e8) / 1e8. Net credited = amount − fee. Fee is transferred from treasury → platform fee collector wallet on each chain (non-blocking; failure is logged, never blocks the user).',
+      'Revenue rail 2 — Tiered withdrawal fees: same tier structure as deposits. Net sent to user = amount − fee. Fee collector receives the fee portion from treasury before the net transfer.',
+      'Revenue rail 3 — Blitz entry fees (one-time per window, paid on-chain directly to fee collector): BNB 0.1 · SOL 1 · SUI 50 · XLM 400 · XTZ 150 · NEAR 50 · STRK 1500 · INIT 0.01 · OCT 0.01 · PUSH 0.01 · SOMNIA 0.01 · 0G 0.01.',
+      'Revenue rail 4 — House edge: payout multipliers are calibrated below fair-odds parity (e.g. at 1.9× multiplier, breakeven win rate is 52.6%). Realized edge = Σ(stake − payout) across all settled bets. Game Mode P&L in admin dashboard tracks per-mode edge drift in real time.',
+      'Protocol-level expected gross take-rate is a function of round volume, win-rate distribution, multiplier policy, and deposit/withdrawal frequency per chain.',
+      'Revenue projections: at $5M monthly bet volume → $250K–$500K/month; at $20M → $400K–$2M/month.',
+      'VIP/tiers reduce fee friction for high-volume traders while shifting monetization weight toward sustained volume and retention.',
     ],
   },
   {
@@ -274,20 +288,15 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
   },
   {
     id: 'roadmap',
-    title: '14. Technical & Ecosystem Roadmap (0-3 Months)',
+    title: '14. Technical & Ecosystem Roadmap',
     body: [
-      'Core execution shift: evolve classic mode from P2T (person-to-treasury) into P2P matching to minimize treasury directional risk; protocol monetization focuses on platform trading fees and withdrawal fees.',
-      'Market expansion target: add 200+ additional tradable references (crypto, forex, stocks, commodities) for binary rounds, powered by Pyth price feeds and the existing normalization layer.',
-      'Product UX target: mobile-first design parity so onboarding, charting, order entry, and settlement visibility work cleanly on handheld screens.',
-      'Access model target: enable invite-only controls through access-code + referral mode with waitlist gating for staged rollout and abuse control.',
-      'Multichain target: expand toward top high-usage chains in phased approvals, with a 3-month post-public-launch adoption window on BNB Chain before broader chain expansion decisions.',
-      'Optional product extensions: leverage surfaces (1x-100x), trader profiles (highest PnL, best accuracy, most trades, biggest risk), tournaments, and social trading primitives (follow/copy/win-rate visibility).',
-      'Observability extension: public dashboard track for total trades, volume, payouts, treasury balance, and win/loss ratio to increase operational transparency.',
-      'Ecosystem growth plan (50% focus): micro-influencer program (1k-20k follower creators), public X launch playbook with giveaway-led virality, ambassador cohorts, invite-only access-code campaigns, referral-driven onboarding, and waitlist conversion.',
-      'Optional ecosystem extension: launch of BYNOMO token on BNB Chain and weekly X podcast/AMA series with top traders for visibility acceleration.',
-      '3-month product outcomes target: production-ready binary stack, full P2P mode implemented, and 200+ assets integrated.',
-      '3-month growth outcomes target: 10,000+ users onboarded, 5,000+ active traders, and sustained trading activity on BNB Chain.',
-      '3-month ecosystem impact target: establish a real-time binary trading use case on BNB Chain and position Bynomo among early high-activity Web3 trading dApps.',
+      'Current state (v1.2.0): 12 chains live (SOL, BNB, SUI, NEAR, STRK, XLM, XTZ, INIT, OCT, PUSH, 0G, SOMNIA), three execution modes (Box, Draw, Classic), Blitz mode, full fee system with per-chain collector wallets, withdrawal review queue, ban/unban with balance wipe, and admin dashboard with Game Mode P&L analytics.',
+      'Pre-public-launch traction: 12,567+ bets settled · 249.89 SOL ($46,258) staked volume · ~$4,600 platform revenue · 76 unique wallets · 28 active price feeds · 2h 8m avg session time · +799% traffic growth · 3,421+ community members in 3 days (X: 2,261 · Telegram: 900 · Discord: 260) · 5+ inbound chain ecosystem partnership offers. Accepted for $4M Bagsapp Funding.',
+      'Phase 1 — Public launch (active): viral X giveaway launch, per-chain ecosystem blitz (regional groups + executive outreach + all ecosystem projects for each of 12 chains), 100 micro-influencer campaign (1K–20K followers), perpetual referral fee-share with deep links, leaderboard and trader profiles.',
+      'Phase 2 (30–90 days): P2P matching for Classic mode (eliminates treasury directional risk). 200+ additional Pyth asset references. Mobile-first redesign and PWA. Bynomo Ambassador Program. Weekly X Podcast/AMA with top traders. Chain foundation grant applications.',
+      'Phase 3 (91–180 days): leverage surfaces (1×–100×), trader profiles (PnL, accuracy, risk, trade count), tournament infrastructure, social trading primitives (follow/copy/win-rate visibility), CEX/wallet deep integrations, regional expansion (Southeast Asia, MENA, LatAm).',
+      'Chain expansion model: each new chain follows the adapter pattern — treasury EOA, deposit verification route, withdrawal backend, fee routing, wallet modal integration. Expansion gated by ecosystem grant availability and community adoption evidence.',
+      '12-month outcome targets: 100,000+ users · $5M+ monthly bet volume · top-5 multi-chain trading dapp by volume.',
     ],
   },
   {
@@ -314,11 +323,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'oracle-pipeline',
     title: '17. Oracle Normalization & Price Integrity',
     body: [
-      'The price subsystem treats raw market feeds as untrusted until normalized through symbol mapping, feed-id canonicalization, timeout controls, and sanity bounds.',
-      'Ingestion is chunked and parallelized to avoid single-request bottlenecks and long-tail timeout amplification under volatile market conditions.',
-      'Each settlement round binds to deterministic snapshots (strike/end) and records temporal provenance to avoid post-hoc ambiguity.',
-      'Outlier handling prioritizes integrity over speed: if feed confidence degrades beyond policy thresholds, the round is delayed or fails closed rather than settling on questionable data.',
-      'Protocol-level rule: no payout transition may occur without an explicit, auditable price source path.',
+      'Price source: Pyth Hermes REST API (https://hermes.pyth.network/v2/updates/price/latest). Raw price = price field × 10^expo. Feed IDs are mapped per-asset in PRICE_FEED_IDS (BTC, ETH, SOL, SUI, BNB, XLM, XTZ, NEAR, STRK, INIT, metals, forex pairs, equities).',
+      'Exception: BYNOMO token price is fetched from DexScreener (https://api.dexscreener.com/latest/dex/tokens/{mint}) using pairs[0].priceUsd, since it is not a Pyth-listed asset.',
+      'Multi-feed ingestion: all feeds are batched in groups of 14 feed IDs per request with a 6-second timeout per batch. Batches run in parallel; results are merged. On any batch failure, the last known full price cache (localStorage key bynomo_last_price_cache_v1) is used as a fallback.',
+      'Poll interval: 1 second (with in-flight guard to prevent overlapping requests). Price updates trigger Zustand store updates which drive chart rendering and bet resolution.',
+      'Freshness constraint: price snapshots must be within ORACLE_PRICE_FRESHNESS_THRESHOLD (60 seconds). MANUAL_SETTLEMENT_TIMEOUT is 300 seconds — after which unresolved rounds are escalated. Both are configurable via env.',
+      'The price subsystem treats raw feeds as untrusted until normalized through symbol mapping, feed-id canonicalization, timeout controls, and confidence bounds.',
+      'Outlier handling: if feed confidence degrades beyond policy thresholds the round is delayed or fails closed — never settled on stale or questionable data. Protocol rule: no payout transition may occur without an explicit, auditable price source path.',
     ],
     mermaid: `flowchart TB
     R[Raw Feed Responses] --> N1[Feed ID Canonicalization]
@@ -428,15 +439,13 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'box-multiplier',
     title: '23. Box Mode Multiplier Engine (Implementation Spec)',
     body: [
-      'In Box mode, multiplier is not static and not fetched from an external API. It is generated per-cell in the chart engine at render-time, then passed into bet placement as part of targetId.',
-      'Generation source: `components/game/LiveChart.tsx` creates grid cells and computes each cell multiplier from (a) price distance risk and (b) time distance bonus.',
-      'Step 1 - price-distance base: if current price is inside a row band, base = 1.01 (near-min risk). Else compute normalized distance from current price and apply non-linear curve: base = 1.05 + pow(normalizedDist, 1.3) * 3.95.',
-      'Step 2 - time bonus: cells farther in future columns get additive bonus: timeBonus = max(0, (colX - tipX) / 800) * 0.25.',
-      'Step 3 - cap and format: calculated = min(base + timeBonus, 10.0) in normal mode; display formatted as fixed decimal string (e.g. 2.75x).',
-      'Step 4 - Blitz optional boost: when Blitz is active + user eligible and cell condition matches (high-stake or lucky diagonal), multiplier is multiplied by blitzMultiplier and clamped to max 20.',
-      'Placement path: clicking a cell builds targetId = `${UP|DOWN}-${cell.multiplier}-${timeframeSeconds}` and sends it into `placeBetFromHouseBalance()` in `lib/store/gameSlice.ts`.',
-      'Persistence path: store parses targetId, extracts numeric multiplier, saves it to active bet state; on resolution payout = won ? amount * multiplier : 0.',
-      'Therefore, the exact multiplier shown on the box cell is the same multiplier used in final payout math.',
+      'In Box mode, multiplier is not static and not fetched from an external API. It is generated per-cell in the chart engine (components/game/LiveChart.tsx) at render-time, then embedded in targetId and passed to bet placement.',
+      'Step 1 — price-distance base: if current price is inside the row band, base = 1.01 (minimal risk). Otherwise: normalizedDist = |priceRowMid − currentPrice| / currentPrice; base = 1.05 + pow(normalizedDist, 1.3) × 3.95.',
+      'Step 2 — time-distance bonus: timeBonus = max(0, (colX − tipX) / 800) × 0.25. Cells further into the future receive a higher bonus.',
+      'Step 3 — cap and display: raw = base + timeBonus; calculated = min(raw, 10.0) in normal mode. Displayed as a fixed decimal string (e.g. "2.75×").',
+      'Step 4 — Blitz boost: applied only when isBlitzActive && hasBlitzAccess && (baseMultiplier > 2.2 || cell is on a lucky diagonal pattern). Boosted = calculated × blitzMultiplier (default 2.0), clamped to max 20.',
+      'Placement path: clicking a cell builds targetId = `${UP|DOWN}-${cell.multiplier}-${timeframeSeconds}` and calls placeBetFromHouseBalance() in lib/store/gameSlice.ts.',
+      'Settlement path: gameSlice parses targetId to extract numeric multiplier; payout = won ? stake × multiplier : 0. The multiplier visible on the cell is exactly the multiplier used in payout math — no hidden adjustment.',
     ],
     mermaid: `flowchart LR
     C[Grid Cell Candidate] --> P[Price-distance Base]
@@ -518,8 +527,8 @@ export default function LitepaperPage() {
           </div>
         </div>
         <p className="mb-8 text-sm text-white/60">
-          Version <span className="font-mono">v1.1.0</span> · Last updated{' '}
-          <span className="font-mono">2026-04-01</span>
+          Version <span className="font-mono">v1.2.0</span> · Last updated{' '}
+          <span className="font-mono">2026-04-07</span>
         </p>
 
         <div className="lp-panel mb-10 rounded-2xl border border-violet-500/20 bg-violet-500/[0.05] p-5">
@@ -647,8 +656,8 @@ export default function LitepaperPage() {
         <div className="mb-10 grid gap-4 md:grid-cols-4">
           {[
             ['Primary timeframes', '5s · 10s · 15s · 30s · 60s'],
-            ['Asset surface', '300+ crypto, equities, metals, forex'],
-            ['Monetization rails', 'Withdrawal fee bands + calibrated house edge'],
+            ['Asset surface', '1,010+ crypto, equities, metals, forex'],
+            ['Monetization rails', 'Deposit & withdrawal fees + house edge + Blitz entry fees'],
             ['Security posture', 'Admin auth + RLS + CSP + audit logs'],
           ].map(([k, v]) => (
             <div key={k} className="lp-panel rounded-xl border border-white/10 bg-white/[0.02] p-4">
