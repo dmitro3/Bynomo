@@ -1,6 +1,9 @@
 name: Deploy to Vercel (owner only)
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -12,11 +15,14 @@ jobs:
     outputs:
       authorized: ${{ steps.check.outputs.authorized }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Check commit author
         id: check
         run: |
-          AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
-          AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
+          AUTHOR_EMAIL="$(git log -1 --format='%ae')"
+          AUTHOR_NAME="$(git log -1 --format='%an')"
           PUSHER="${{ github.actor }}"
 
           echo "Commit by: $AUTHOR_NAME <$AUTHOR_EMAIL>"
@@ -56,7 +62,7 @@ jobs:
   deploy:
     name: Deploy to Vercel Production
     needs: check-author
-    if: needs.check-author.outputs.authorized == 'true'
+    if: github.event_name == 'push' && needs.check-author.outputs.authorized == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
