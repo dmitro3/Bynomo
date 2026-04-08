@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { HeaderMenu } from './game/HeaderMenu';
@@ -9,8 +9,6 @@ import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
 export function Header() {
-    const [clickCount, setClickCount] = useState(0);
-    const clickTimer = useRef<NodeJS.Timeout | null>(null);
     const [demoActivated, setDemoActivated] = useState(false);
     const pathname = usePathname();
 
@@ -21,7 +19,6 @@ export function Header() {
         toggleAccountType,
         accountType,
         accessCode,
-        setSystemOptimizationOpen
     } = useStore();
 
     const activateDemoMode = () => {
@@ -41,18 +38,6 @@ export function Header() {
         setTimeout(() => setDemoActivated(false), 2000);
     };
 
-    const handleOverflowClick = () => {
-        if (clickTimer.current) clearTimeout(clickTimer.current);
-        const newCount = clickCount + 1;
-        setClickCount(newCount);
-        
-        if (newCount >= 3) {
-            setSystemOptimizationOpen(true);
-            setClickCount(0);
-        }
-
-        clickTimer.current = setTimeout(() => setClickCount(0), 1000);
-    };
 
     return (
         <header className="z-[100] px-4 sm:px-8 py-3 flex justify-between items-center bg-black/40 backdrop-blur-3xl border-b border-white/5">
@@ -61,11 +46,6 @@ export function Header() {
                     <motion.span
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={(e) => {
-                            // Prevent navigation if clicking for demo mode
-                            if (clickCount > 0) e.preventDefault();
-                            handleOverflowClick();
-                        }}
                         className="text-xl sm:text-2xl font-black tracking-tighter sm:tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-400 to-white cursor-pointer select-none"
                         style={{ fontFamily: 'var(--font-orbitron)' }}
                     >
