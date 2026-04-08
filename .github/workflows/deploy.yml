@@ -1,0 +1,75 @@
+name: Deploy to Vercel (owner only)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-author:
+    name: Block unauthorized committers
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.check.outputs.authorized }}
+    steps:
+      - name: Check commit author
+        id: check
+        run: |
+          AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
+          AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
+          PUSHER="${{ github.actor }}"
+
+          echo "Commit by: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+          echo "Pushed by: $PUSHER"
+
+          # ── Authorized committers ─────────────────────────────────────────
+          # Add your own email(s) here. Anyone NOT in this list will be blocked.
+          ALLOWED_EMAILS=(
+            "amaansayyad@yahoo.com"
+          )
+          ALLOWED_GITHUB_USER="AmaanSayyad"
+          # ─────────────────────────────────────────────────────────────────
+
+          AUTHORIZED=false
+          for EMAIL in "${ALLOWED_EMAILS[@]}"; do
+            if [ "$AUTHOR_EMAIL" = "$EMAIL" ]; then
+              AUTHORIZED=true
+              break
+            fi
+          done
+
+          if [ "$PUSHER" != "$ALLOWED_GITHUB_USER" ]; then
+            echo "::error::Deployment BLOCKED — push actor '$PUSHER' is not '$ALLOWED_GITHUB_USER'."
+            echo "authorized=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          if [ "$AUTHORIZED" = "false" ]; then
+            echo "::error::Deployment BLOCKED — commit author '$AUTHOR_EMAIL' is not on the authorized list."
+            echo "authorized=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "authorized=true" >> $GITHUB_OUTPUT
+          echo "✅ Authorized committer. Proceeding with deployment."
+
+  deploy:
+    name: Deploy to Vercel Production
+    needs: check-author
+    if: needs.check-author.outputs.authorized == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
