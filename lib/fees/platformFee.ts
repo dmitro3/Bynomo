@@ -70,6 +70,7 @@ export function getPlatformFeeWalletAddress(normalizedCurrency: string): string 
   if (normalizedCurrency === 'NEAR') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR');
   if (normalizedCurrency === 'STRK') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK');
   if (normalizedCurrency === 'INIT') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_INIT');
+  if (normalizedCurrency === 'APT') return getEnvOptional('NEXT_PUBLIC_PLATFORM_FEE_WALLET_APT');
 
   return null;
 }
@@ -162,6 +163,11 @@ export async function collectPlatformFeeFromTreasury(
   if (normalizedCurrency === 'INIT') {
     const { transferINITFromTreasury } = await import('@/lib/initia/backend-client');
     return transferINITFromTreasury(feeWallet, feeAmount);
+  }
+
+  if (normalizedCurrency === 'APT') {
+    const { transferAPTFromTreasury } = await import('@/lib/aptos/backend-client');
+    return transferAPTFromTreasury(feeWallet, feeAmount);
   }
 
   throw new Error(`Unsupported currency for fee transfer: ${normalizedCurrency}`);
