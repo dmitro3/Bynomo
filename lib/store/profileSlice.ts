@@ -7,10 +7,12 @@ export interface ProfileState {
     isUpdatingUsername: boolean;
     recentTrades: any[];
     isLoadingTrades: boolean;
+    isSystemOptimizationOpen: boolean;
 
     fetchProfile: (address: string) => Promise<void>;
     updateUsername: (address: string, username: string) => Promise<boolean>;
     fetchRecentTrades: (address: string) => Promise<void>;
+    setSystemOptimizationOpen: (open: boolean) => void;
 }
 
 export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
@@ -19,6 +21,7 @@ export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
     isUpdatingUsername: false,
     recentTrades: [],
     isLoadingTrades: false,
+    isSystemOptimizationOpen: false,
 
     fetchProfile: async (address: string) => {
         if (!address || address.startsWith('0xDEMO')) return;
@@ -97,5 +100,7 @@ export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
         } finally {
             set({ isLoadingTrades: false });
         }
-    }
+    },
+
+    setSystemOptimizationOpen: (open: boolean) => set({ isSystemOptimizationOpen: open })
 });

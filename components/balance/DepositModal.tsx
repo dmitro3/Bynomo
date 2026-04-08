@@ -456,7 +456,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             {network === 'NEAR' && <img src="/logos/near.png" alt="NEAR" className="w-5 h-5" />}
             {network === 'STRK' && <img src="/logos/starknet-strk-logo.svg" alt="STRK" className="w-5 h-5" />}
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/bnb-bnb-logo.png'; }} />}
+            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/aptos-apt-logo.png'; }} />}
             {walletBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

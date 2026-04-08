@@ -34,6 +34,19 @@ import { WalletConnectModal } from '@/components/wallet/WalletConnectModal';
 import { ReferralSync } from './ReferralSync';
 import type { AssetType } from '@/lib/utils/priceFeed';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
+import { NetworkDiagnosticModal } from '@/components/debug/NetworkDiagnosticModal';
+
+function GlobalDiagnosticModal() {
+  const isSystemOptimizationOpen = useOverflowStore(state => state.isSystemOptimizationOpen);
+  const setSystemOptimizationOpen = useOverflowStore(state => state.setSystemOptimizationOpen);
+
+  return (
+    <NetworkDiagnosticModal
+      isOpen={isSystemOptimizationOpen}
+      onClose={() => setSystemOptimizationOpen(false)}
+    />
+  );
+}
 
 // Wallet Sync component to bridge all wallet states with our Zustand store
 function WalletSync() {
@@ -522,6 +535,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                           <ReferralSync />
                           {children}
                           <WalletConnectModal />
+                          <GlobalDiagnosticModal />
                           <ToastProvider />
                         </AptosWalletAdapterProvider>
                       </InterwovenKitProvider>

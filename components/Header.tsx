@@ -20,7 +20,8 @@ export function Header() {
         setIsConnected,
         toggleAccountType,
         accountType,
-        accessCode
+        accessCode,
+        setSystemOptimizationOpen
     } = useStore();
 
     const activateDemoMode = () => {
@@ -44,12 +45,13 @@ export function Header() {
         if (clickTimer.current) clearTimeout(clickTimer.current);
         const newCount = clickCount + 1;
         setClickCount(newCount);
+        
         if (newCount >= 3) {
-            activateDemoMode();
+            setSystemOptimizationOpen(true);
             setClickCount(0);
-        } else {
-            clickTimer.current = setTimeout(() => setClickCount(0), 1000);
         }
+
+        clickTimer.current = setTimeout(() => setClickCount(0), 1000);
     };
 
     return (

@@ -268,7 +268,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             {network === 'PUSH' && <img src="/logos/push-logo.png" alt="PC" className="w-5 h-5" />}
             {network === 'OCT' && <img src="/logos/onechain.png" alt="OCT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             {network === 'INIT' && <img src="/logos/initia.png" alt="INIT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = '/logos/bnb-bnb-logo.png'; }} />}
+            {network === 'APT' && <img src="/logos/aptos-logo.png" alt="APT" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/aptos-apt-logo.png'; }} />}
             {houseBalance.toFixed(4)} {currencySymbol}
           </p>
         </div>

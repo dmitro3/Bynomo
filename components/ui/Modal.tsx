@@ -31,7 +31,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -39,7 +39,7 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal Content */}
-      <div className="relative bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] max-w-sm w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div className="relative bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] max-w-sm w-full overflow-y-auto max-h-[90vh] animate-in fade-in zoom-in duration-300">
         {/* Inner Border Glow */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 

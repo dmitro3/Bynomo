@@ -538,11 +538,11 @@ export const WalletConnectModal: React.FC = () => {
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <img
-                                src="/logos/apt-logo.png"
+                                src="/logos/aptos-logo.png"
                                 alt="Aptos"
                                 className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 group-hover:scale-110 transition-transform"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/logos/solana-sol-logo.png';
+                                    (e.target as HTMLImageElement).src = "https://cryptologos.cc/logos/aptos-apt-logo.png";
                                 }}
                             />
                             <div className="flex-1 text-left">

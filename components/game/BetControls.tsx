@@ -20,11 +20,14 @@ export const BetControls: React.FC<BetControlsProps> = ({
 }) => {
   const {
     houseBalance,
+    walletBalance,
     network,
     activeRound,
     targetCells,
     isPlacingBet,
-    address
+    address,
+    accountType,
+    selectedCurrency
   } = useStore();
 
   const isWalletConnected = !!address;
@@ -42,6 +45,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'ZG': return '0G';
       case 'INIT': return 'INIT';
       case 'XLM': return 'XLM';
+      case 'APT': return 'APT';
       case 'SOL': {
         const state = useStore.getState() as any;
         return state.selectedCurrency || 'SOL';
@@ -68,6 +72,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'ZG': return '/logos/0g.png';
       case 'INIT': return '/logos/initia.png';
       case 'XLM': return '/logos/stellar-xlm-logo.png';
+      case 'APT': return '/logos/aptos-logo.png';
       default: return '/logos/bnb-bnb-logo.png';
     }
   }, [network, currencySymbol]);
@@ -107,8 +112,11 @@ export const BetControls: React.FC<BetControlsProps> = ({
       return false;
     }
 
-    if (amount > houseBalance) {
-      setError(`Insufficient house balance. You have ${houseBalance.toFixed(4)} ${currencySymbol}. Please deposit more.`);
+    const isDirectMode = (network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB';
+    const effectiveBalance = (isDirectMode && accountType === 'real') ? walletBalance : houseBalance;
+
+    if (amount > effectiveBalance) {
+      setError(`Insufficient ${isDirectMode && accountType === 'real' ? 'wallet' : 'house'} balance. You have ${effectiveBalance.toFixed(4)} ${currencySymbol}. Please ${isDirectMode ? 'top up your wallet' : 'deposit more'}.`);
       return false;
     }
 
@@ -131,12 +139,20 @@ export const BetControls: React.FC<BetControlsProps> = ({
         <div className="space-y-4 transition-all duration-700 flex-1">
           <h3 className="text-xl font-bold text-white mb-6">Place Bet</h3>
 
-          {/* House Balance */}
+          {/* House/Wallet Balance */}
           {isWalletConnected && (
             <div className="bg-gray-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">House Balance</p>
-                <p className="text-white text-xl font-black mt-1">{houseBalance.toFixed(4)} {currencySymbol}</p>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                  {((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') && accountType === 'real' 
+                    ? 'Wallet Balance' 
+                    : 'House Balance'}
+                </p>
+                <p className="text-white text-xl font-black mt-1">
+                  {(((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') && accountType === 'real' 
+                    ? walletBalance 
+                    : houseBalance).toFixed(4)} {currencySymbol}
+                </p>
               </div>
               <img src={currencyLogo} alt={currencySymbol} className="w-8 h-8 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
             </div>
