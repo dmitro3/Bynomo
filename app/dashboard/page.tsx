@@ -1343,7 +1343,7 @@ export default function AdminDashboard() {
                                                 {/* Mode cards — match rounded-2xl border border-white/10 bg-white/[0.02] */}
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     {(['binomo', 'box', 'draw'] as const).map(modeKey => {
-                                                        const modeLabels: Record<string, string> = { binomo: 'Classic (Binomo)', box: 'Box Mode', draw: 'Draw Mode' };
+                                                        const modeLabels: Record<string, string> = { binomo: 'Classic', box: 'Box', draw: 'Draw' };
                                                         const m = (modeAnalytics.real ?? []).find((x: any) => x.mode === modeKey);
 
                                                         if (!m) return (

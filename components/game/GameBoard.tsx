@@ -632,13 +632,22 @@ export const GameBoard: React.FC = () => {
           {/* Game Mode Selector */}
           <div className="flex shrink-0 gap-1 p-1 bg-black/60 border-b border-white/5" data-tour="game-mode-toggle">
             <button
+              onClick={() => setGameMode('binomo')}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'binomo'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
+                : 'text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Classic
+            </button>
+            <button
               onClick={() => setGameMode('box')}
               className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'box'
                 ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
                 : 'text-gray-500 hover:text-gray-300'
                 }`}
             >
-              Box Mode
+              Box
             </button>
             <button
               onClick={() => setGameMode('draw')}
@@ -648,15 +657,6 @@ export const GameBoard: React.FC = () => {
                 }`}
             >
               Draw
-            </button>
-            <button
-              onClick={() => setGameMode('binomo')}
-              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 ${gameMode === 'binomo'
-                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40'
-                : 'text-gray-500 hover:text-gray-300'
-                }`}
-            >
-              Classic
             </button>
           </div>
 
