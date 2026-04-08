@@ -562,6 +562,7 @@ Migrations live in `supabase/migrations/`.
 
 ---
 
+
 ## Admin Dashboard
 
 Located at `/dashboard`. Protected by admin auth (`requireAdminAuth`).
