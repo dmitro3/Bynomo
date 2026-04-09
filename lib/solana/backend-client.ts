@@ -34,9 +34,15 @@ export async function verifySolanaDepositTx(
         const treasuryPub = new PublicKey(config.treasuryAddress);
         const userPub = new PublicKey(userAddress);
 
-        const parsed = await connection.getParsedTransaction(signature, {
-            maxSupportedTransactionVersion: 0,
-        });
+        // Retry up to 3 times — a freshly submitted transaction may not be indexed yet.
+        let parsed = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 3000));
+            parsed = await connection.getParsedTransaction(signature, {
+                maxSupportedTransactionVersion: 0,
+            });
+            if (parsed) break;
+        }
 
         if (!parsed || parsed.meta?.err) return false;
         const meta = parsed.meta;

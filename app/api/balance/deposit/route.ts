@@ -346,9 +346,16 @@ export async function POST(request: NextRequest) {
 
     // Tiered platform/protocol fee: move the fee portion from treasury to a dedicated collector wallet.
     // A failure here must NOT block the user's deposit — log the error and continue.
+    // Cap at 25 s so that slow RPCs (e.g. Solana sendAndConfirmTransaction) never stall the response.
     let feeTxHash: string | null = null;
     try {
-      feeTxHash = await collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount);
+      const feeTimeout = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 25_000)
+      );
+      feeTxHash = await Promise.race([
+        collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount),
+        feeTimeout,
+      ]);
     } catch (feeErr) {
       console.error('[deposit] Fee collection failed (non-blocking):', feeErr);
     }
