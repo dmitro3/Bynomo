@@ -35,7 +35,7 @@ interface CellBet {
 }
 
 // Component to safely display asset logos with fallback
-const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: string; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks'; decimals: number }> = {
+const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: string; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' | 'Commodities'; decimals: number }> = {
   BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto', decimals: 2 },
   ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: '/logos/ethereum-eth-logo.png', category: 'Crypto', decimals: 2 },
   SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: '/logos/solana-sol-logo.png', category: 'Crypto', decimals: 2 },
@@ -94,7 +94,7 @@ const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: stri
 
   // Added Assets - All using CoinGecko for reliability
   LINK: { name: 'Chainlink', symbol: 'LINK', pair: 'LINK/USD', logo: 'https://assets.coingecko.com/coins/images/877/standard/chainlink-new-logo.png', category: 'Crypto', decimals: 3 },
-  AVAX: { name: 'Avalanche', symbol: 'AVAX', pair: 'AVAX/USD', logo: 'https://assets.coingecko.com/coins/images/12559/standard/coin-round-red.png', category: 'Crypto', decimals: 2 },
+  AVAX: { name: 'Avalanche', symbol: 'AVAX', pair: 'AVAX/USD', logo: '/logos/avalanche-avax-logo.png', category: 'Crypto', decimals: 2 },
   DOT: { name: 'Polkadot', symbol: 'DOT', pair: 'DOT/USD', logo: 'https://assets.coingecko.com/coins/images/12171/standard/polkadot.png', category: 'Crypto', decimals: 2 },
   LTC: { name: 'Litecoin', symbol: 'LTC', pair: 'LTC/USD', logo: 'https://assets.coingecko.com/coins/images/2/standard/litecoin.png', category: 'Crypto', decimals: 2 },
   UNI: { name: 'Uniswap', symbol: 'UNI', pair: 'UNI/USD', logo: 'https://assets.coingecko.com/coins/images/12504/standard/uni.jpg', category: 'Crypto', decimals: 2 },
@@ -104,30 +104,30 @@ const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: stri
   RENDER: { name: 'Render', symbol: 'RENDER', pair: 'RENDER/USD', logo: 'https://assets.coingecko.com/coins/images/11636/standard/rndr.png', category: 'Crypto', decimals: 2 },
   TAO: { name: 'Bittensor', symbol: 'TAO', pair: 'TAO/USD', logo: 'https://assets.coingecko.com/coins/images/31120/standard/tao.png', category: 'Crypto', decimals: 2 },
   INJ: { name: 'Injective', symbol: 'INJ', pair: 'INJ/USD', logo: 'https://assets.coingecko.com/coins/images/12882/standard/Secondary_Symbol.png', category: 'Crypto', decimals: 2 },
-  KAS: { name: 'Kaspa', symbol: 'KAS', pair: 'KAS/USD', logo: 'https://assets.coingecko.com/coins/images/25751/standard/kaspa-icon-explorer.png', category: 'Crypto', decimals: 4 },
-  FET: { name: 'Fetch.ai', symbol: 'FET', pair: 'FET/USD', logo: 'https://assets.coingecko.com/coins/images/5681/standard/Fetch.jpg', category: 'Crypto', decimals: 3 },
+  KAS: { name: 'Kaspa', symbol: 'KAS', pair: 'KAS/USD', logo: '/logos/kaspa-kas-logo.png', category: 'Crypto', decimals: 4 },
+  FET: { name: 'Fetch.ai', symbol: 'FET', pair: 'FET/USD', logo: '/logos/artificial-superintelligence-alliance-fet-logo.png', category: 'Crypto', decimals: 3 },
   FIL: { name: 'Filecoin', symbol: 'FIL', pair: 'FIL/USD', logo: 'https://assets.coingecko.com/coins/images/12817/standard/filecoin.png', category: 'Crypto', decimals: 2 },
-  AR: { name: 'Arweave', symbol: 'AR', pair: 'AR/USD', logo: 'https://assets.coingecko.com/coins/images/4343/standard/oRt6nCDq_400x400.png', category: 'Crypto', decimals: 2 },
-  STX: { name: 'Stacks', symbol: 'STX', pair: 'STX/USD', logo: 'https://assets.coingecko.com/coins/images/2069/standard/Stacks_Logo.png', category: 'Crypto', decimals: 2 },
+  AR: { name: 'Arweave', symbol: 'AR', pair: 'AR/USD', logo: '/logos/arweave-ar-logo.png', category: 'Crypto', decimals: 2 },
+  STX: { name: 'Stacks', symbol: 'STX', pair: 'STX/USD', logo: '/logos/stacks-stx-logo.png', category: 'Crypto', decimals: 2 },
   HBAR: { name: 'Hedera', symbol: 'HBAR', pair: 'HBAR/USD', logo: 'https://assets.coingecko.com/coins/images/3688/standard/hbar.png', category: 'Crypto', decimals: 4 },
   ICP: { name: 'Internet Computer', symbol: 'ICP', pair: 'ICP/USD', logo: 'https://assets.coingecko.com/coins/images/14495/standard/Internet_Computer_logo.png', category: 'Crypto', decimals: 2 },
-  VET: { name: 'VeChain', symbol: 'VET', pair: 'VET/USD', logo: 'https://assets.coingecko.com/coins/images/1167/standard/VET_Token.png', category: 'Crypto', decimals: 4 },
-  OP: { name: 'Optimism', symbol: 'OP', pair: 'OP/USD', logo: 'https://assets.coingecko.com/coins/images/25244/standard/OP.png', category: 'Crypto', decimals: 3 },
+  VET: { name: 'VeChain', symbol: 'VET', pair: 'VET/USD', logo: '/logos/vechain-vet-logo.png', category: 'Crypto', decimals: 4 },
+  OP: { name: 'Optimism', symbol: 'OP', pair: 'OP/USD', logo: '/logos/optimism-ethereum-op-logo.png', category: 'Crypto', decimals: 3 },
   BONK: { name: 'Bonk', symbol: 'BONK', pair: 'BONK/USD', logo: 'https://assets.coingecko.com/coins/images/28600/standard/bonk.jpg', category: 'Crypto', decimals: 8 },
-  ARB: { name: 'Arbitrum', symbol: 'ARB', pair: 'ARB/USD', logo: 'https://assets.coingecko.com/coins/images/16547/standard/photo_2023-01-31_23.26.49.jpeg', category: 'Crypto', decimals: 3 },
+  ARB: { name: 'Arbitrum', symbol: 'ARB', pair: 'ARB/USD', logo: '/logos/arbitrum-arb-logo.png', category: 'Crypto', decimals: 3 },
   SNX: { name: 'Synthetix', symbol: 'SNX', pair: 'SNX/USD', logo: 'https://assets.coingecko.com/coins/images/3406/standard/SNX.png', category: 'Crypto', decimals: 2 },
   AAVE: { name: 'Aave', symbol: 'AAVE', pair: 'AAVE/USD', logo: 'https://assets.coingecko.com/coins/images/12645/standard/AAVE.png', category: 'Crypto', decimals: 2 },
-  GRT: { name: 'The Graph', symbol: 'GRT', pair: 'GRT/USD', logo: 'https://assets.coingecko.com/coins/images/13397/standard/GRT_Token.png', category: 'Crypto', decimals: 4 },
-  THETA: { name: 'Theta Network', symbol: 'THETA', pair: 'THETA/USD', logo: 'https://assets.coingecko.com/coins/images/3213/standard/theta.png', category: 'Crypto', decimals: 3 },
+  GRT: { name: 'The Graph', symbol: 'GRT', pair: 'GRT/USD', logo: '/logos/the-graph-grt-logo.png', category: 'Crypto', decimals: 4 },
+  THETA: { name: 'Theta Network', symbol: 'THETA', pair: 'THETA/USD', logo: '/logos/theta-network-theta-logo.png', category: 'Crypto', decimals: 3 },
   ALGO: { name: 'Algorand', symbol: 'ALGO', pair: 'ALGO/USD', logo: 'https://assets.coingecko.com/coins/images/4380/standard/download.png', category: 'Crypto', decimals: 4 },
-  EGLD: { name: 'MultiversX', symbol: 'EGLD', pair: 'EGLD/USD', logo: 'https://assets.coingecko.com/coins/images/12335/standard/egld.png', category: 'Crypto', decimals: 2 },
+  EGLD: { name: 'MultiversX', symbol: 'EGLD', pair: 'EGLD/USD', logo: '/logos/multiversx-egld-egld-logo.png', category: 'Crypto', decimals: 2 },
   FLOW: { name: 'Flow', symbol: 'FLOW', pair: 'FLOW/USD', logo: 'https://assets.coingecko.com/coins/images/13446/standard/flow.png', category: 'Crypto', decimals: 3 },
   
   // Commodities
-  WTI: { name: 'Crude Oil WTI', symbol: 'WTI', pair: 'WTI/USD', logo: 'https://cdn-icons-png.flaticon.com/512/3075/3075911.png', category: 'Metals', decimals: 2 },
-  BRENT: { name: 'Crude Oil Brent', symbol: 'BRENT', pair: 'BRENT/USD', logo: 'https://cdn-icons-png.flaticon.com/512/3075/3075911.png', category: 'Metals', decimals: 2 },
-  CORN: { name: 'Corn', symbol: 'CORN', pair: 'CORN/USD', logo: 'https://cdn-icons-png.flaticon.com/512/7606/7606171.png', category: 'Metals', decimals: 3 },
-  WHEAT: { name: 'Wheat', symbol: 'WHEAT', pair: 'WHEAT/USD', logo: 'https://cdn-icons-png.flaticon.com/512/1583/1583326.png', category: 'Metals', decimals: 3 },
+  WTI: { name: 'Crude Oil WTI', symbol: 'WTI', pair: 'WTI/USD', logo: 'OIL', category: 'Commodities', decimals: 2 },
+  BRENT: { name: 'Crude Oil Brent', symbol: 'BRENT', pair: 'BRENT/USD', logo: 'OIL', category: 'Commodities', decimals: 2 },
+  CORN: { name: 'Corn', symbol: 'CORN', pair: 'CORN/USD', logo: 'CORN', category: 'Commodities', decimals: 3 },
+  WHEAT: { name: 'Wheat', symbol: 'WHEAT', pair: 'WHEAT/USD', logo: 'WHEAT', category: 'Commodities', decimals: 3 },
 };
 
 
@@ -278,8 +278,18 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
 
   // Special handling for different asset types
   const isMetal = asset === 'GOLD' || asset === 'SILVER';
+  const isCommodity = ['WTI', 'BRENT', 'CORN', 'WHEAT'].includes(asset);
   const isNear = asset === 'NEAR';
   const isForex = ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(asset);
+
+  if (isCommodity) {
+    const text = asset === 'WTI' || asset === 'BRENT' ? 'OIL' : asset;
+    return (
+      <div className={`relative flex items-center justify-center overflow-hidden w-full h-full rounded-full bg-gradient-to-br from-orange-500/20 to-black border border-orange-500/30 ${className}`}>
+        <span className="font-black text-[10px] text-orange-400 tracking-tighter">{text}</span>
+      </div>
+    );
+  }
 
   const finalImageClass = (isMetal || isForex)
     ? className.replace('object-contain', '').trim() + ' scale-[1.5] object-cover'
@@ -377,7 +387,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   // Asset search and category filtering
   const [assetSearchQuery, setAssetSearchQuery] = useState('');
   const [watchlist, setWatchlist] = useState<AssetType[]>([]);
-  const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks'>('All');
+  const [activeAssetCategory, setActiveAssetCategory] = useState<'All' | 'Crypto' | 'Metals' | 'Forex' | 'Stocks' | 'Commodities'>('All');
 
   // Bet results for visual feedback
   interface BetResult {
@@ -2121,7 +2131,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left }}
-            className="w-72 bg-black/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-[9999] p-3"
+            className="w-80 bg-black/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-[9999] p-3"
           >
             {/* Search Input */}
             <div className="relative mb-3">
@@ -2141,11 +2151,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
             {/* Category Tabs */}
             <div className="flex gap-1 mb-3 bg-white/5 p-1 rounded-xl">
-              {(['All', 'Crypto', 'Metals', 'Forex', 'Stocks'] as const).map((cat) => (
+              {(['All', 'Crypto', 'Metals', 'Forex', 'Stocks', 'Commodities'] as const).map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveAssetCategory(cat)}
-                  className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${activeAssetCategory === cat ? 'bg-purple-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`flex-1 py-1.5 px-1 rounded-lg text-[9px] font-black tracking-tighter transition-all ${activeAssetCategory === cat ? 'bg-purple-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                   {cat}
                 </button>
