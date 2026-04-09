@@ -32,20 +32,20 @@ interface CellBet {
 
 // Component to safely display asset logos with fallback
 const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: string; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' | 'Commodities'; decimals: number }> = {
-  BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto', decimals: 2 },
-  ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: '/logos/ethereum-eth-logo.png', category: 'Crypto', decimals: 2 },
-  SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: '/logos/solana-sol-logo.png', category: 'Crypto', decimals: 2 },
-  SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', logo: '/logos/sui-logo.png', category: 'Crypto', decimals: 3 },
-  TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', logo: '/logos/tron-trx-logo.png', category: 'Crypto', decimals: 4 },
-  XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', logo: '/logos/xrp-xrp-logo.png', category: 'Crypto', decimals: 4 },
-  DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto', decimals: 5 },
-  ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', logo: '/logos/cardano-ada-logo.png', category: 'Crypto', decimals: 4 },
-  BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto', decimals: 2 },
-  BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', logo: '/logos/bnb-bnb-logo.png', category: 'Crypto', decimals: 2 },
-  XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', logo: '/logos/stellar-xlm-logo.png', category: 'Crypto', decimals: 4 },
-  XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', logo: '/logos/tezos-xtz-logo.png', category: 'Crypto', decimals: 3 },
-  NEAR: { name: 'Near Protocol', symbol: 'NEAR', pair: 'NEAR/USD', logo: '/logos/near.png', category: 'Crypto', decimals: 3 },
-  APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', logo: '/logos/aptos-logo.png', category: 'Crypto', decimals: 2 },
+  BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: 'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png', category: 'Crypto', decimals: 2 },
+  ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: 'https://assets.coingecko.com/coins/images/279/standard/ethereum.png', category: 'Crypto', decimals: 2 },
+  SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: 'https://assets.coingecko.com/coins/images/4128/standard/solana.png', category: 'Crypto', decimals: 2 },
+  SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', logo: 'https://assets.coingecko.com/coins/images/26375/standard/sui-ocean-square.png', category: 'Crypto', decimals: 3 },
+  TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', logo: 'https://assets.coingecko.com/coins/images/1094/standard/tron-logo.png', category: 'Crypto', decimals: 4 },
+  XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', logo: 'https://assets.coingecko.com/coins/images/44/standard/xrp-symbol-white-128.png', category: 'Crypto', decimals: 4 },
+  DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', logo: 'https://assets.coingecko.com/coins/images/5/standard/dogecoin.png', category: 'Crypto', decimals: 5 },
+  ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', logo: 'https://assets.coingecko.com/coins/images/975/standard/cardano.png', category: 'Crypto', decimals: 4 },
+  BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', logo: 'https://assets.coingecko.com/coins/images/780/standard/bitcoin-cash-circle.png', category: 'Crypto', decimals: 2 },
+  BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', logo: 'https://assets.coingecko.com/coins/images/825/standard/bnb-icon2_2x.png', category: 'Crypto', decimals: 2 },
+  XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', logo: 'https://assets.coingecko.com/coins/images/100/standard/Stellar_symbol_black_RGB.png', category: 'Crypto', decimals: 4 },
+  XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', logo: 'https://assets.coingecko.com/coins/images/976/standard/Tezos-logo.png', category: 'Crypto', decimals: 3 },
+  NEAR: { name: 'Near Protocol', symbol: 'NEAR', pair: 'NEAR/USD', logo: 'https://assets.coingecko.com/coins/images/10365/standard/near.jpg', category: 'Crypto', decimals: 3 },
+  APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', logo: 'https://assets.coingecko.com/coins/images/26455/standard/aptos_round.png', category: 'Crypto', decimals: 2 },
   
   // Metals
   GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'XAU/USD', logo: '/logos/gold.jpg', category: 'Metals', decimals: 2 },
@@ -311,7 +311,7 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
         alt={asset}
         className={finalImageClass}
         onError={handleImageError}
-        {...(!currentSrc.includes('clearbit') && !currentSrc.includes('google.com') ? { crossOrigin: 'anonymous' } : {})}
+        {/* crossOrigin only needed for canvas taint-checks; skip for all external CDNs */}
       />
     </div>
   );
