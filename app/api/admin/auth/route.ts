@@ -20,7 +20,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!password || password !== stored) {
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+    // Hash both values to a fixed-length digest before comparing, so the
+    // response timing reveals nothing about the stored password's length.
+    const { createHmac, timingSafeEqual } = await import('crypto');
+    const hmacKey = Buffer.from(stored, 'utf-8');
+    const a = createHmac('sha256', hmacKey).update(password).digest();
+    const b = createHmac('sha256', hmacKey).update(stored).digest();
+    if (!timingSafeEqual(a, b)) {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
 

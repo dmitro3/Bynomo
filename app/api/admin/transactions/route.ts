@@ -7,9 +7,10 @@ export async function GET(request: NextRequest) {
     if (deny) return deny;
     try {
         // Fetch recent deposits and withdrawals from audit log
+        // Explicit column selection to avoid exposing sensitive future columns
         const { data: transactions, error } = await supabase
             .from('balance_audit_log')
-            .select('*')
+            .select('id, user_address, currency, operation_type, amount, balance_before, balance_after, transaction_hash, bet_id, created_at')
             .in('operation_type', ['deposit', 'withdrawal'])
             .order('created_at', { ascending: false })
             .limit(50);

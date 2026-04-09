@@ -39,8 +39,8 @@ async function executeTreasuryWithdrawal(
       withdrawTxHash = await transferSOLFromTreasury(userAddress, netWithdrawAmount);
     }
   } else if (normalizedCurrency === 'SUI') {
-    const { transferUSDCFromTreasury } = await import('@/lib/sui/backend-client');
-    withdrawTxHash = await transferUSDCFromTreasury(userAddress, netWithdrawAmount);
+    const { transferSUIFromTreasury } = await import('@/lib/sui/backend-client');
+    withdrawTxHash = await transferSUIFromTreasury(userAddress, netWithdrawAmount);
   } else if (normalizedCurrency === 'XLM') {
     const { transferXLMFromTreasury } = await import('@/lib/stellar/backend-client');
     withdrawTxHash = await transferXLMFromTreasury(userAddress, netWithdrawAmount);
@@ -77,9 +77,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Invalid request id' }, { status: 400 });
     }
 
+    // Explicit column selection to avoid exposing sensitive future columns
     const { data: req, error: reqError } = await supabase
       .from('withdrawal_requests')
-      .select('*')
+      .select('id, user_address, currency, amount, net_amount, fee_amount, fee_tier, requested_at, status, decided_by, tx_hash, notes, account_type, signature, signed_at, created_at')
       .eq('id', id)
       .single();
 
@@ -100,7 +101,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       normalizedCurrency === 'PUSH' ||
       normalizedCurrency === 'PC' ||
       normalizedCurrency === 'SOMNIA' ||
-      normalizedCurrency === 'STT';
+      normalizedCurrency === 'STT' ||
+      normalizedCurrency === '0G';
 
     if (requiresIntentSignature) {
       if (!req.signature || !req.signed_at) {

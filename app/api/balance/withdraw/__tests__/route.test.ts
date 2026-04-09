@@ -1,575 +1,418 @@
-/**
- * Unit tests for POST /api/balance/withdraw endpoint
- * 
- * Task: 4.3 Create POST /api/balance/withdraw endpoint
- * Requirements: 5.3, 7.5
- */
+import { NextRequest } from 'next/server';
 
 import { POST } from '../route';
-import { supabase } from '@/lib/supabase/client';
-import { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { supabaseService } from '@/lib/supabase/serviceClient';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
+import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
+import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
+import { transferBNBFromTreasury } from '@/lib/bnb/backend-client';
 
-// Mock the Supabase client
-jest.mock('@/lib/supabase/client', () => ({
-  supabase: {
+const TEST_USER = '0x1111111111111111111111111111111111111111';
+const DEMO_USER = '0xDEMO_1234567890';
+
+jest.mock('@/lib/balance/balanceApiGuard', () => ({
+  assertBalanceApiAuthorized: jest.fn(() => null),
+}));
+
+jest.mock('@/lib/bans/walletBan', () => ({
+  isWalletGloballyBanned: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('@/lib/utils/address', () => ({
+  isValidAddress: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock('@/lib/admin/walletAddressVariants', () => ({
+  walletAddressSearchVariants: jest.fn((address: string) => [address, address.toLowerCase()]),
+}));
+
+jest.mock('@/lib/wallet/canonicalAddress', () => ({
+  canonicalHouseUserAddress: jest.fn((address: string) => address.toLowerCase()),
+}));
+
+jest.mock('@/lib/fees/platformFee', () => ({
+  calculateFeeAmount: jest.fn((amount: number) => Number((amount * 0.1).toFixed(8))),
+  collectPlatformFeeFromTreasury: jest.fn().mockResolvedValue('0xfeehash'),
+  getFeePercentLabel: jest.fn(() => '10%'),
+}));
+
+jest.mock('@/lib/bnb/backend-client', () => ({
+  transferBNBFromTreasury: jest.fn().mockResolvedValue('0xwithdrawhash'),
+}));
+
+jest.mock('@/lib/supabase/serviceClient', () => ({
+  supabaseService: {
+    from: jest.fn(),
     rpc: jest.fn(),
   },
 }));
 
-// Mock NextResponse.json to return a proper Response object
 jest.mock('next/server', () => {
   const actual = jest.requireActual('next/server');
   return {
     ...actual,
     NextResponse: {
-      json: jest.fn((body: any, init?: ResponseInit) => {
-        return {
-          json: async () => body,
-          status: init?.status || 200,
-          headers: new Headers(init?.headers),
-        };
-      }),
+      json: jest.fn((body: any, init?: ResponseInit) => ({
+        json: async () => body,
+        status: init?.status || 200,
+        headers: new Headers(init?.headers),
+      })),
     },
   };
 });
 
+type QueryResult = { data?: any; error?: any; count?: number | null };
+
+type FromMockState = {
+  userBalances?: QueryResult;
+  depositAudit?: QueryResult;
+  withdrawalAudit?: QueryResult;
+  pendingAmounts?: QueryResult;
+  withdrawalAuditCount?: QueryResult;
+  pendingCount?: QueryResult;
+  pendingInsert?: QueryResult;
+  feeAuditInsert?: QueryResult;
+};
+
+const mockFrom = supabaseService.from as jest.MockedFunction<typeof supabaseService.from>;
+const mockRpc = supabaseService.rpc as jest.MockedFunction<typeof supabaseService.rpc>;
+const mockAssertBalanceApiAuthorized = assertBalanceApiAuthorized as jest.MockedFunction<typeof assertBalanceApiAuthorized>;
+const mockIsWalletGloballyBanned = isWalletGloballyBanned as jest.MockedFunction<typeof isWalletGloballyBanned>;
+const mockCalculateFeeAmount = calculateFeeAmount as jest.MockedFunction<typeof calculateFeeAmount>;
+const mockCollectPlatformFeeFromTreasury = collectPlatformFeeFromTreasury as jest.MockedFunction<typeof collectPlatformFeeFromTreasury>;
+const mockGetFeePercentLabel = getFeePercentLabel as jest.MockedFunction<typeof getFeePercentLabel>;
+const mockTransferBNBFromTreasury = transferBNBFromTreasury as jest.MockedFunction<typeof transferBNBFromTreasury>;
+
+function buildRequest(body: unknown) {
+  return new NextRequest('http://localhost:3000/api/balance/withdraw', {
+    method: 'POST',
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
+function mockSupabaseFrom(state: FromMockState) {
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'user_balances') {
+      return {
+        select: () => ({
+          in: () => ({
+            eq: async () => ({
+              data: state.userBalances?.data ?? [],
+              error: state.userBalances?.error ?? null,
+            }),
+          }),
+        }),
+      } as any;
+    }
+
+    if (table === 'balance_audit_log') {
+      return {
+        select: (_columns: string, options?: { count?: 'exact'; head?: boolean }) => {
+          if (options?.count === 'exact' && options?.head) {
+            return {
+              eq: () => ({
+                in: async () => ({
+                  count: state.withdrawalAuditCount?.count ?? 0,
+                  error: state.withdrawalAuditCount?.error ?? null,
+                }),
+              }),
+            };
+          }
+
+          return {
+            in: () => ({
+              eq: () => ({
+                eq: async (_field: string, operationType: string) => ({
+                  data:
+                    operationType === 'deposit'
+                      ? state.depositAudit?.data ?? []
+                      : state.withdrawalAudit?.data ?? [],
+                  error:
+                    operationType === 'deposit'
+                      ? state.depositAudit?.error ?? null
+                      : state.withdrawalAudit?.error ?? null,
+                }),
+              }),
+            }),
+          };
+        },
+        insert: () =>
+          Promise.resolve({
+            data: state.feeAuditInsert?.data ?? null,
+            error: state.feeAuditInsert?.error ?? null,
+          }),
+      } as any;
+    }
+
+    if (table === 'withdrawal_requests') {
+      return {
+        select: (_columns: string, options?: { count?: 'exact'; head?: boolean }) => {
+          if (options?.count === 'exact' && options?.head) {
+            return {
+              eq: () => ({
+                in: async () => ({
+                  count: state.pendingCount?.count ?? 0,
+                  error: state.pendingCount?.error ?? null,
+                }),
+              }),
+            };
+          }
+
+          return {
+            in: () => ({
+              eq: () => ({
+                in: async () => ({
+                  data: state.pendingAmounts?.data ?? [],
+                  error: state.pendingAmounts?.error ?? null,
+                }),
+              }),
+            }),
+          };
+        },
+        insert: () => ({
+          select: () => ({
+            single: async () => ({
+              data: state.pendingInsert?.data ?? { id: 99 },
+              error: state.pendingInsert?.error ?? null,
+            }),
+          }),
+        }),
+      } as any;
+    }
+
+    throw new Error(`Unexpected table mock: ${table}`);
+  });
+}
+
 describe('POST /api/balance/withdraw', () => {
-  const mockRpc = supabase.rpc as jest.MockedFunction<typeof supabase.rpc>;
-  
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('should successfully process a withdrawal and return new balance', async () => {
-    // Mock successful stored procedure response
-    const mockResult = {
-      success: true,
-      error: null,
-      new_balance: 15.0,
-    };
-
+    mockAssertBalanceApiAuthorized.mockReturnValue(null);
+    mockIsWalletGloballyBanned.mockResolvedValue(false);
+    mockCalculateFeeAmount.mockImplementation((amount: number) => Number((amount * 0.1).toFixed(8)));
+    mockCollectPlatformFeeFromTreasury.mockResolvedValue('0xfeehash');
+    mockGetFeePercentLabel.mockReturnValue('10%');
+    mockTransferBNBFromTreasury.mockResolvedValue('0xwithdrawhash');
+    mockSupabaseFrom({
+      userBalances: {
+        data: [{ balance: 2, status: 'active', user_address: TEST_USER.toLowerCase() }],
+      },
+      depositAudit: { data: [] },
+      withdrawalAudit: { data: [] },
+      pendingAmounts: { data: [] },
+      withdrawalAuditCount: { count: 0 },
+      pendingCount: { count: 0 },
+      pendingInsert: { data: { id: 77 } },
+      feeAuditInsert: { data: null },
+    });
     mockRpc.mockResolvedValue({
-      data: mockResult,
+      data: { success: true, error: null, new_balance: 1.95 },
       error: null,
     } as any);
+  });
 
-    // Create mock request with valid withdrawal data
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
+  it('returns 400 when userAddress is missing', async () => {
+    const response = await POST(buildRequest({ amount: 0.05, currency: 'BNB' }));
     const json = await response.json();
 
-    // Verify response
+    expect(response.status).toBe(400);
+    expect(json).toEqual({ error: 'Missing required fields: userAddress, amount' });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for invalid wallet addresses', async () => {
+    const { isValidAddress } = jest.requireMock('@/lib/utils/address') as {
+      isValidAddress: jest.Mock;
+    };
+    isValidAddress.mockResolvedValueOnce(false);
+
+    const response = await POST(buildRequest({
+      userAddress: 'bad-address',
+      amount: 0.05,
+      currency: 'BNB',
+    }));
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json).toEqual({ error: 'Invalid wallet address format' });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the user balance record is missing', async () => {
+    mockSupabaseFrom({
+      userBalances: { data: [] },
+    });
+
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 0.05,
+      currency: 'BNB',
+    }));
+    const json = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(json).toEqual({ error: 'User record not found' });
+  });
+
+  it('returns 400 when the house balance is insufficient', async () => {
+    mockSupabaseFrom({
+      userBalances: {
+        data: [{ balance: 0.01, status: 'active', user_address: TEST_USER.toLowerCase() }],
+      },
+      depositAudit: { data: [] },
+      withdrawalAudit: { data: [] },
+      pendingAmounts: { data: [] },
+      withdrawalAuditCount: { count: 0 },
+      pendingCount: { count: 0 },
+    });
+
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 0.05,
+      currency: 'BNB',
+    }));
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json).toEqual({ error: 'Insufficient house balance in BNB' });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('creates a pending request for large real withdrawals', async () => {
+    mockSupabaseFrom({
+      userBalances: {
+        data: [{ balance: 10, status: 'active', user_address: TEST_USER.toLowerCase() }],
+      },
+      depositAudit: { data: [{ amount: 20 }] },
+      withdrawalAudit: { data: [] },
+      pendingAmounts: { data: [] },
+      withdrawalAuditCount: { count: 0 },
+      pendingCount: { count: 0 },
+      pendingInsert: { data: { id: 123 } },
+    });
+
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 1,
+      currency: 'BNB',
+      userTier: 'free',
+    }));
+    const json = await response.json();
+
     expect(response.status).toBe(200);
     expect(json).toEqual({
       success: true,
-      newBalance: 15.0,
+      status: 'pending',
+      requestId: 123,
+      newBalance: 10,
+      frequencyReview: false,
+      withdrawalCount: 1,
     });
+    expect(mockTransferBNBFromTreasury).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
 
-    // Verify stored procedure was called with correct parameters
+  it('processes small BNB withdrawals immediately in test mode', async () => {
+    mockSupabaseFrom({
+      userBalances: {
+        data: [{ balance: 2, status: 'active', user_address: TEST_USER.toLowerCase() }],
+      },
+      depositAudit: { data: [] },
+      withdrawalAudit: { data: [] },
+      pendingAmounts: { data: [] },
+      withdrawalAuditCount: { count: 0 },
+      pendingCount: { count: 0 },
+      feeAuditInsert: { data: null },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: { success: true, error: null, new_balance: 1.95 },
+      error: null,
+    } as any);
+
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 0.05,
+      currency: 'BNB',
+      userTier: 'free',
+    }));
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json).toEqual({
+      success: true,
+      txHash: '0xwithdrawhash',
+      newBalance: 1.95,
+    });
+    expect(mockCollectPlatformFeeFromTreasury).toHaveBeenCalledWith('BNB', 0.005);
+    expect(mockTransferBNBFromTreasury).toHaveBeenCalledWith(TEST_USER, 0.045);
     expect(mockRpc).toHaveBeenCalledWith('update_balance_for_withdrawal', {
-      p_user_address: '0x123abc',
-      p_withdrawal_amount: 10.5,
-      p_transaction_hash: '0xabcdef123456',
+      p_user_address: TEST_USER.toLowerCase(),
+      p_withdrawal_amount: 0.05,
+      p_currency: 'BNB',
+      p_transaction_hash: '0xfeehash|netTx:0xwithdrawhash',
     });
   });
 
-  it('should return 400 for missing userAddress', async () => {
-    // Create mock request with missing userAddress
-    const requestBody = {
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Missing required fields: userAddress, amount, txHash',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for missing amount', async () => {
-    // Create mock request with missing amount
-    const requestBody = {
-      userAddress: '0x123abc',
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Missing required fields: userAddress, amount, txHash',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for missing txHash', async () => {
-    // Create mock request with missing txHash
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Missing required fields: userAddress, amount, txHash',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for invalid address format', async () => {
-    // Create mock request with invalid address (no 0x prefix)
-    const requestBody = {
-      userAddress: 'invalid123',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Invalid address format. Flow addresses must start with 0x',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for zero amount', async () => {
-    // Create mock request with zero amount
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 0,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Withdrawal amount must be greater than zero',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for negative amount', async () => {
-    // Create mock request with negative amount
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: -5.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Withdrawal amount must be greater than zero',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should return 400 for insufficient balance', async () => {
-    // Mock stored procedure returning insufficient balance error
-    const mockResult = {
-      success: false,
-      error: 'Insufficient balance',
-      new_balance: 5.0,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request with amount exceeding balance
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Insufficient balance',
-    });
-  });
-
-  it('should return 400 for user not found', async () => {
-    // Mock stored procedure returning user not found error
-    const mockResult = {
-      success: false,
-      error: 'User not found',
-      new_balance: null,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request
-    const requestBody = {
-      userAddress: '0xnonexistent',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'User not found',
-    });
-  });
-
-  it('should return 503 for database connection errors', async () => {
-    // Mock database connection error
-    mockRpc.mockResolvedValue({
+  it('returns the transfer warning payload when the DB update fails after transfer', async () => {
+    mockRpc.mockResolvedValueOnce({
       data: null,
-      error: { code: 'CONNECTION_ERROR', message: 'Connection failed' },
+      error: { message: 'rpc failed' },
     } as any);
 
-    // Create mock request
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 0.05,
+      currency: 'BNB',
+    }));
     const json = await response.json();
 
-    // Verify response
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(200);
     expect(json).toEqual({
-      error: 'Service temporarily unavailable. Please try again.',
+      success: true,
+      txHash: '0xwithdrawhash',
+      warning: 'BNB sent but balance update failed. Please contact support.',
+      error: 'rpc failed',
     });
   });
 
-  it('should handle stored procedure errors', async () => {
-    // Mock stored procedure returning error
-    const mockResult = {
-      success: false,
-      error: 'Database constraint violation',
-      new_balance: null,
-    };
+  it('returns 500 when the treasury transfer itself fails', async () => {
+    mockTransferBNBFromTreasury.mockRejectedValueOnce(new Error('insufficient funds'));
 
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
+    const response = await POST(buildRequest({
+      userAddress: TEST_USER,
+      amount: 0.05,
+      currency: 'BNB',
+    }));
     const json = await response.json();
 
-    // Verify response
-    expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'Database constraint violation',
-    });
-  });
-
-  it('should handle unexpected errors gracefully', async () => {
-    // Mock unexpected error
-    mockRpc.mockRejectedValue(new Error('Unexpected error'));
-
-    // Create mock request
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
     expect(response.status).toBe(500);
     expect(json).toEqual({
-      error: 'An error occurred processing your request',
+      error: 'Withdrawal failed: insufficient funds',
     });
   });
 
-  it('should handle large withdrawal amounts correctly', async () => {
-    // Mock successful stored procedure response with large amount
-    const mockResult = {
-      success: true,
-      error: null,
-      new_balance: 0.12345678,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request with large amount
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 999999.12345678,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
+  it('allows demo withdrawals to execute immediately without manual review', async () => {
+    mockSupabaseFrom({
+      userBalances: {
+        data: [{ balance: 5, status: 'active', user_address: DEMO_USER.toLowerCase() }],
+      },
+      depositAudit: { data: [] },
+      withdrawalAudit: { data: [] },
+      pendingAmounts: { data: [] },
+      withdrawalAuditCount: { count: 0 },
+      pendingCount: { count: 0 },
     });
 
-    // Call the endpoint
-    const response = await POST(request);
+    const response = await POST(buildRequest({
+      userAddress: DEMO_USER,
+      amount: 1,
+      currency: 'BNB',
+    }));
     const json = await response.json();
 
-    // Verify response
     expect(response.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(json.newBalance).toBe(0.12345678);
-  });
-
-  it('should handle small decimal amounts correctly', async () => {
-    // Mock successful stored procedure response with small decimal
-    const mockResult = {
-      success: true,
-      error: null,
-      new_balance: 0.99999999,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request with small decimal amount
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 0.00000001,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(200);
-    expect(json.success).toBe(true);
-    expect(json.newBalance).toBe(0.99999999);
-  });
-
-  it('should handle malformed JSON gracefully', async () => {
-    // Create mock request with malformed JSON
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: 'not valid json',
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(500);
-    expect(json).toEqual({
-      error: 'An error occurred processing your request',
-    });
-
-    // Verify stored procedure was not called
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('should verify audit log is created via stored procedure', async () => {
-    // The stored procedure handles audit log creation internally
-    // This test verifies the procedure is called with correct parameters
-    const mockResult = {
-      success: true,
-      error: null,
-      new_balance: 5.0,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 10.0,
-      txHash: '0xtxhash789',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    await POST(request);
-
-    // Verify stored procedure was called with transaction hash
-    // The procedure internally creates audit log with operation_type='withdrawal'
-    expect(mockRpc).toHaveBeenCalledWith('update_balance_for_withdrawal', {
-      p_user_address: '0x123abc',
-      p_withdrawal_amount: 10.0,
-      p_transaction_hash: '0xtxhash789',
-    });
-  });
-
-  it('should handle withdrawal of entire balance', async () => {
-    // Mock successful stored procedure response for withdrawing entire balance
-    const mockResult = {
-      success: true,
-      error: null,
-      new_balance: 0,
-    };
-
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request to withdraw entire balance
-    const requestBody = {
-      userAddress: '0x123abc',
-      amount: 25.5,
-      txHash: '0xabcdef123456',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/balance/withdraw', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the endpoint
-    const response = await POST(request);
-    const json = await response.json();
-
-    // Verify response
-    expect(response.status).toBe(200);
-    expect(json.success).toBe(true);
-    expect(json.newBalance).toBe(0);
+    expect(json.status).toBeUndefined();
+    expect(mockRpc).toHaveBeenCalled();
   });
 });

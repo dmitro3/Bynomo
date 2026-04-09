@@ -7,9 +7,10 @@ export async function GET(request: NextRequest) {
     const deny = requireAdminAuth(request);
     if (deny) return deny;
     try {
+        // Explicit column selection to avoid exposing sensitive future columns
         const { data, error } = await supabase
             .from('access_codes')
-            .select('*')
+            .select('id, code, is_used, used_by, used_at, created_at')
             .order('created_at', { ascending: false });
 
         if (error) throw error;

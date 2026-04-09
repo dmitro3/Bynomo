@@ -5,12 +5,16 @@
  * GET  /api/referral?address=<wallet>   — fetch or create referral record
  * POST /api/referral                    — register a new user with a ref code
  * GET  /api/referral?leaderboard=1      — top 20 referrers (addresses truncated)
+ *
+ * The single-wallet fetch and POST require first-party auth so users cannot
+ * enumerate each other's referral codes or referred_by fields.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
 
 function truncate(addr: string) {
   if (!addr || addr.length < 12) return addr;
@@ -21,14 +25,14 @@ function truncate(addr: string) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
 
-  // Leaderboard
+  // Leaderboard is public (addresses are already truncated)
   if (searchParams.get('leaderboard') === '1') {
     const { data, error } = await supabase
       .from('user_referrals')
       .select('user_address, referral_count, referral_code')
       .order('referral_count', { ascending: false })
       .limit(20);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Failed to load leaderboard' }, { status: 500 });
     return NextResponse.json({
       leaderboard: (data ?? []).map(r => ({
         user_address: truncate(r.user_address),
@@ -38,7 +42,11 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Single wallet info
+  // Single wallet info — requires first-party auth so users cannot enumerate
+  // each other's referral codes or referred_by field via the public API.
+  const unauthorized = assertBalanceApiAuthorized(req);
+  if (unauthorized) return unauthorized;
+
   const address = searchParams.get('address')?.trim();
   if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });
   const variants = walletAddressSearchVariants(address);
@@ -50,7 +58,7 @@ export async function GET(req: NextRequest) {
     .limit(1);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch referral data' }, { status: 500 });
   }
 
   const row = refRows?.[0];
@@ -63,6 +71,9 @@ export async function GET(req: NextRequest) {
 
 // ── POST ──────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const unauthorized = assertBalanceApiAuthorized(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await req.json();
     const { address, referredByCode } = body as { address: string; referredByCode?: string };
@@ -106,7 +117,7 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Failed to register referral' }, { status: 500 });
 
     // Increment referrer's count server-side (no client can fake this)
     if (referredByAddress) {

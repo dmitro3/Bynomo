@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
 
 export async function POST(request: NextRequest) {
     try {
+        const unauthorized = assertBalanceApiAuthorized(request);
+        if (unauthorized) return unauthorized;
+
         const { code, walletAddress } = await request.json();
 
         if (!code) {
@@ -60,6 +64,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, code: accessCode.code });
     } catch (error: any) {
         console.error('Validation error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Access code validation failed' }, { status: 500 });
     }
 }

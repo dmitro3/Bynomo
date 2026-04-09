@@ -6,9 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
 
 export async function POST(request: NextRequest) {
     try {
+        const unauthorized = assertBalanceApiAuthorized(request);
+        if (unauthorized) return unauthorized;
+
         const body = await request.json();
         const {
             id,

@@ -16,6 +16,70 @@ import { getSolanaConfig } from './config';
 import bs58 from 'bs58';
 
 /**
+ * Verifies a native SOL or SPL deposit to the configured treasury (signature = tx id).
+ */
+export async function verifySolanaDepositTx(
+    signature: string,
+    userAddress: string,
+    expectedAmount: number,
+    tokenMint?: string,
+): Promise<boolean> {
+    if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) return false;
+
+    try {
+        const config = getSolanaConfig();
+        if (!config.treasuryAddress) return false;
+
+        const connection = new Connection(config.rpcEndpoint, 'confirmed');
+        const treasuryPub = new PublicKey(config.treasuryAddress);
+        const userPub = new PublicKey(userAddress);
+
+        const parsed = await connection.getParsedTransaction(signature, {
+            maxSupportedTransactionVersion: 0,
+        });
+
+        if (!parsed || parsed.meta?.err) return false;
+
+        if (!tokenMint) {
+            const keys = parsed.transaction.message.accountKeys.map((k) =>
+                typeof k === 'string' ? k : k.pubkey.toBase58(),
+            );
+            const treasuryIdx = keys.indexOf(treasuryPub.toBase58());
+            const userIdx = keys.indexOf(userPub.toBase58());
+            if (treasuryIdx === -1 || userIdx === -1) return false;
+            const preT = parsed.meta.preBalances[treasuryIdx];
+            const postT = parsed.meta.postBalances[treasuryIdx];
+            const gained = postT - preT;
+            const minLamports = Math.floor(expectedAmount * LAMPORTS_PER_SOL * 0.99);
+            return gained >= minLamports;
+        }
+
+        const { getMint } = await import('@solana/spl-token');
+        const mintPk = new PublicKey(tokenMint);
+        const mintInfo = await getMint(connection, mintPk);
+        const decimals = mintInfo.decimals;
+        const minRaw = BigInt(Math.floor(expectedAmount * Math.pow(10, decimals) * 0.99));
+
+        const treasuryStr = treasuryPub.toBase58();
+        const preTb = parsed.meta.preTokenBalances || [];
+        const postTb = parsed.meta.postTokenBalances || [];
+
+        const row = (rows: typeof postTb) =>
+            rows.find((b) => b.mint === tokenMint && b.owner === treasuryStr);
+
+        const preRow = row(preTb);
+        const postRow = row(postTb);
+        const preAmt = BigInt(preRow?.uiTokenAmount?.amount ?? '0');
+        const postAmt = BigInt(postRow?.uiTokenAmount?.amount ?? '0');
+        const gained = postAmt - preAmt;
+        return gained >= minRaw;
+    } catch (err) {
+        console.error('[verifySolanaDepositTx]', err);
+        return false;
+    }
+}
+
+/**
  * Get the treasury keypair for backend operations
  */
 export function getTreasuryKeypair(): Keypair {

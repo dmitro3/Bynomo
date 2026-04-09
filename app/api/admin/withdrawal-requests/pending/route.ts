@@ -6,9 +6,10 @@ export async function GET(_request: NextRequest) {
   const deny = requireAdminAuth(_request);
   if (deny) return deny;
   try {
+    // Explicit column selection to avoid exposing sensitive future columns
     const { data, error } = await supabase
       .from('withdrawal_requests')
-      .select('*')
+      .select('id, user_address, currency, amount, net_amount, fee_amount, fee_tier, requested_at, status, decided_by, tx_hash, notes, account_type, created_at')
       .eq('status', 'pending')
       .order('requested_at', { ascending: false })
       .limit(50);

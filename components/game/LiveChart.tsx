@@ -324,7 +324,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const activeBets = useStore((state) => state.activeBets);
   const resolveBet = useStore((state) => state.resolveBet);
   const fetchBalance = useStore((state) => state.fetchBalance);
-  const updateBalance = useStore((state) => state.updateBalance);
   const userAddress = useStore((state) => state.address);
   const houseBalance = useStore((state) => state.houseBalance);
   const isPlacingBet = useStore((state) => state.isPlacingBet);
@@ -1143,30 +1142,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           playLoseSound();
         }
 
-        // Update house balance via API (skip for demo mode)
-        const isDemoMode = userAddress?.startsWith('0xDEMO');
-
-        if (userAddress && !isDemoMode) {
-          // Real mode - use API
-          if (won) {
-            fetch('/api/balance/win', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userAddress,
-                winAmount: payout,
-                betId: bet.betId
-              })
-            }).then(() => {
-              fetchBalance(userAddress);
-            }).catch(console.error);
-          } else {
-            // If lost, just refresh balance (already deducted)
-            fetchBalance(userAddress);
-          }
-        } else if (isDemoMode && won) {
-          // Demo mode - update locally on win (bet amount already subtracted)
-          updateBalance(payout, 'add');
+        // Balance settlement is handled centrally by resolveBet in the store.
+        // Avoid duplicate /api/balance/win calls from the chart layer.
+        if (userAddress) {
+          fetchBalance(userAddress);
         }
 
         // Add to resolved cells for visual feedback
@@ -1177,7 +1156,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           timestamp: Date.now()
         }]);
 
-        console.log(`Bet resolved: ${won ? 'WON' : 'LOST'} - Amount: ${bet.amount}, Multiplier: ${bet.multiplier}, Payout: ${payout}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Bet resolved: ${won ? 'WON' : 'LOST'} - Amount: ${bet.amount}, Multiplier: ${bet.multiplier}, Payout: ${payout}`);
+        }
       }
     });
   }, [betCells, cellBets, scales, currentPrice, resolveBet, userAddress, fetchBalance, playWinSound, playLoseSound, gameMode]);

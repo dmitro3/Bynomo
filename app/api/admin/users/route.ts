@@ -8,9 +8,10 @@ export async function GET(request: NextRequest) {
     if (deny) return deny;
     try {
         // Fetch all user balances
+        // Explicit column selection to avoid exposing sensitive future columns
         const { data: balances, error: balanceError } = await supabase
             .from('user_balances')
-            .select('*')
+            .select('id, user_address, currency, balance, status, tier, updated_at, created_at')
             .order('updated_at', { ascending: false });
 
         if (balanceError) throw balanceError;

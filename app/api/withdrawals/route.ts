@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
 
 export async function GET(request: NextRequest) {
+  // Require first-party authorization header to prevent enumeration of any wallet's withdrawals
+  const unauthorized = assertBalanceApiAuthorized(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
@@ -11,17 +16,20 @@ export async function GET(request: NextRequest) {
     }
 
     const variants = walletAddressSearchVariants(address);
+    // Explicit column selection - never expose internal fields like signature
     const { data, error } = await supabase
       .from('withdrawal_requests')
-      .select('*')
+      .select('id, user_address, currency, amount, net_amount, fee_amount, requested_at, status, tx_hash, created_at')
       .in('user_address', variants)
       .order('requested_at', { ascending: false })
       .limit(100);
 
-    if (error) throw error;
+    if (error) {
+      return NextResponse.json({ error: 'Failed to fetch withdrawals' }, { status: 500 });
+    }
     return NextResponse.json({ withdrawals: data || [] });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to fetch withdrawals' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch withdrawals' }, { status: 500 });
   }
 }
 

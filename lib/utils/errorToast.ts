@@ -247,7 +247,11 @@ export function showSyncErrorToast(userAddress: string): void {
     )
   );
   
-  console.error('CRITICAL: Balance synchronization error for user:', userAddress);
+  if (process.env.NODE_ENV === 'development') {
+    console.error('CRITICAL: Balance synchronization error for user:', userAddress);
+  } else {
+    console.error('CRITICAL: Balance synchronization error detected');
+  }
 }
 
 // ============================================================================

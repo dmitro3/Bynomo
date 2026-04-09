@@ -36,9 +36,10 @@ export async function GET(_request: NextRequest) {
             maxStreak = Math.max(maxStreak, currentStreak);
 
             if (maxStreak >= 10) {
+                // Explicit column selection to avoid exposing sensitive future columns
                 const { data: userData } = await supabase
                     .from('user_balances')
-                    .select('*')
+                    .select('id, user_address, currency, balance, status, tier, updated_at, created_at')
                     .eq('user_address', address);
                 if (userData && userData.length > 0) {
                     suspiciousUsers.push({ ...userData[0], maxStreak, latestBets: results.slice(0, 10) });

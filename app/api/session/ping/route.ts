@@ -2,26 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
 
-// Auto-create the table if it doesn't exist yet (idempotent)
+// The user_sessions table must be created via a proper migration (003_user_sessions.sql).
+// exec_sql RPC has been removed — it was a privilege escalation vector that allowed
+// arbitrary DDL execution through the API surface.
 async function ensureTable() {
-  try {
-    await supabaseService.rpc('exec_sql' as any, {
-      sql: `
-        create table if not exists public.user_sessions (
-          id               uuid primary key default gen_random_uuid(),
-          wallet_address   text not null,
-          network          text not null default 'BNB',
-          started_at       timestamptz not null default now(),
-          last_ping_at     timestamptz not null default now(),
-          ended_at         timestamptz
-        );
-        create index if not exists idx_user_sessions_wallet  on public.user_sessions (wallet_address);
-        create index if not exists idx_user_sessions_started on public.user_sessions (started_at desc);
-      `,
-    });
-  } catch {
-    // RPC may not exist — table creation handled by manual migration
-  }
+  // No-op: rely on migrations to create the table.
+  // This function is kept to avoid changing the caller sites in this file.
 }
 
 // Session timeout: if no ping for 90s, that session is considered ended
@@ -107,13 +93,13 @@ export async function POST(req: NextRequest) {
         .insert({ wallet_address: w, network, started_at: now, last_ping_at: now })
         .select('id')
         .single();
-      if (err2) return NextResponse.json({ error: err2.message }, { status: 500 });
+      if (err2) return NextResponse.json({ error: 'Session creation failed' }, { status: 500 });
       return NextResponse.json({ session_id: retry!.id, status: 'created' });
     }
 
     return NextResponse.json({ session_id: created!.id, status: 'created' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'unknown error' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Session update failed' }, { status: 500 });
   }
 }
 
@@ -140,7 +126,7 @@ export async function DELETE(req: NextRequest) {
       .is('ended_at', null);
 
     return NextResponse.json({ status: 'closed' });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'unknown error' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Session close failed' }, { status: 500 });
   }
 }

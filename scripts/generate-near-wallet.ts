@@ -21,4 +21,10 @@ NEAR_TREASURY_PRIVATE_KEY=${privateKey}
 `;
 
 fs.writeFileSync("near-wallet.txt", output);
+try {
+  fs.chmodSync("near-wallet.txt", 0o600);
+} catch {
+  // Best effort only; some filesystems do not support chmod.
+}
 console.log("Wallet generated in near-wallet.txt");
+console.log("Private key has been written to the file only. Handle it as a secret and rotate if exposed.");

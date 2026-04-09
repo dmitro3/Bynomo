@@ -195,7 +195,9 @@ export async function handleDepositEvent(event: SuiEvent): Promise<void> {
     // Convert amount from smallest unit to USDC (6 decimals)
     const amount = Number(amountInSmallestUnit) / 1_000_000;
 
-    console.log(`Processing DepositEvent: user=${userAddress}, amount=${amount} USDC`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Processing DepositEvent: user=${userAddress}, amount=${amount} USDC`);
+    }
 
     // Update balance in Supabase
     await updateUserBalance(
@@ -205,7 +207,9 @@ export async function handleDepositEvent(event: SuiEvent): Promise<void> {
       event.id.txDigest
     );
 
-    console.log(`Successfully processed DepositEvent for ${userAddress}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Successfully processed DepositEvent for ${userAddress}`);
+    }
   } catch (error) {
     console.error('Error handling DepositEvent:', error);
     logEventError('deposit_event_handling_failed', error, { eventId: event.id, user: userAddress });
