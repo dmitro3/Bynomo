@@ -15,14 +15,15 @@ const nextConfig: NextConfig = {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      // Keep script policy compatible with Next/Turbopack runtime and in-app tooling.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.posthog.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com data:",
+      // Privy needs unsafe-eval for its embedded wallet SDK; posthog analytics.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.posthog.com https://*.privy.io https://*.privy.systems",
+      // Privy loads fonts/styles from its own CDN.
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.privy.io https://*.privy.systems",
+      "font-src 'self' https://fonts.gstatic.com https://assets.privy.io data:",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https: wss:",
-      // Allow only known embed providers used by the app.
-      "frame-src https://www.youtube.com https://youtube.com https://dexscreener.com https://docs.google.com",
+      // Privy embedded-wallet iframes + existing embeds.
+      "frame-src https://www.youtube.com https://youtube.com https://dexscreener.com https://docs.google.com https://auth.privy.io https://*.privy.systems",
       "upgrade-insecure-requests",
     ].join("; ");
 
