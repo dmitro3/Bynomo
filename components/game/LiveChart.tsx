@@ -311,7 +311,6 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
         alt={asset}
         className={finalImageClass}
         onError={handleImageError}
-        {/* crossOrigin only needed for canvas taint-checks; skip for all external CDNs */}
       />
     </div>
   );
