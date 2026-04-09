@@ -134,7 +134,7 @@ const DEFAULT_TARGET_CELLS: TargetCell[] = [
  */
 export const createGameSlice: StateCreator<any> = (set, get) => ({
   // Initial state
-  gameMode: 'box', // Default to box mode
+  gameMode: 'binomo', // Default to classic mode
   selectedAsset: 'BNB',
   currentPrice: 0,
   priceHistory: [],
@@ -150,8 +150,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
   isSettling: false,
   lastResult: null,
   error: null,
-  // Default pacing for box/draw.
-  // This repo's initial `gameMode` is `box`, so the chart grid/green-line speed should start at 5s.
+  // Default pacing. Classic (binomo) mode uses a countdown timer set by the user; 5s is a sensible default.
   timeframeSeconds: 5,
   activeTab: 'bet',
   activeIndicators: {},
