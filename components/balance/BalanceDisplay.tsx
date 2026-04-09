@@ -238,26 +238,9 @@ export const BalanceDisplay: React.FC = () => {
             </div>
           </div>
 
-          {/* House Balance or Direct Mode info */}
-          {((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') && accountType === 'real' ? (
-            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 text-center space-y-2">
-              <div className="flex justify-center">
-                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <p className="text-white text-[11px] font-bold uppercase tracking-wider">Direct Asset Payment</p>
-                <p className="text-gray-500 text-[9px] mt-1 leading-relaxed">
-                  Trades on {network} use your wallet balance directly. No house deposits are required.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Balance Display */}
+          {/* House Balance – shown for all networks */}
+          <>
+            {/* Balance Display */}
               <div className={`bg-gradient-to-br rounded-lg p-2.5 border ${accountType === 'demo'
                 ? 'from-yellow-500/10 to-transparent border-yellow-500/30'
                 : 'from-purple-600/10 to-transparent border-purple-600/30'
@@ -339,7 +322,6 @@ export const BalanceDisplay: React.FC = () => {
                 )}
               </div>
             </>
-          )}
 
           {/* Info Message */}
           {!address && (
