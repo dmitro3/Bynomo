@@ -185,9 +185,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           value: parseEther(depositAmount.toString()),
         });
         toast.info('Transaction submitted. Waiting for confirmation...');
-        const { waitForTransactionReceipt } = await import('@wagmi/core');
-        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
-        await waitForTransactionReceipt(wagmiCfg, { hash: pushHash as `0x${string}`, timeout: 60_000 });
+        try {
+          const { waitForTransactionReceipt } = await import('@wagmi/core');
+          const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+          await waitForTransactionReceipt(wagmiCfg, { hash: pushHash as `0x${string}`, timeout: 30_000 });
+        } catch {
+          // Proceed with known hash if receipt polling fails.
+        }
         txHash = pushHash;
       } else if (network === 'STRK') {
         const { depositSTRK } = await import('@/lib/starknet/wallet');
@@ -356,9 +360,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             value: parseEther(depositAmount.toString()),
           });
           toast.info('Transaction submitted. Waiting for on-chain confirmation...');
-          const { waitForTransactionReceipt } = await import('@wagmi/core');
-          const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
-          await waitForTransactionReceipt(wagmiCfg, { hash: bnbHash as `0x${string}`, timeout: 60_000 });
+          try {
+            const { waitForTransactionReceipt } = await import('@wagmi/core');
+            const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+            await waitForTransactionReceipt(wagmiCfg, { hash: bnbHash as `0x${string}`, timeout: 30_000 });
+          } catch {
+            // Receipt polling failed (e.g. WalletConnect RPC issue) but tx was already
+            // submitted — proceed with the known hash; the deposit API verifies on-chain.
+          }
           txHash = bnbHash;
         } else {
           if (!authenticated) throw new Error('Not authenticated with Privy');
