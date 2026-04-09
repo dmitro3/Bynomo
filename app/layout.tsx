@@ -71,6 +71,7 @@ export default function RootLayout({
       <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased bg-[#02040a] text-white h-screen overflow-hidden flex flex-col`}
+        suppressHydrationWarning
       >
         <PostHogProvider>
           <Providers>
