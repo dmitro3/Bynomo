@@ -16,8 +16,9 @@ import {
 import { getRpcUrl } from './config';
 
 const APTOS_COIN_TYPE = '0x1::aptos_coin::AptosCoin';
-const APT_DECIMALS = 8n;
-const APT_FACTOR = 10n ** APT_DECIMALS;
+/** 10^8 — avoid `n` literals (tsconfig target ES2017) */
+const APT_DECIMALS_NUM = 8;
+const APT_FACTOR = BigInt(10 ** APT_DECIMALS_NUM);
 
 function normalizeAddress(address: string): string {
   try {
@@ -71,13 +72,13 @@ export class AptosClient {
   formatAPT(amount: bigint): string {
     const whole = amount / APT_FACTOR;
     const fraction = amount % APT_FACTOR;
-    const fractionStr = fraction.toString().padStart(Number(APT_DECIMALS), '0').replace(/0+$/, '');
+    const fractionStr = fraction.toString().padStart(APT_DECIMALS_NUM, '0').replace(/0+$/, '');
     return fractionStr.length ? `${whole}.${fractionStr}` : `${whole}`;
   }
 
   parseAPT(amount: string): bigint {
     const [whole, fraction = ''] = amount.trim().split('.');
-    const paddedFraction = fraction.padEnd(Number(APT_DECIMALS), '0').slice(0, Number(APT_DECIMALS));
+    const paddedFraction = fraction.padEnd(APT_DECIMALS_NUM, '0').slice(0, APT_DECIMALS_NUM);
     return BigInt(whole) * APT_FACTOR + BigInt(paddedFraction || '0');
   }
 }

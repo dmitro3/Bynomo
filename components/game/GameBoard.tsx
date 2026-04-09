@@ -318,7 +318,6 @@ export const GameBoard: React.FC = () => {
         }
       } else if (network === 'APT') {
         const { getAptosClient } = await import('@/lib/aptos/client');
-        const { signAndSubmitTransaction } = await import('@aptos-labs/wallet-adapter-react');
         const client = getAptosClient();
         const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_APT;
         if (!feeWallet) throw new Error('APT fee collector wallet not configured');
