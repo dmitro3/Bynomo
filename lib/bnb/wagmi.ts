@@ -62,6 +62,10 @@ export const somniaTestnet = defineChain({
 
 export const config = createConfig(
     getDefaultConfig({
+        // ConnectKit ships Family (Aave) Accounts by default; it lazy-connects and logs
+        // "FamilyAccountsSdk.connect()" errors for everyone not using that wallet.
+        enableFamily: false,
+
         chains: [bsc, somniaTestnet, pushChainDonut, zgMainnet],
         transports: {
             [somniaTestnet.id]: http(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_RPC || 'https://dream-rpc.somnia.network'),
