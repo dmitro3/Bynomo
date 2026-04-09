@@ -17,9 +17,9 @@ const nextConfig: NextConfig = {
       "form-action 'self'",
       // Privy needs unsafe-eval for its embedded wallet SDK; posthog analytics.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.posthog.com https://*.privy.io https://*.privy.systems",
-      // Privy loads fonts/styles from its own CDN.
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.privy.io https://*.privy.systems",
-      "font-src 'self' https://fonts.gstatic.com https://assets.privy.io data:",
+      // Privy + Initia load fonts/styles from their own CDNs.
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.privy.io https://*.privy.systems https://assets.initia.xyz",
+      "font-src 'self' https://fonts.gstatic.com https://assets.privy.io https://assets.initia.xyz data:",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https: wss:",
       // Privy embedded-wallet iframes + existing embeds.
