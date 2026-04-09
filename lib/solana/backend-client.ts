@@ -15,6 +15,15 @@ import {
 import { getSolanaConfig } from './config';
 import bs58 from 'bs58';
 
+function withRpcTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+        ),
+    ]);
+}
+
 /**
  * Verifies a native SOL or SPL deposit to the configured treasury (signature = tx id).
  */
@@ -35,12 +44,21 @@ export async function verifySolanaDepositTx(
         const userPub = new PublicKey(userAddress);
 
         // Retry up to 3 times — a freshly submitted transaction may not be indexed yet.
+        // Each RPC call is bounded so the deposit route cannot hang indefinitely.
         let parsed = null;
         for (let attempt = 0; attempt < 3; attempt++) {
             if (attempt > 0) await new Promise(r => setTimeout(r, 3000));
-            parsed = await connection.getParsedTransaction(signature, {
-                maxSupportedTransactionVersion: 0,
-            });
+            try {
+                parsed = await withRpcTimeout(
+                    connection.getParsedTransaction(signature, {
+                        maxSupportedTransactionVersion: 0,
+                    }),
+                    14_000,
+                    'getParsedTransaction',
+                );
+            } catch {
+                parsed = null;
+            }
             if (parsed) break;
         }
 
@@ -64,7 +82,7 @@ export async function verifySolanaDepositTx(
 
         const { getMint } = await import('@solana/spl-token');
         const mintPk = new PublicKey(tokenMint);
-        const mintInfo = await getMint(connection, mintPk);
+        const mintInfo = await withRpcTimeout(getMint(connection, mintPk), 14_000, 'getMint');
         const decimals = mintInfo.decimals;
         const minRaw = BigInt(Math.floor(expectedAmount * Math.pow(10, decimals) * 0.99));
 

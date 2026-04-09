@@ -85,7 +85,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
       set({ isLoading: true, error: null });
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
       let response: Response;
       try {
@@ -199,28 +199,23 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const depositController = new AbortController();
-      const depositTimeoutId = setTimeout(() => depositController.abort(), 60_000);
-      let response: Response;
-      try {
-        response = await fetch('/api/balance/deposit', {
-          method: 'POST',
-          signal: depositController.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...balanceMutationHeaders(),
-          },
-          body: JSON.stringify({
-            userAddress: address,
-            amount,
-            txHash,
-            currency: currency,
-            userTier: (get() as any).userTier || 'free',
-          }),
-        });
-      } finally {
-        clearTimeout(depositTimeoutId);
-      }
+      // Do not attach AbortSignal here. Solana/Sui deposits can legitimately take
+      // 60s+ (RPC indexing retries + fee transfer race + DB). A short client abort
+      // produced "signal is aborted without reason" while the server was still working.
+      const response = await fetch('/api/balance/deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...balanceMutationHeaders(),
+        },
+        body: JSON.stringify({
+          userAddress: address,
+          amount,
+          txHash,
+          currency: currency,
+          userTier: (get() as any).userTier || 'free',
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
