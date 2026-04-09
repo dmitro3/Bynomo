@@ -481,9 +481,6 @@ export const GameBoard: React.FC = () => {
 
     try {
       const multiplier = getMultiplier(selectedDuration);
-      let signature: string | undefined;
-
-      
       // Track bet placement (sanitized - no wallet address or specific amounts)
       posthog.capture('bet_placed', {
         direction,
@@ -495,75 +492,13 @@ export const GameBoard: React.FC = () => {
         currency: currencySymbol
         // wallet address never sent to analytics
       })
-      
-      // Special path for SOL, BNB and APT: Send stake transaction first
-      if (network === 'SOL' || network === 'BNB' || network === 'APT') {
-        toast.info(`Sending ${betAmount} ${currencySymbol} stake...`);
-        try {
-          if (network === 'SOL' && currencySymbol === 'SOL') {
-            const { getSolanaConnection, buildSolTransferTransaction } = await import('@/lib/solana/client');
-            const connection = getSolanaConnection();
-            const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS_SOL || process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
-            if (!treasuryWallet) throw new Error('SOL treasury wallet not configured');
-            
-            const transaction = await buildSolTransferTransaction(parseFloat(betAmount), address!, treasuryWallet);
-            signature = await sendSolanaTransaction(transaction, connection);
-            if (process.env.NODE_ENV === 'development') {
-              console.log("Solana stake confirmed");
-            }
-          } else if (network === 'BNB' && currencySymbol === 'BNB') {
-            const wallet = wallets.find(w => w.address.toLowerCase() === address!.toLowerCase());
-            if (!wallet) throw new Error("Active wallet not found in session");
-            const ethereumProvider = await wallet.getEthereumProvider();
-            const provider = new ethers.BrowserProvider(ethereumProvider);
-            const signer = await provider.getSigner();
-            const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
-            if (!treasuryWallet) throw new Error('BNB treasury wallet not configured');
-            const txResponse = await signer.sendTransaction({
-              to: getAddress(treasuryWallet),
-              value: ethers.parseEther(betAmount),
-            });
-            if (process.env.NODE_ENV === 'development') {
-              console.log("BNB stake confirmed");
-            }
-            await txResponse.wait();
-            signature = txResponse.hash;
-          } else if (network === 'APT' && (currencySymbol === 'APT' || currencySymbol === 'Aptos')) {
-            const { getAptosClient } = await import('@/lib/aptos/client');
-            const client = getAptosClient();
-            const treasuryWallet = process.env.NEXT_PUBLIC_APTOS_TREASURY_ADDRESS;
-            if (!treasuryWallet) throw new Error('APT treasury wallet not configured');
-            
-            const response = await signAndSubmitAptos({
-              data: {
-                function: "0x1::aptos_account::transfer",
-                typeArguments: [],
-                functionArguments: [treasuryWallet, (BigInt(Math.floor(parseFloat(betAmount) * 1e8))).toString()],
-              }
-            });
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log("Aptos stake confirmed");
-            }
-            await client.getSDK().waitForTransaction({ transactionHash: response.hash });
-            signature = response.hash;
-          }
-        } catch (txErr: any) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error("Stake transaction failed:", txErr.message || txErr);
-          }
-          toast.error(txErr.message || "Failed to send stake transaction");
-          return;
-        }
-      }
 
-
+      // House balance only — /api/balance/bet deducts Supabase balance; no on-chain stake per bet.
       await placeBetFromHouseBalance(
         betAmount,
         `${direction}-${multiplier}-${selectedDuration}`,
         address,
         undefined,
-        { txHash: signature }
       );
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {

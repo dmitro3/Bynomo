@@ -7,10 +7,6 @@ import { useStore } from '@/lib/store';
 import { AssetType } from '@/lib/utils/priceFeed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playWinSound, playLoseSound } from '@/lib/utils/sounds';
-import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
-import { useWallets } from '@privy-io/react-auth';
-import { ethers } from 'ethers';
-import { getAddress } from 'viem';
 import { useToast } from '@/lib/hooks/useToast';
 
 interface LiveChartProps {
@@ -326,8 +322,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const currentPrice = useStore((state) => state.currentPrice);
   const selectedAsset = useStore((state) => state.selectedAsset);
   const toast = useToast();
-  const { sendTransaction: sendSolanaTransaction } = useSolanaWallet();
-  const { wallets } = useWallets();
   const userTier = useStore((state) => state.userTier);
   const setSelectedAsset = useStore((state) => state.setSelectedAsset);
   const placeBetFromHouseBalance = useStore((state) => state.placeBetFromHouseBalance);
@@ -1312,49 +1306,14 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
 
                 try {
                   const targetId = `${cell.isUp ? 'UP' : 'DOWN'}-${cell.multiplier}-${timeframeSeconds}`;
-                  
-                  let signature: string | undefined;
 
-                  // Special path for SOL and BNB: Send stake transaction first
-                  if ((network === 'SOL' && currencySymbol === 'SOL') || (network === 'BNB' && currencySymbol === 'BNB')) {
-                    toast.info(`Sending ${betAmount} ${currencySymbol} stake...`);
-                    try {
-                      if (network === 'SOL' && currencySymbol === 'SOL') {
-                        const { getSolanaConnection, buildSolTransferTransaction } = await import('@/lib/solana/client');
-                        const connection = getSolanaConnection();
-                        const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS_SOL || process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
-                        if (!treasuryWallet) throw new Error('SOL treasury wallet not configured');
-                        
-                        const transaction = await buildSolTransferTransaction(parseFloat(betAmount), userAddress, treasuryWallet);
-                        signature = await sendSolanaTransaction(transaction, connection);
-                      } else if (network === 'BNB' && currencySymbol === 'BNB') {
-                        const wallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
-                        if (!wallet) throw new Error("Active wallet not found in session");
-                        const ethereumProvider = await wallet.getEthereumProvider();
-                        const provider = new ethers.BrowserProvider(ethereumProvider);
-                        const signer = await provider.getSigner();
-                        const treasuryWallet = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
-                        if (!treasuryWallet) throw new Error('BNB treasury wallet not configured');
-                        const txResponse = await signer.sendTransaction({
-                          to: getAddress(treasuryWallet),
-                          value: ethers.parseEther(betAmount),
-                        });
-                        await txResponse.wait();
-                        signature = txResponse.hash;
-                      }
-                    } catch (txErr: any) {
-                      console.error("Stake transaction failed:", txErr);
-                      toast.error(txErr.message || "Failed to send stake transaction");
-                      return;
-                    }
-                  }
-
+                  // House balance only — deduct via /api/balance/bet (no per-bet wallet signature).
+                  // Users fund the treasury once via Deposit; stakes are not sent on-chain each click.
                   const result = await placeBetFromHouseBalance(
                     betAmount,
                     targetId,
                     userAddress,
                     cell.id,
-                    { txHash: signature }
                   );
 
                   if (result && result.bet) {
