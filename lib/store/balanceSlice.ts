@@ -84,7 +84,17 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const response = await fetch(`/api/balance/${address}?currency=${currency}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+      let response: Response;
+      try {
+        response = await fetch(`/api/balance/${address}?currency=${currency}`, {
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -100,7 +110,12 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         error: null
       });
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        set({ isLoading: false, error: 'Balance fetch timed out. Retrying...' });
+        // Retry once after a short delay
+        setTimeout(() => get().fetchBalance(address), 3000);
+        return;
+      }
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to fetch balance'

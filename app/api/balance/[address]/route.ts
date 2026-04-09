@@ -73,11 +73,17 @@ export async function GET(
     const variants = walletAddressSearchVariants(address);
 
     // Sum balances across legacy duplicate rows (e.g. mixed EVM casing)
-    const { data: balRows, error } = await supabase
-      .from('user_balances')
-      .select('balance, updated_at, user_address')
-      .in('user_address', variants)
-      .eq('currency', currency);
+    const balanceTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Balance query timeout')), 8000)
+    );
+    const { data: balRows, error } = await Promise.race([
+      supabase
+        .from('user_balances')
+        .select('balance, updated_at, user_address')
+        .in('user_address', variants)
+        .eq('currency', currency),
+      balanceTimeout,
+    ]);
 
     if (error) {
       console.error('Database error fetching balance:', error);
