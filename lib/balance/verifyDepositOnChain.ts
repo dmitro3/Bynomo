@@ -61,7 +61,7 @@ export async function verifySuiFamilyDepositDigest(
       if (owner.toLowerCase() !== treasury) continue;
       if (coinType !== expectedCoinType) continue;
       const delta = BigInt(String(amountRaw));
-      if (delta > 0n) credited += delta;
+      if (delta > BigInt(0)) credited += delta;
     }
     return credited >= minUnits;
   } catch (e) {
@@ -189,7 +189,7 @@ function normalizeHex(value?: string | null): string | null {
 function parseU256(low?: string, high?: string): bigint {
   const lo = BigInt(low || '0');
   const hi = BigInt(high || '0');
-  return lo + (hi << 128n);
+  return lo + (hi << BigInt(128));
 }
 
 export async function verifyStarknetDepositTx(
@@ -227,7 +227,7 @@ export async function verifyStarknetDepositTx(
 
       let from: string | null = null;
       let to: string | null = null;
-      let value = 0n;
+      let value = BigInt(0);
 
       if (keys.length >= 3 && data.length >= 2) {
         from = normalizeHex(keys[1]);
@@ -294,7 +294,7 @@ export async function verifyOctDepositDigest(
       if (!owner || !amountRaw) continue;
       if (owner.toLowerCase() !== treasury) continue;
       const delta = BigInt(String(amountRaw));
-      if (delta > 0n) credited += delta;
+      if (delta > BigInt(0)) credited += delta;
     }
     return credited >= minUnits;
   } catch (e) {

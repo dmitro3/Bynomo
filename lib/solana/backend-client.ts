@@ -39,6 +39,8 @@ export async function verifySolanaDepositTx(
         });
 
         if (!parsed || parsed.meta?.err) return false;
+        const meta = parsed.meta;
+        if (!meta) return false;
 
         if (!tokenMint) {
             const keys = parsed.transaction.message.accountKeys.map((k) =>
@@ -47,8 +49,8 @@ export async function verifySolanaDepositTx(
             const treasuryIdx = keys.indexOf(treasuryPub.toBase58());
             const userIdx = keys.indexOf(userPub.toBase58());
             if (treasuryIdx === -1 || userIdx === -1) return false;
-            const preT = parsed.meta.preBalances[treasuryIdx];
-            const postT = parsed.meta.postBalances[treasuryIdx];
+            const preT = meta.preBalances[treasuryIdx];
+            const postT = meta.postBalances[treasuryIdx];
             const gained = postT - preT;
             const minLamports = Math.floor(expectedAmount * LAMPORTS_PER_SOL * 0.99);
             return gained >= minLamports;
@@ -61,8 +63,8 @@ export async function verifySolanaDepositTx(
         const minRaw = BigInt(Math.floor(expectedAmount * Math.pow(10, decimals) * 0.99));
 
         const treasuryStr = treasuryPub.toBase58();
-        const preTb = parsed.meta.preTokenBalances || [];
-        const postTb = parsed.meta.postTokenBalances || [];
+        const preTb = meta.preTokenBalances || [];
+        const postTb = meta.postTokenBalances || [];
 
         const row = (rows: typeof postTb) =>
             rows.find((b) => b.mint === tokenMint && b.owner === treasuryStr);

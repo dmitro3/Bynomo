@@ -250,7 +250,7 @@ export async function GET(request: NextRequest) {
         currency: cur,
         balance: bal,
         status: b.status,
-        user_tier: b.user_tier,
+        user_tier: b.tier,
         updated_at: b.updated_at,
         withdrawableNow: can,
       };

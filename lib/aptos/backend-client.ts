@@ -1,11 +1,19 @@
-import { AptosClient } from 'aptos';
 import { getAptosConfig } from './config';
 
+/** REST response shape for GET /v1/transactions/by_hash/{hash} (user transaction) */
+interface AptosUserTransactionRest {
+  type?: string;
+  success?: boolean;
+  sender?: string;
+  payload?: {
+    function?: string;
+    arguments?: string[];
+  };
+}
+
 /**
- * Verifies an Aptos deposit transaction on-chain.
- * @param txHash - Aptos transaction hash
- * @param userAddress - Expected sender address
- * @param amount - Expected amount in APT
+ * Verifies an Aptos deposit transaction on-chain via REST (no legacy `aptos` SDK).
+ * Avoids Turbopack issues: that package pulls `got` and incompatible @noble/hashes for @scure/bip39.
  */
 export async function verifyAptosDepositTx(
   txHash: string,
@@ -13,28 +21,33 @@ export async function verifyAptosDepositTx(
   amount: number
 ): Promise<boolean> {
   const config = getAptosConfig();
-  const client = new AptosClient(config.rpcUrls[0]);
+  const base = config.rpcUrls[0].replace(/\/$/, '');
 
   try {
-    // Wait for transaction if necessary (though usually it's already confirmed when called here)
-    const tx = await client.getTransactionByHash(txHash) as any;
-    
-    if (!tx || !tx.success) return false;
+    const res = await fetch(`${base}/transactions/by_hash/${encodeURIComponent(txHash)}`, {
+      headers: { accept: 'application/json' },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return false;
 
-    // Check sender
-    if (tx.sender.toLowerCase() !== userAddress.toLowerCase()) return false;
+    const tx = (await res.json()) as AptosUserTransactionRest;
+    if (!tx.success || tx.type !== 'user_transaction') return false;
 
-    // In Aptos, transfers are usually entry function payloads
+    if (!tx.sender || tx.sender.toLowerCase() !== userAddress.toLowerCase()) return false;
+
     const payload = tx.payload;
-    if (payload.function !== '0x1::aptos_account::transfer') return false;
+    if (!payload?.function || payload.function !== '0x1::aptos_account::transfer') return false;
 
-    // Check recipient and amount
-    const recipient = payload.arguments[0];
-    const amountSent = parseInt(payload.arguments[1]);
-    
+    const args = payload.arguments ?? [];
+    const recipient = args[0];
+    const amountArg = args[1];
+    if (!recipient || amountArg === undefined) return false;
+
+    const amountSent = typeof amountArg === 'string' ? parseInt(amountArg, 10) : Number(amountArg);
+    if (!Number.isFinite(amountSent)) return false;
+
     if (recipient.toLowerCase() !== config.treasuryAddress.toLowerCase()) return false;
 
-    // Aptos uses 8 decimals for APT
     const expectedOctas = Math.floor(amount * 100_000_000);
     return amountSent >= expectedOctas;
   } catch (err) {
