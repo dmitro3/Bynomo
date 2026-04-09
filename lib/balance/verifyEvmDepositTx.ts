@@ -37,21 +37,34 @@ export async function verifyEvmDepositTx(
   const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
     Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('RPC timeout')), ms))]);
 
-  try {
-    const provider = new ethers.JsonRpcProvider(rpc);
-    const [tx, receipt] = await Promise.all([
-      withTimeout(provider.getTransaction(txHash), 12_000),
-      withTimeout(provider.getTransactionReceipt(txHash), 12_000),
-    ]);
-    if (!tx || !receipt || receipt.status !== 1) return false;
+  const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-    if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) return false;
-    if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
+  // Retry up to 4 times with increasing delays — the RPC may not have indexed the tx yet.
+  const attempts = [0, 2000, 5000, 10000]; // immediate, +2s, +5s, +10s
+  for (const wait of attempts) {
+    if (wait > 0) await delay(wait);
+    try {
+      const provider = new ethers.JsonRpcProvider(rpc);
+      const [tx, receipt] = await Promise.all([
+        withTimeout(provider.getTransaction(txHash), 12_000),
+        withTimeout(provider.getTransactionReceipt(txHash), 12_000),
+      ]);
 
-    const minWei = ethers.parseEther(amount.toString());
-    return tx.value >= minWei;
-  } catch (err) {
-    console.error('[verifyEvmDepositTx] RPC error:', err);
-    return false;
+      // Tx not indexed yet — try next attempt
+      if (!tx || !receipt) continue;
+
+      if (receipt.status !== 1) return false; // tx reverted — no point retrying
+      if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) return false;
+      if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
+
+      const minWei = ethers.parseEther(amount.toString());
+      return tx.value >= minWei;
+    } catch (err) {
+      console.error('[verifyEvmDepositTx] RPC error (will retry):', err);
+      // Continue to next attempt
+    }
   }
+
+  console.error('[verifyEvmDepositTx] All attempts exhausted for', txHash);
+  return false;
 }

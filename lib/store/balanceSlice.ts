@@ -203,20 +203,28 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const response = await fetch('/api/balance/deposit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...balanceMutationHeaders(),
-        },
-        body: JSON.stringify({
-          userAddress: address,
-          amount,
-          txHash,
-          currency: currency,
-          userTier: (get() as any).userTier || 'free',
-        }),
-      });
+      const depositController = new AbortController();
+      const depositTimeoutId = setTimeout(() => depositController.abort(), 60_000);
+      let response: Response;
+      try {
+        response = await fetch('/api/balance/deposit', {
+          method: 'POST',
+          signal: depositController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...balanceMutationHeaders(),
+          },
+          body: JSON.stringify({
+            userAddress: address,
+            amount,
+            txHash,
+            currency: currency,
+            userTier: (get() as any).userTier || 'free',
+          }),
+        });
+      } finally {
+        clearTimeout(depositTimeoutId);
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
