@@ -2,6 +2,7 @@
   "name": "Bynomo",
   "version": "0.1.0",
   "private": true,
+  "_resolutions_note": "Resolutions ensure consistent cryptographic primitives for security - @noble/hashes and @noble/curves are pinned for security advisory compliance",
   "resolutions": {
     "@noble/hashes": "^1.8.0",
     "@noble/curves": "^1.9.7"

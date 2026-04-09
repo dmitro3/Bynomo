@@ -6,14 +6,23 @@
  */
 
 import { POST } from '../route';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService } from '@/lib/supabase/serviceClient';
 import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-// Mock the Supabase client
-jest.mock('@/lib/supabase/client', () => ({
-  supabase: {
+const TEST_USER = '0x1111111111111111111111111111111111111111';
+const TEST_USER_B = '0x4444444444444444444444444444444444444444';
+
+jest.mock('@/lib/bans/walletBan', () => ({
+  isWalletGloballyBanned: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('@/lib/supabase/serviceClient', () => ({
+  supabaseService: {
     rpc: jest.fn(),
+    from: jest.fn().mockReturnValue({
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    }),
   },
 }));
 
@@ -34,14 +43,8 @@ jest.mock('next/server', () => {
   };
 });
 
-// Mock FCL
-jest.mock('@onflow/fcl', () => ({
-  send: jest.fn(),
-  decode: jest.fn(),
-}));
-
 describe('POST /api/balance/bet', () => {
-  const mockRpc = supabase.rpc as jest.MockedFunction<typeof supabase.rpc>;
+  const mockRpc = supabaseService.rpc as jest.MockedFunction<typeof supabaseService.rpc>;
   const mockNextResponseJson = NextResponse.json as jest.MockedFunction<typeof NextResponse.json>;
   
   beforeEach(() => {
@@ -63,7 +66,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request with valid bet data
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -94,8 +97,9 @@ describe('POST /api/balance/bet', () => {
 
     // Verify stored procedure was called with correct parameters
     expect(mockRpc).toHaveBeenCalledWith('deduct_balance_for_bet', {
-      p_user_address: '0x123abc',
+      p_user_address: TEST_USER.toLowerCase(),
       p_bet_amount: 5.0,
+      p_currency: 'BNB',
     });
   });
 
@@ -130,7 +134,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for missing betAmount', async () => {
     // Create mock request with missing betAmount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       roundId: 1,
       targetPrice: 50000,
       isOver: true,
@@ -184,7 +188,7 @@ describe('POST /api/balance/bet', () => {
     // Verify response
     expect(response.status).toBe(400);
     expect(json).toEqual({
-      error: 'Invalid address format. Flow addresses must start with 0x',
+      error: 'Invalid wallet address format',
     });
 
     // Verify stored procedure was not called
@@ -194,7 +198,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for zero bet amount', async () => {
     // Create mock request with zero amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 0,
       roundId: 1,
       targetPrice: 50000,
@@ -230,7 +234,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for negative bet amount', async () => {
     // Create mock request with negative amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: -5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -278,7 +282,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 10.0,
       roundId: 1,
       targetPrice: 50000,
@@ -304,7 +308,7 @@ describe('POST /api/balance/bet', () => {
     // Verify response
     expect(response.status).toBe(400);
     expect(json).toEqual({
-      error: 'Insufficient house balance. Please deposit more FLOW.',
+      error: 'Insufficient house balance. Deposit more BNB.',
     });
   });
 
@@ -323,7 +327,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0xnewuser',
+      userAddress: TEST_USER_B,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -362,7 +366,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -388,14 +392,14 @@ describe('POST /api/balance/bet', () => {
     // Verify response
     expect(response.status).toBe(503);
     expect(json).toEqual({
-      error: 'Service temporarily unavailable. Please try again.',
+      error: 'Service unavailable',
     });
   });
 
   it('should return 400 for invalid multiplier (less than 1.0)', async () => {
     // Create mock request with invalid multiplier
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -431,7 +435,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for missing multiplier', async () => {
     // Create mock request with missing multiplier
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -466,7 +470,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for invalid target cell (missing id)', async () => {
     // Create mock request with invalid target cell
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -501,7 +505,7 @@ describe('POST /api/balance/bet', () => {
   it('should return 400 for invalid target cell (missing priceChange)', async () => {
     // Create mock request with invalid target cell
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -539,7 +543,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -605,7 +609,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request with large bet amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 1000.0,
       roundId: 1,
       targetPrice: 50000,
@@ -649,7 +653,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request with small decimal bet amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 0.00000001,
       roundId: 1,
       targetPrice: 50000,
@@ -694,7 +698,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,
@@ -719,8 +723,9 @@ describe('POST /api/balance/bet', () => {
     // Verify stored procedure was called
     // The procedure internally creates audit log with operation_type='bet_placed'
     expect(mockRpc).toHaveBeenCalledWith('deduct_balance_for_bet', {
-      p_user_address: '0x123abc',
+      p_user_address: TEST_USER.toLowerCase(),
       p_bet_amount: 5.0,
+      p_currency: 'BNB',
     });
   });
 
@@ -739,7 +744,7 @@ describe('POST /api/balance/bet', () => {
 
     // Create mock request with DOWN direction
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betAmount: 5.0,
       roundId: 1,
       targetPrice: 50000,

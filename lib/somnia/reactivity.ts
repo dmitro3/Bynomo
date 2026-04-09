@@ -4,8 +4,6 @@
  * Subscribes to Somnia Reactivity reactor contract events via WebSocket and
  * decodes DepositConfirmed / WithdrawConfirmed logs.
  */
-'use client';
-
 import {
   createPublicClient,
   createWalletClient,

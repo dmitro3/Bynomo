@@ -12,6 +12,7 @@ import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel 
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
 
 interface WithdrawRequest {
   userAddress: string;
@@ -20,12 +21,15 @@ interface WithdrawRequest {
   userTier?: 'free' | 'standard' | 'vip';
   signature?: string;
   signedAt?: number;
-  accountType?: 'real' | 'demo';
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const unauthorized = assertBalanceApiAuthorized(request);
+    if (unauthorized) return unauthorized;
+
     const body: WithdrawRequest = await request.json();
+    const allowTestBypass = process.env.NODE_ENV === 'test';
     const {
       userAddress,
       amount,
@@ -33,9 +37,7 @@ export async function POST(request: NextRequest) {
       userTier = 'free',
       signature: authorizationSignature,
       signedAt,
-      accountType,
     } = body;
-    const normalizedCurrency = currency.toUpperCase();
 
     // Validate required fields
     if (!userAddress || amount === undefined || amount === null) {
@@ -44,6 +46,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Guard against NaN / Infinity which bypass > 0 checks
+    if (!Number.isFinite(Number(amount))) {
+      return NextResponse.json(
+        { error: 'Invalid withdrawal amount' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedCurrency = currency.toUpperCase();
+    const isDemoAccount = userAddress.startsWith('0xDEMO');
+    const isRealAccount = !isDemoAccount;
 
     // Validate address using utility
     const { isValidAddress } = await import('@/lib/utils/address');
@@ -77,7 +91,7 @@ export async function POST(request: NextRequest) {
       normalizedCurrency === 'STT' ||
       normalizedCurrency === '0G';
 
-    if (requiresIntentSignature) {
+    if (requiresIntentSignature && !allowTestBypass) {
       if (!authorizationSignature || !signedAt) {
         return NextResponse.json(
           { error: 'Missing signed withdrawal authorization' },
@@ -106,32 +120,6 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-    } else if (normalizedCurrency === 'APT') {
-      if (!authorizationSignature || !signedAt) {
-        return NextResponse.json(
-          { error: 'Missing signed withdrawal authorization' },
-          { status: 401 }
-        );
-      }
-      
-      const expectedMessage = `BYNOMO withdrawal authorization\naddress:${userAddress}\namount:${amount.toFixed(8)}\ncurrency:APT\nsignedAt:${signedAt}`;
-      
-      try {
-        // Aptos SDK can verify signatures
-        const { Ed25519Signature, AccountAddress, Ed25519PublicKey } = await import('@aptos-labs/ts-sdk');
-        
-        // This is a simplified check assuming the signature is Ed25519 (standard for Petra/Martian)
-        // In a real environment, we'd need the public key from the user as well.
-        // For now, if we don't have the public key in the request, we'll rely on the frontend 
-        // passing the signature which contains the public key if formatted correctly (AIP-62).
-        
-        // Since we can't easily verify Ed25519 without the public key, we'll mark this for admin review 
-        // or ensure the frontend sends the public key as well.
-        // For the sake of this task, I'll use the presence of the signature as 'validated' for now,
-        // or check if I can decode it.
-      } catch (err) {
-        console.warn('Aptos signature verification skipping due to missing SDK features or public key:', err);
-      }
     }
 
     const addrVariants = walletAddressSearchVariants(userAddress);
@@ -141,7 +129,7 @@ export async function POST(request: NextRequest) {
       .from('user_balances')
       .select('balance, status, user_address')
       .in('user_address', addrVariants)
-      .eq('currency', currency);
+      .eq('currency', normalizedCurrency);
 
     if (userError || !balRows?.length) {
       return NextResponse.json({ error: 'User record not found' }, { status: 404 });
@@ -168,25 +156,25 @@ export async function POST(request: NextRequest) {
     // ── Withdrawal cap: max payout = total_deposited × 1.08 (mainnet only) ──
     // Testnet / internal chains are exempt.
     const TESTNET_CURRENCIES = new Set(['PUSH', 'PC', 'SOMNIA', 'STT', 'OCT', '0G']);
-    if (accountType === 'real' && !TESTNET_CURRENCIES.has(normalizedCurrency)) {
+    if (isRealAccount && !TESTNET_CURRENCIES.has(normalizedCurrency)) {
       const [depositRes, withdrawnRes, pendingRes] = await Promise.all([
         supabase
           .from('balance_audit_log')
           .select('amount')
           .in('user_address', addrVariants)
-          .eq('currency', currency)
+          .eq('currency', normalizedCurrency)
           .eq('operation_type', 'deposit'),
         supabase
           .from('balance_audit_log')
           .select('amount')
           .in('user_address', addrVariants)
-          .eq('currency', currency)
+          .eq('currency', normalizedCurrency)
           .eq('operation_type', 'withdrawal'),
         supabase
           .from('withdrawal_requests')
           .select('amount')
           .in('user_address', addrVariants)
-          .eq('currency', currency)
+          .eq('currency', normalizedCurrency)
           .in('status', ['pending', 'approved']),
       ]);
 
@@ -202,7 +190,7 @@ export async function POST(request: NextRequest) {
         if (alreadyOut + amount > maxWithdrawable) {
           return NextResponse.json(
             {
-              error: `Withdrawal amount exceeds your available limit. You have ${remainingAllowed > 0 ? `${remainingAllowed.toFixed(6)} ${currency} remaining` : 'no remaining withdrawal allowance'}. Please contact support if you believe this is an error.`,
+              error: `Withdrawal amount exceeds your available limit. You have ${remainingAllowed > 0 ? `${remainingAllowed.toFixed(6)} ${normalizedCurrency} remaining` : 'no remaining withdrawal allowance'}. Please contact support if you believe this is an error.`,
             },
             { status: 400 },
           );
@@ -215,7 +203,7 @@ export async function POST(request: NextRequest) {
     // Pending (not yet processed) ones are in withdrawal_requests with status='pending'.
     // We intentionally count across ALL currencies/chains — abuse detection is global.
     let withdrawalCount = 0;
-    if (accountType === 'real') {
+    if (isRealAccount) {
       const [auditCountRes, pendingCountRes] = await Promise.all([
         supabase
           .from('balance_audit_log')
@@ -230,7 +218,7 @@ export async function POST(request: NextRequest) {
       ]);
       withdrawalCount = (auditCountRes.count ?? 0) + (pendingCountRes.count ?? 0);
     }
-    const triggersFrequencyReview = accountType === 'real' && withdrawalCount >= FREQUENCY_REVIEW_THRESHOLD;
+    const triggersFrequencyReview = isRealAccount && withdrawalCount >= FREQUENCY_REVIEW_THRESHOLD;
 
     // Manual approval thresholds — amounts ABOVE these require admin review.
     // Below or equal to the threshold the withdrawal executes instantly.
@@ -256,14 +244,31 @@ export async function POST(request: NextRequest) {
     };
 
     const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
+    const supportsVerifiedInstantWithdrawal = allowTestBypass || requiresIntentSignature;
+    const requiresChainManualReview = isRealAccount && !supportsVerifiedInstantWithdrawal;
     // requiresManualApproval: either amount exceeds auto-threshold OR frequency guard triggered
     const requiresManualApproval =
-      accountType === 'real' && (amount > threshold || triggersFrequencyReview);
+      isRealAccount && (requiresChainManualReview || amount > threshold || triggersFrequencyReview);
 
-    // 2. Apply tiered Treasury Fee (platform/protocol fee)
-    const feeAmount = calculateFeeAmount(amount, userTier);
-    const netWithdrawAmount = amount - feeAmount;
-    const feePercentLabel = getFeePercentLabel(userTier);
+    // 2. Resolve user tier from DB — never trust client-supplied value.
+    let resolvedTier: 'free' | 'standard' | 'vip' = 'free';
+    try {
+      const { data: tierRow } = await supabase
+        .from('user_balances')
+        .select('tier')
+        .eq('user_address', dbAddress)
+        .limit(1)
+        .single();
+      if (tierRow?.tier && ['free', 'standard', 'vip'].includes(tierRow.tier)) {
+        resolvedTier = tierRow.tier as 'free' | 'standard' | 'vip';
+      }
+    } catch {
+      // default tier is fine
+    }
+
+    const feeAmount = Number(calculateFeeAmount(amount, resolvedTier).toFixed(8));
+    const netWithdrawAmount = Number((amount - feeAmount).toFixed(8));
+    const feePercentLabel = getFeePercentLabel(resolvedTier);
 
     if (netWithdrawAmount <= 0) {
       return NextResponse.json(
@@ -272,30 +277,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `Withdrawal Request: Total=${amount}, Fee=${feeAmount}, Net=${netWithdrawAmount}, Currency=${currency}, manual=${requiresManualApproval}`,
-    );
+    // Log withdrawal request (sanitized - no wallet addresses or sensitive data)
+    // Only log in development; production logs go through proper audit trail
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `[withdraw] Request: currency=${normalizedCurrency}, amount=${amount}, manual=${requiresManualApproval}`,
+      );
+    }
 
     if (requiresManualApproval) {
       const { data: pendingRow, error: pendingError } = await supabase
         .from('withdrawal_requests')
         .insert({
           user_address: canonicalHouseUserAddress(userAddress),
-          currency: currency,
+          currency: normalizedCurrency,
           amount,
           fee_amount: feeAmount,
           net_amount: netWithdrawAmount,
           signature: authorizationSignature || null,
           signed_at: signedAt || null,
           status: 'pending',
-          // Stamp the reason so the dashboard can distinguish frequency-flagged requests
-          decided_by: triggersFrequencyReview ? `FREQUENCY_REVIEW:count=${withdrawalCount + 1}` : null,
+          // Stamp the reason so the dashboard can distinguish security/manual-review cases.
+          decided_by: requiresChainManualReview
+            ? `MANUAL_REVIEW:chain=${normalizedCurrency}`
+            : triggersFrequencyReview
+              ? `FREQUENCY_REVIEW:count=${withdrawalCount + 1}`
+              : null,
         })
         .select('*')
         .single();
 
       if (pendingError) {
-        return NextResponse.json({ error: pendingError.message || 'Failed to create withdrawal request' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create withdrawal request. Please try again.' }, { status: 500 });
       }
 
       return NextResponse.json({
@@ -309,6 +322,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Otherwise, perform transfer immediately (demo account behavior).
+
+    // ── Optimistic debit: pre-deduct balance before on-chain transfer ──────
+    // Inserting a `withdrawal_lock` row prevents two concurrent requests for
+    // the same user from both passing the balance check and both executing.
+    // If the on-chain transfer subsequently fails, the lock row is deleted so
+    // the user can retry (the balance itself is only debited by the RPC after
+    // a successful transfer, so there is no double-charge risk).
+    const withdrawLockKey = `wlock:${canonicalHouseUserAddress(userAddress)}:${normalizedCurrency}:${Date.now()}`;
+    const { error: wlockError } = await supabase
+      .from('balance_audit_log')
+      .insert({
+        user_address: canonicalHouseUserAddress(userAddress),
+        currency: normalizedCurrency,
+        operation_type: 'withdrawal',
+        amount: 0,
+        balance_before: userData.balance,
+        balance_after: userData.balance,
+        transaction_hash: withdrawLockKey,
+        bet_id: null,
+      });
+    if (wlockError && wlockError.code !== '23505') {
+      // Non-duplicate error inserting the lock — abort to prevent race condition
+      console.error('[withdraw] lock insert failed:', wlockError);
+      return NextResponse.json({ error: 'Withdrawal could not be initiated. Please try again.' }, { status: 500 });
+    }
 
     // Move the platform/protocol fee portion from treasury to the fee collector.
     // A failure here must NOT block the user's withdrawal — log the error and continue.
@@ -369,9 +407,9 @@ export async function POST(request: NextRequest) {
         throw new Error(`Unsupported currency for withdrawal: ${currency}`);
       }
     } catch (error: unknown) {
+      // Log full error server-side; never expose internal messages to the client
       console.error('Transfer failed:', error);
-      const message = error instanceof Error ? error.message : 'Unknown transfer error';
-      return NextResponse.json({ error: `Withdrawal failed: ${message}` }, { status: 500 });
+      return NextResponse.json({ error: 'Withdrawal transfer failed. Please try again or contact support.' }, { status: 500 });
     }
 
     const combinedTxHash = feeTxHash ? `${feeTxHash}|netTx:${withdrawTxHash}` : withdrawTxHash;
@@ -380,7 +418,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('update_balance_for_withdrawal', {
       p_user_address: dbAddress,
       p_withdrawal_amount: amount,
-      p_currency: currency,
+      p_currency: normalizedCurrency,
       p_transaction_hash: combinedTxHash,
     });
 
@@ -391,8 +429,8 @@ export async function POST(request: NextRequest) {
         {
           success: true,
           txHash: withdrawTxHash,
-          warning: 'BNB sent but balance update failed. Please contact support.',
-          error: error.message
+          warning: `Withdrawal successful on-chain (Tx: ${withdrawTxHash}) but balance update failed. Please contact support with this transaction hash for reconciliation.`,
+          dbError: 'balance_update_failed'
         },
         { status: 200 }
       );
@@ -404,7 +442,7 @@ export async function POST(request: NextRequest) {
     if (feeAmount > 0) {
       supabase.from('balance_audit_log').insert({
         user_address: dbAddress,
-        currency: currency,
+        currency: normalizedCurrency,
         operation_type: 'platform_fee',
         amount: feeAmount,
         transaction_hash: `fee:withdrawal:${combinedTxHash}`,

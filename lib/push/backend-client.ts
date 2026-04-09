@@ -14,11 +14,10 @@ export function getPushTreasuryWallet(): ethers.Wallet {
     const config = getPushConfig();
     // Prefer a dedicated Push treasury key, fall back to shared EVM treasury key
     const secretKey =
-        process.env.PUSH_TREASURY_SECRET_KEY ||
-        process.env.BNB_TREASURY_SECRET_KEY;
+    process.env.PUSH_TREASURY_SECRET_KEY;
 
     if (!secretKey) {
-        throw new Error('PUSH_TREASURY_SECRET_KEY (or BNB_TREASURY_SECRET_KEY) is not configured');
+        throw new Error('PUSH_TREASURY_SECRET_KEY is not configured');
     }
 
     const provider = new ethers.JsonRpcProvider(config.rpcEndpoint, {

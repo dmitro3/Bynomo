@@ -126,11 +126,11 @@ export const GameBoard: React.FC = () => {
     try {
       setIsActivatingBlitz(true);
       
-      // Track Blitz entry attempt
+      // Track Blitz entry attempt (no wallet address sent to third-party analytics)
       posthog.capture('blitz_entry_started', {
         network,
-        entryFee: blitzEntryFee,
-        address
+        entryFee: blitzEntryFee
+        // address intentionally omitted to protect user privacy
       })
 
       if (network === 'SOL') {
@@ -141,7 +141,9 @@ export const GameBoard: React.FC = () => {
         const transaction = await buildSolTransferTransaction(blitzEntryFee, address, feeWallet);
         toast.info(`Confirming ${blitzEntryFee} SOL Blitz Entry...`);
         const signature = await sendSolanaTransaction(transaction, connection);
-        console.log("Solana Blitz payment sig:", signature);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Solana Blitz confirmed");
+        }
       } else if (network === 'BNB') {
         const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
         if (!wallet) {
@@ -160,7 +162,9 @@ export const GameBoard: React.FC = () => {
           to: getAddress(feeWallet),
           value: ethers.parseEther(blitzEntryFee.toString()),
         });
-        console.log("BNB Blitz payment tx:", txResponse.hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("BNB Blitz confirmed");
+        }
       } else if (network === 'SUI') {
         if (!suiAccount) throw new Error('Sui wallet not connected');
         const { buildSuiNativeTransferTransaction } = await import('@/lib/sui/client');
@@ -169,7 +173,9 @@ export const GameBoard: React.FC = () => {
         const tx = await buildSuiNativeTransferTransaction(blitzEntryFee, address, feeWallet);
         toast.info(`Confirming ${blitzEntryFee} SUI Blitz Entry...`);
         const result = await signAndExecuteSui({ transaction: tx as any });
-        console.log("Sui Blitz payment digest:", result.digest);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Sui Blitz confirmed");
+        }
       } else if (network === 'XTZ') {
         const { BeaconWallet } = await import('@taquito/beacon-wallet');
         const { NetworkType } = await import('@airgap/beacon-types');
@@ -191,7 +197,9 @@ export const GameBoard: React.FC = () => {
 
         toast.info(`Confirming ${blitzEntryFee} XTZ Blitz Entry...`);
         const op = await tezos.wallet.transfer({ to: feeWallet, amount: blitzEntryFee }).send();
-        console.log("Tezos Blitz payment hash:", op.opHash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Tezos Blitz confirmed");
+        }
       } else if (network === 'XLM') {
         const { StellarWalletsKit, WalletNetwork, allowAllModules } = await import('@creit.tech/stellar-wallets-kit');
         const { TransactionBuilder, Networks, Operation, Asset, Horizon } = await import('@stellar/stellar-sdk');
@@ -222,21 +230,27 @@ export const GameBoard: React.FC = () => {
         toast.info(`Confirming ${blitzEntryFee} XLM Blitz Entry...`);
         const { signedTxXdr } = await kit.signTransaction(transaction.toXDR());
         const result = await server.submitTransaction(TransactionBuilder.fromXDR(signedTxXdr, Networks.PUBLIC));
-        console.log("Stellar Blitz payment hash:", (result as any).hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Stellar Blitz confirmed");
+        }
       } else if (network === 'NEAR') {
         const { transferNEARToAddress } = await import('@/lib/near/wallet');
         const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_NEAR;
         if (!feeWallet) throw new Error('NEAR fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} NEAR Blitz Entry...`);
         const txHash = await transferNEARToAddress(blitzEntryFee.toString(), feeWallet);
-        console.log("NEAR Blitz payment hash:", txHash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("NEAR Blitz confirmed");
+        }
       } else if (network === 'STRK') {
         const { transferSTRKToAddress } = await import('@/lib/starknet/wallet');
         const feeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_STRK;
         if (!feeWallet) throw new Error('STRK fee collector wallet not configured');
         toast.info(`Confirming ${blitzEntryFee} STRK Blitz Entry...`);
         const txHash = await transferSTRKToAddress(blitzEntryFee, feeWallet);
-        console.log("Starknet Blitz payment hash:", txHash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Starknet Blitz confirmed");
+        }
       } else if (network === 'PUSH') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
         const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
@@ -246,7 +260,9 @@ export const GameBoard: React.FC = () => {
           to: getAddress(evmFeeWallet) as `0x${string}`,
           value: parseEther(blitzEntryFee.toString()),
         });
-        console.log("Push Chain Blitz payment tx:", hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Push Chain Blitz confirmed");
+        }
       } else if (network === 'SOMNIA') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
         const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
@@ -260,7 +276,9 @@ export const GameBoard: React.FC = () => {
         const { waitForTransactionReceipt } = await import('@wagmi/core');
         const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
         await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
-        console.log("Somnia Blitz payment tx:", hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Somnia Blitz confirmed");
+        }
       } else if (network === 'ZG') {
         if (!walletClient) throw new Error('Wallet not connected. Please reconnect via Connect Wallet.');
         const evmFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_EVM;
@@ -274,7 +292,9 @@ export const GameBoard: React.FC = () => {
         const { waitForTransactionReceipt } = await import('@wagmi/core');
         const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
         await waitForTransactionReceipt(wagmiCfg, { hash: hash as `0x${string}`, timeout: 60_000 });
-        console.log("0G Blitz payment tx:", hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("0G Blitz confirmed");
+        }
       } else if (network === 'OCT') {
         if (!suiAccount) throw new Error('Sui-compatible wallet not connected');
         const { buildOCTTransferTransaction } = await import('@/lib/onechain/client');
@@ -283,7 +303,9 @@ export const GameBoard: React.FC = () => {
         toast.info(`Confirming ${blitzEntryFee} OCT Blitz Entry...`);
         const tx = await buildOCTTransferTransaction(blitzEntryFee, address!, octFeeWallet);
         const result = await signAndExecuteSui({ transaction: tx as any });
-        console.log("OneChain Blitz payment tx:", result.digest);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("OneChain Blitz confirmed");
+        }
       } else if (network === 'INIT') {
         const { buildInitiaTransferTxRequest } = await import('@/lib/initia/client');
         const initFeeWallet = process.env.NEXT_PUBLIC_PLATFORM_FEE_WALLET_INIT;
@@ -291,7 +313,9 @@ export const GameBoard: React.FC = () => {
         const txRequest = buildInitiaTransferTxRequest(address!, initFeeWallet, blitzEntryFee);
         toast.info(`Confirming ${blitzEntryFee} INIT Blitz Entry...`);
         const result = await requestInitiaTx(txRequest);
-        console.log("Initia Blitz payment hash:", result.transactionHash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Initia Blitz confirmed");
+        }
       } else if (network === 'APT') {
         const { getAptosClient } = await import('@/lib/aptos/client');
         const { signAndSubmitTransaction } = await import('@aptos-labs/wallet-adapter-react');
@@ -309,7 +333,9 @@ export const GameBoard: React.FC = () => {
           }
         });
         
-        console.log("Aptos Blitz payment hash:", response.hash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Aptos Blitz confirmed");
+        }
         await client.getSDK().waitForTransaction({ transactionHash: response.hash });
       } else {
         throw new Error(`Blitz not supported for network: ${network}`);
@@ -319,21 +345,23 @@ export const GameBoard: React.FC = () => {
       enableBlitzAccess();
       refreshWalletBalance();
       
-      // Track successful Blitz entry
+      // Track successful Blitz entry (sanitized - no wallet address)
       posthog.capture('blitz_entry_success', {
         network,
-        entryFee: blitzEntryFee,
-        address
+        entryFee: blitzEntryFee
+        // address removed to protect user privacy
       })
     } catch (err: any) {
-      console.error("Blitz entry failed:", err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Blitz entry failed:", err.message || err);
+      }
       const errorMessage = err.message || "";
       
-      // Track Blitz entry failure
+      // Track Blitz entry failure (sanitized - no wallet address)
       posthog.capture('blitz_entry_failed', {
         network,
-        error: errorMessage,
-        address
+        error: errorMessage
+        // address removed to protect user privacy
       })
       
       if (errorMessage.includes('rejected') || errorMessage.includes('denied') || errorMessage.includes('User rejected')) {
@@ -352,9 +380,10 @@ export const GameBoard: React.FC = () => {
     setAccessError(null);
 
     try {
+      const { balanceMutationHeaders } = await import('@/lib/balance/balanceClientHeaders');
       const res = await fetch('/api/validate-access-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...balanceMutationHeaders() },
         body: JSON.stringify({
           code: accessInput.trim().toUpperCase(),
           walletAddress: address
@@ -396,15 +425,24 @@ export const GameBoard: React.FC = () => {
     return () => clearInterval(interval);
   }, [isBlitzActive, blitzEndTime, nextBlitzTime, updateBlitzTimer]);
 
-  // Identify user when wallet connects
+  // Identify user when wallet connects — use a one-way hash of the address
+  // so PostHog receives a stable anonymous ID without the raw wallet address.
+  // This keeps session stitching while protecting user privacy.
   useEffect(() => {
     if (address) {
-      posthog.identify(address, {
+      // Simple deterministic hash: last 12 chars is NOT sufficient, use a digest approach
+      // We XOR-fold a basic hash to create a stable non-reversible identifier
+      const simpleHash = address
+        .split('')
+        .reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
+      const anonymousId = `u_${Math.abs(simpleHash).toString(36)}_${address.slice(-6)}`;
+      posthog.identify(anonymousId, {
+        // Never send raw wallet address to third-party analytics
         network,
         hasBlitzAccess,
         userTier,
         hasAccessCode: !!accessCode
-      })
+      });
     }
   }, [address, network, hasBlitzAccess, userTier, accessCode])
 
@@ -447,15 +485,16 @@ export const GameBoard: React.FC = () => {
       let signature: string | undefined;
 
       
-      // Track bet placement
+      // Track bet placement (sanitized - no wallet address or specific amounts)
       posthog.capture('bet_placed', {
         direction,
-        amount: betAmount,
+        // amount removed to protect financial privacy
         multiplier,
         duration: selectedDuration,
         asset: selectedAsset,
         network,
         currency: currencySymbol
+        // wallet address never sent to analytics
       })
       
       // Special path for SOL, BNB and APT: Send stake transaction first
@@ -470,7 +509,9 @@ export const GameBoard: React.FC = () => {
             
             const transaction = await buildSolTransferTransaction(parseFloat(betAmount), address!, treasuryWallet);
             signature = await sendSolanaTransaction(transaction, connection);
-            console.log(`Solana SOL stake payment sig:`, signature);
+            if (process.env.NODE_ENV === 'development') {
+              console.log("Solana stake confirmed");
+            }
           } else if (network === 'BNB' && currencySymbol === 'BNB') {
             const wallet = wallets.find(w => w.address.toLowerCase() === address!.toLowerCase());
             if (!wallet) throw new Error("Active wallet not found in session");
@@ -483,7 +524,9 @@ export const GameBoard: React.FC = () => {
               to: getAddress(treasuryWallet),
               value: ethers.parseEther(betAmount),
             });
-            console.log("BNB stake payment tx:", txResponse.hash);
+            if (process.env.NODE_ENV === 'development') {
+              console.log("BNB stake confirmed");
+            }
             await txResponse.wait();
             signature = txResponse.hash;
           } else if (network === 'APT' && (currencySymbol === 'APT' || currencySymbol === 'Aptos')) {
@@ -500,12 +543,16 @@ export const GameBoard: React.FC = () => {
               }
             });
             
-            console.log("Aptos stake payment hash:", response.hash);
+            if (process.env.NODE_ENV === 'development') {
+              console.log("Aptos stake confirmed");
+            }
             await client.getSDK().waitForTransaction({ transactionHash: response.hash });
             signature = response.hash;
           }
         } catch (txErr: any) {
-          console.error("Stake transaction failed:", txErr);
+          if (process.env.NODE_ENV === 'development') {
+            console.error("Stake transaction failed:", txErr.message || txErr);
+          }
           toast.error(txErr.message || "Failed to send stake transaction");
           return;
         }
@@ -520,14 +567,17 @@ export const GameBoard: React.FC = () => {
         { txHash: signature }
       );
     } catch (err) {
-      console.error("Failed to place bet:", err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to place bet:", err instanceof Error ? err.message : err);
+      }
       
-      // Track bet failure
+      // Track bet failure (sanitized - no wallet address or specific amounts)
       posthog.capture('bet_failed', {
         direction,
-        amount: betAmount,
+        // amount removed to protect financial privacy
         error: err instanceof Error ? err.message : 'Unknown error',
         network
+        // wallet address never sent to analytics
       })
     }
   };

@@ -14,10 +14,10 @@ const treasuryAbi = [
 
 export function getZGTreasuryWallet(): ethers.Wallet {
   const rawSecretKey =
-    process.env.ZG_TREASURY_PRIVATE_KEY || process.env.BNB_TREASURY_SECRET_KEY;
+    process.env.ZG_TREASURY_PRIVATE_KEY;
 
   if (!rawSecretKey) {
-    throw new Error('ZG_TREASURY_PRIVATE_KEY (or BNB_TREASURY_SECRET_KEY) is not configured');
+    throw new Error('ZG_TREASURY_PRIVATE_KEY is not configured');
   }
 
   // Support env keys with or without 0x prefix.

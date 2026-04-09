@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
       refRes,
       sessRes,
     ] = await Promise.all([
-      supabaseService.from('user_balances').select('*').in('user_address', variants),
+      // Explicit column selection to avoid exposing sensitive future columns
+      supabaseService.from('user_balances').select('id, user_address, currency, balance, status, tier, updated_at, created_at').in('user_address', variants),
       supabaseService
         .from('balance_audit_log')
         .select(
@@ -78,9 +79,10 @@ export async function GET(request: NextRequest) {
         .in('wallet_address', variants)
         .order('created_at', { ascending: false })
         .limit(BETS_CAP),
+      // Explicit column selection to avoid exposing sensitive future columns
       supabaseService
         .from('withdrawal_requests')
-        .select('*')
+        .select('id, user_address, currency, amount, net_amount, fee_amount, fee_tier, requested_at, status, decided_by, tx_hash, notes, account_type, created_at')
         .in('user_address', variants)
         .order('requested_at', { ascending: false })
         .limit(500),
@@ -89,7 +91,8 @@ export async function GET(request: NextRequest) {
         .select('user_address, username, access_code, updated_at')
         .in('user_address', variants)
         .limit(1),
-      supabaseService.from('user_referrals').select('*').in('user_address', variants).limit(1),
+      // Explicit column selection to avoid exposing sensitive future columns
+      supabaseService.from('user_referrals').select('id, user_address, referral_code, referral_count, referred_by, created_at, updated_at').in('user_address', variants).limit(1),
       supabaseService
         .from('user_sessions')
         .select('id, network, started_at, last_ping_at, ended_at')

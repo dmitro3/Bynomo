@@ -15,10 +15,10 @@ const treasuryAbi = [
 export function getSomniaTreasuryWallet(): ethers.Wallet {
   const config = getSomniaConfig();
   const rawSecretKey =
-    process.env.SOMNIA_TREASURY_SECRET_KEY || process.env.BNB_TREASURY_SECRET_KEY;
+    process.env.SOMNIA_TREASURY_SECRET_KEY;
 
   if (!rawSecretKey) {
-    throw new Error('SOMNIA_TREASURY_SECRET_KEY (or BNB_TREASURY_SECRET_KEY) is not configured');
+    throw new Error('SOMNIA_TREASURY_SECRET_KEY is not configured');
   }
 
   // Support env keys with or without 0x prefix.

@@ -6,14 +6,42 @@
  */
 
 import { POST } from '../route';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseService } from '@/lib/supabase/serviceClient';
 import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-// Mock the Supabase client
-jest.mock('@/lib/supabase/client', () => ({
-  supabase: {
+const TEST_USER = '0x1111111111111111111111111111111111111111';
+const TEST_USER_B = '0x4444444444444444444444444444444444444444';
+
+jest.mock('@/lib/bans/walletBan', () => ({
+  isWalletGloballyBanned: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('@/lib/supabase/serviceClient', () => ({
+  supabaseService: {
     rpc: jest.fn(),
+    from: jest.fn((table: string) => {
+      const chainMethods = {
+        select: jest.fn(() => chainMethods),
+        eq: jest.fn(() => chainMethods),
+        limit: jest.fn(() => Promise.resolve({ data: [], error: null })),
+        insert: jest.fn(() => Promise.resolve({ error: null })),
+      };
+      // For payout_lock and payout duplicate checks
+      if (table === 'balance_audit_log') {
+        return {
+          ...chainMethods,
+          select: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              eq: jest.fn(() => ({
+                limit: jest.fn(() => Promise.resolve({ data: [], error: null })),
+              })),
+            })),
+          })),
+        };
+      }
+      return chainMethods;
+    }),
   },
 }));
 
@@ -35,7 +63,7 @@ jest.mock('next/server', () => {
 });
 
 describe('POST /api/balance/payout', () => {
-  const mockRpc = supabase.rpc as jest.MockedFunction<typeof supabase.rpc>;
+  const mockRpc = supabaseService.rpc as jest.MockedFunction<typeof supabaseService.rpc>;
   const mockNextResponseJson = NextResponse.json as jest.MockedFunction<typeof NextResponse.json>;
   
   beforeEach(() => {
@@ -57,7 +85,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request with valid payout data
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 20.5,
       betId: 'bet_123456',
     };
@@ -80,8 +108,9 @@ describe('POST /api/balance/payout', () => {
 
     // Verify stored procedure was called with correct parameters
     expect(mockRpc).toHaveBeenCalledWith('credit_balance_for_payout', {
-      p_user_address: '0x123abc',
+      p_user_address: TEST_USER.toLowerCase(),
       p_payout_amount: 20.5,
+      p_currency: 'BNB',
       p_bet_id: 'bet_123456',
     });
   });
@@ -101,7 +130,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0xnewuser',
+      userAddress: TEST_USER_B,
       payoutAmount: 15.0,
       betId: 'bet_789',
     };
@@ -150,7 +179,7 @@ describe('POST /api/balance/payout', () => {
   it('should return 400 for missing payoutAmount', async () => {
     // Create mock request with missing payoutAmount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       betId: 'bet_123456',
     };
 
@@ -176,7 +205,7 @@ describe('POST /api/balance/payout', () => {
   it('should return 400 for missing betId', async () => {
     // Create mock request with missing betId
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 20.5,
     };
 
@@ -219,7 +248,7 @@ describe('POST /api/balance/payout', () => {
     // Verify response
     expect(response.status).toBe(400);
     expect(json).toEqual({
-      error: 'Invalid address format. Flow addresses must start with 0x',
+      error: 'Invalid wallet address format',
     });
 
     // Verify stored procedure was not called
@@ -229,7 +258,7 @@ describe('POST /api/balance/payout', () => {
   it('should return 400 for zero payout amount', async () => {
     // Create mock request with zero amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 0,
       betId: 'bet_123456',
     };
@@ -256,7 +285,7 @@ describe('POST /api/balance/payout', () => {
   it('should return 400 for negative payout amount', async () => {
     // Create mock request with negative amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: -10.5,
       betId: 'bet_123456',
     };
@@ -289,7 +318,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 20.5,
       betId: 'bet_123456',
     };
@@ -325,7 +354,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 20.5,
       betId: 'bet_123456',
     };
@@ -352,7 +381,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 20.5,
       betId: 'bet_123456',
     };
@@ -388,7 +417,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request with large amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 999999.12345678,
       betId: 'bet_large',
     };
@@ -423,7 +452,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request with small decimal amount
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 0.00000001,
       betId: 'bet_small',
     };
@@ -480,7 +509,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 25.0,
       betId: 'bet_audit_test',
     };
@@ -496,8 +525,9 @@ describe('POST /api/balance/payout', () => {
     // Verify stored procedure was called with bet ID
     // The procedure internally creates audit log with operation_type='bet_won'
     expect(mockRpc).toHaveBeenCalledWith('credit_balance_for_payout', {
-      p_user_address: '0x123abc',
+      p_user_address: TEST_USER.toLowerCase(),
       p_payout_amount: 25.0,
+      p_currency: 'BNB',
       p_bet_id: 'bet_audit_test',
     });
   });
@@ -523,7 +553,7 @@ describe('POST /api/balance/payout', () => {
     const request1 = new NextRequest('http://localhost:3000/api/balance/payout', {
       method: 'POST',
       body: JSON.stringify({
-        userAddress: '0x123abc',
+        userAddress: TEST_USER,
         payoutAmount: 25.0,
         betId: 'bet_1',
       }),
@@ -539,7 +569,7 @@ describe('POST /api/balance/payout', () => {
     const request2 = new NextRequest('http://localhost:3000/api/balance/payout', {
       method: 'POST',
       body: JSON.stringify({
-        userAddress: '0x123abc',
+        userAddress: TEST_USER,
         payoutAmount: 25.0,
         betId: 'bet_2',
       }),
@@ -570,7 +600,7 @@ describe('POST /api/balance/payout', () => {
 
     // Create mock request with calculated payout
     const requestBody = {
-      userAddress: '0x123abc',
+      userAddress: TEST_USER,
       payoutAmount: 25.0, // 10 * 2.5
       betId: 'bet_odds_test',
     };

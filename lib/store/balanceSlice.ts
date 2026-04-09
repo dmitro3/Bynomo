@@ -7,6 +7,7 @@
  */
 
 import { StateCreator } from "zustand";
+import { balanceMutationHeaders } from "@/lib/balance/balanceClientHeaders";
 
 export interface BalanceState {
   // State
@@ -191,6 +192,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...balanceMutationHeaders(),
         },
         body: JSON.stringify({
           userAddress: address,
@@ -239,7 +241,6 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     amount: number,
     security?: { signature?: string; signedAt?: number }
   ) => {
-    const { accountType } = get();
     const network = (get() as any).network || 'BNB';
     const selectedCurrency = (get() as any).selectedCurrency;
     const currency =
@@ -264,6 +265,7 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...balanceMutationHeaders(),
         },
         body: JSON.stringify({
           userAddress: address,
@@ -272,7 +274,6 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
           userTier: (get() as any).userTier || 'free',
           signature: security?.signature,
           signedAt: security?.signedAt,
-          accountType,
         }),
       });
 

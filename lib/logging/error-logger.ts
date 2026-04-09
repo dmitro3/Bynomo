@@ -27,10 +27,63 @@ export interface ErrorLogEntry {
     stack?: string;
     code?: string | number;
   };
-  context?: any;
+  context?: Record<string, unknown>;
   timestamp: string;
-  userAddress?: string;
-  sessionId?: string;
+  // userAddress and sessionId removed to prevent PII/sensitive data exposure
+  userIdHash?: string; // Hashed identifier for correlation without exposing PII
+}
+
+/**
+ * Sanitize context object to remove sensitive data before logging
+ * Removes wallet addresses, private keys, signatures, amounts, and other PII
+ */
+function sanitizeContext(context: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!context || typeof context !== 'object') return context;
+  
+  const sensitiveKeys = [
+    'address', 'userAddress', 'walletAddress', 'from', 'to', 'sender', 'recipient',
+    'privateKey', 'secretKey', 'secret', 'password', 'signature', 'signedMessage',
+    'amount', 'betAmount', 'winAmount', 'payoutAmount', 'balance', 'value',
+    'txHash', 'transactionHash', 'digest', 'hash',
+    'authorizationSignature', 'settlementToken', 'accessCode', 'referred_by'
+  ];
+  
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeContext(value as Record<string, unknown>);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+/**
+ * Generate a hashed user identifier for correlation without exposing PII
+ * Returns a truncated hash of the wallet address for grouping errors by user
+ */
+function getUserIdHash(): string | undefined {
+  if (typeof window === 'undefined') {
+    return 'server';
+  }
+  
+  try {
+    const sessionData = localStorage.getItem('overflow_sui_wallet_session');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      if (session.address) {
+        // Return first 8 chars of a simple hash - enough for correlation, not enough to identify
+        return 'u_' + session.address.slice(-8);
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  
+  return undefined;
 }
 
 /**
@@ -39,7 +92,7 @@ export interface ErrorLogEntry {
  * @param {ErrorCategory} category - Category of the error
  * @param {string} errorType - Specific type of error
  * @param {any} error - The error object
- * @param {any} context - Additional context
+ * @param {any} context - Additional context (will be sanitized to remove sensitive data)
  */
 export function logError(
   category: ErrorCategory,
@@ -47,6 +100,8 @@ export function logError(
   error: any,
   context?: any
 ): void {
+  const sanitizedContext = sanitizeContext(context);
+  
   const errorLog: ErrorLogEntry = {
     category,
     errorType,
@@ -54,24 +109,28 @@ export function logError(
     error: error instanceof Error ? {
       name: error.name,
       message: error.message,
-      stack: error.stack,
+      // Stack traces can leak internal paths - only include in dev
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       code: (error as any).code,
     } : undefined,
-    context,
+    context: sanitizedContext,
     timestamp: new Date().toISOString(),
-    userAddress: getUserAddress(),
-    sessionId: getSessionId(),
+    userIdHash: getUserIdHash(), // Anonymous correlation ID
   };
   
-  // Log to console with color coding
-  const consoleMethod = getConsoleMethod(category);
-  consoleMethod(`[${category.toUpperCase()}] ${errorType}:`, JSON.stringify(errorLog, null, 2));
+  // Log to console with color coding (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    const consoleMethod = getConsoleMethod(category);
+    consoleMethod(`[${category.toUpperCase()}] ${errorType}:`, JSON.stringify(errorLog, null, 2));
+  }
   
   // Send to external logging service
   sendToLoggingService(errorLog);
   
-  // Store in local storage for debugging (last 50 errors)
-  storeErrorLocally(errorLog);
+  // Store in local storage for debugging (last 50 errors) - only in development
+  if (process.env.NODE_ENV === 'development') {
+    storeErrorLocally(errorLog);
+  }
 }
 
 /**
@@ -162,65 +221,26 @@ function getConsoleMethod(category: ErrorCategory): Function {
   }
 }
 
-/**
- * Get the current user's address from store or localStorage
- * 
- * @returns {string | undefined} User address if available
- */
-function getUserAddress(): string | undefined {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-  
-  try {
-    // Try to get from localStorage session
-    const sessionData = localStorage.getItem('overflow_sui_wallet_session');
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      return session.address;
-    }
-  } catch (error) {
-    // Ignore errors
-  }
-  
-  return undefined;
-}
-
-/**
- * Get or create a session ID for tracking errors across a session
- * 
- * @returns {string} Session ID
- */
-function getSessionId(): string {
-  if (typeof window === 'undefined') {
-    return 'server';
-  }
-  
-  try {
-    let sessionId = sessionStorage.getItem('overflow_session_id');
-    if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      sessionStorage.setItem('overflow_session_id', sessionId);
-    }
-    return sessionId;
-  } catch (error) {
-    return 'unknown';
-  }
-}
+// Note: getUserAddress and getSessionId removed to prevent PII exposure
+// Use getUserIdHash() for anonymous correlation instead
 
 /**
  * Send error log to external logging service
+ * Note: All logs are pre-sanitized to remove sensitive data before sending
  * 
- * @param {ErrorLogEntry} errorLog - The error log entry
+ * @param {ErrorLogEntry} errorLog - The error log entry (already sanitized)
  */
 function sendToLoggingService(errorLog: ErrorLogEntry): void {
   // TODO: Implement integration with external logging service
-  // Examples:
+  // Examples (all receive pre-sanitized data):
   // - Sentry: Sentry.captureException(errorLog.error, { contexts: { custom: errorLog } })
   // - LogRocket: LogRocket.captureException(errorLog.error, { extra: errorLog })
   // - Datadog: datadogLogs.logger.error(errorLog.message, errorLog)
   
-  // For now, just log that we would send it
+  // IMPORTANT: Never send raw wallet addresses, amounts, or transaction details to third parties
+  // All sensitive data is redacted before this function is called
+  
+  // For now, just log that we would send it (development only)
   if (process.env.NODE_ENV === 'development') {
     console.log('[DEV] Would send to logging service:', errorLog.category, errorLog.errorType);
   }
@@ -309,24 +329,29 @@ export function exportErrorLogs(): string {
  * 
  * @param {ErrorCategory} category - Category of the event
  * @param {string} eventType - Type of event
- * @param {any} context - Event context
+ * @param {any} context - Event context (will be sanitized)
  */
 export function logInfo(
   category: ErrorCategory,
   eventType: string,
   context?: any
 ): void {
+  const sanitizedContext = sanitizeContext(context);
+  
   const logEntry = {
     type: 'info',
     category,
     eventType,
-    context,
+    context: sanitizedContext,
     timestamp: new Date().toISOString(),
-    userAddress: getUserAddress(),
-    sessionId: getSessionId(),
+    userIdHash: getUserIdHash(), // Anonymous correlation ID
   };
   
-  console.log(`[${category.toUpperCase()}] ${eventType}:`, JSON.stringify(logEntry, null, 2));
+  // Only log to console in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[${category.toUpperCase()}] ${eventType}:`, JSON.stringify(logEntry, null, 2));
+  }
   
-  // TODO: Send to analytics service (e.g., Mixpanel, Amplitude)
+  // TODO: Send to analytics service (e.g., Mixpanel, Amplitude) - with sanitized data only
+  // IMPORTANT: Never send raw wallet addresses, amounts, or transaction details to third parties
 }

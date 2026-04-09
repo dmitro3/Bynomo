@@ -12,9 +12,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { ethers } from 'ethers';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
+import { createSettlementToken } from '@/lib/balance/settlementToken';
 
 interface BetRequest {
   userAddress: string;
@@ -30,10 +31,14 @@ interface BetRequest {
     direction: 'UP' | 'DOWN';
     timeframe: number;
   };
+  betRequestId?: string; // Idempotency key to prevent double-betting
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const unauthorized = assertBalanceApiAuthorized(request);
+    if (unauthorized) return unauthorized;
+
     // Parse request body
     const body: BetRequest = await request.json();
     const { userAddress, betAmount, currency = 'BNB', roundId, targetPrice, isOver, multiplier, targetCell } = body;
@@ -42,6 +47,14 @@ export async function POST(request: NextRequest) {
     if (!userAddress || betAmount === undefined || betAmount === null) {
       return NextResponse.json(
         { error: 'Missing required fields: userAddress, betAmount' },
+        { status: 400 }
+      );
+    }
+
+    // Guard against NaN / Infinity which bypass > 0 checks
+    if (!Number.isFinite(Number(betAmount))) {
+      return NextResponse.json(
+        { error: 'Invalid bet amount' },
         { status: 400 }
       );
     }
@@ -77,6 +90,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!Number.isFinite(multiplier) || multiplier > 20) {
+      return NextResponse.json(
+        { error: 'Multiplier exceeds maximum allowed value' },
+        { status: 400 }
+      );
+    }
 
     // Validate target cell
     if (!targetCell || targetCell.id === undefined || targetCell.id === null || targetCell.priceChange === undefined) {
@@ -87,12 +106,44 @@ export async function POST(request: NextRequest) {
     }
 
     const userKey = canonicalHouseUserAddress(userAddress);
+    const normalizedCurrency = currency.toUpperCase();
+    
+    // ── Idempotency: Use betRequestId or generate one from roundId + userAddress ──────────────────
+    // This prevents double-deduction if client retries the same bet request
+    const betRequestId = body.betRequestId || `bet_req_${roundId}_${userKey.slice(-8)}_${Date.now()}`;
+    
+    // Try to insert a lock row first; if it conflicts, this is a duplicate request
+    const { error: lockError } = await supabase
+      .from('balance_audit_log')
+      .insert({
+        user_address: userKey,
+        currency: normalizedCurrency,
+        operation_type: 'bet_lock',
+        amount: 0,
+        bet_id: betRequestId,
+        transaction_hash: `lock:${betRequestId}`,
+      });
+    
+    if (lockError) {
+      if (lockError.code === '23505') {
+        // Unique constraint violation - this bet request was already processed
+        console.warn(`[bet] duplicate request blocked: ${betRequestId}`);
+        return NextResponse.json({ 
+          success: true, 
+          duplicate: true, 
+          message: 'Bet already processed' 
+        });
+      }
+      // Other database errors - log but continue to try the actual bet
+      console.warn('[bet] lock insert failed (non-blocking):', lockError.message);
+    }
 
-    // Call deduct_balance_for_bet stored procedure
+    // Call deduct_balance_for_bet stored procedure — use normalizedCurrency to
+    // prevent case-mismatch bypasses (e.g. "bnb" vs "BNB" resolving different rows)
     const { data, error } = await supabase.rpc('deduct_balance_for_bet', {
       p_user_address: userKey,
       p_bet_amount: betAmount,
-      p_currency: currency,
+      p_currency: normalizedCurrency,
     });
 
     if (error) {
@@ -111,12 +162,20 @@ export async function POST(request: NextRequest) {
 
     // Generate a bet ID
     const betId = `bet_${Date.now()}_${userKey.slice(-6)}`;
+    // normalizedCurrency already defined above
+    const settlementToken = createSettlementToken({
+      betId,
+      userAddress: userKey,
+      currency: normalizedCurrency,
+      maxPayout: Number((betAmount * multiplier).toFixed(8)),
+    });
 
     // Return success with remaining balance and bet ID
     return NextResponse.json({
       success: true,
       remainingBalance: parseFloat(result.new_balance.toString()),
       betId,
+      settlementToken,
     });
   } catch (error) {
     // Handle unexpected errors

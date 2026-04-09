@@ -197,7 +197,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
         }
         if (onSuccess) onSuccess(withdrawAmount, txHash);
       } else {
-        console.log('Withdrawal successful:', txHash);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Withdrawal successful:', txHash);
+        }
         toast.success(
           `Successfully withdrew ${withdrawAmount.toFixed(4)} ${currencySymbol}! Balance updated.`
         );
@@ -205,7 +207,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       }
       onClose();
     } catch (err: any) {
-      console.error('Withdrawal error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Withdrawal error:', err);
+      }
       const errorMessage = err.message || 'Failed to withdraw funds';
       setError(errorMessage);
       toast.error(errorMessage);

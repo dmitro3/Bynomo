@@ -10,6 +10,7 @@ import { StateCreator } from "zustand";
 import { TargetCell, PricePoint, ActiveRound } from "@/types/game";
 import { AssetType } from "@/lib/utils/priceFeed";
 import { playWinSound, playLoseSound } from "@/lib/utils/sounds";
+import { balanceMutationHeaders } from "@/lib/balance/balanceClientHeaders";
 
 // Game Modes
 export type GameMode = 'binomo' | 'box' | 'draw';
@@ -28,6 +29,7 @@ export interface ActiveBet {
   /** Wallet address captured at placement time — used for settlement even if
    *  the user disconnects their wallet before the round resolves. */
   userAddress?: string;
+  settlementToken?: string;
   // Classic mode specific
   strikePrice?: number;
   endTime?: number;
@@ -411,6 +413,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...balanceMutationHeaders(),
         },
         body: JSON.stringify({
           userAddress: userAddress,
@@ -450,6 +453,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         status: 'active',
         network: currency, // Save the currency identifier used (e.g. XLM, NEAR, PC)
         userAddress: userAddress, // Capture address at placement time for settlement
+        settlementToken: data.settlementToken,
         ...(gameMode === 'binomo' ? {
           strikePrice: currentPrice,
           endTime: Date.now() + (durationSeconds * 1000)
@@ -668,12 +672,13 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         if (accountType === 'real' && settlementAddress) {
           fetch('/api/balance/win', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...balanceMutationHeaders() },
             body: JSON.stringify({
               userAddress: settlementAddress,
               winAmount: payout,
               currency: settlementCurrency,
-              betId: resolvedBet.id
+              betId: resolvedBet.id,
+              settlementToken: resolvedBet.settlementToken,
             })
           }).then(() => {
             if (fetchBalance && settlementAddress) fetchBalance(settlementAddress);
@@ -722,7 +727,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       if (accountType === 'real' && settlementAddress && !isDemoBet) {
         fetch('/api/bets/save', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...balanceMutationHeaders() },
           body: JSON.stringify({
             id: resolvedBet.id,
             walletAddress: settlementAddress,

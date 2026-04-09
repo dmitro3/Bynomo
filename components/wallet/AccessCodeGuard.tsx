@@ -52,9 +52,10 @@ export const AccessCodeGuard: React.FC = () => {
         }
 
         try {
+            const { balanceMutationHeaders } = await import('@/lib/balance/balanceClientHeaders');
             const res = await fetch('/api/validate-access-code', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...balanceMutationHeaders() },
                 body: JSON.stringify({
                     code: inputValue.trim(),
                     walletAddress: currentAddress

@@ -1,4 +1,5 @@
 const nearAPI = require("near-api-js");
+const fs = require("fs");
 
 const { KeyPair } = nearAPI;
 
@@ -9,11 +10,22 @@ const privateKey = keyPair.toString();
 // On NEAR, the implicit account ID is the lowercase hex representation of the public key's data
 const accountId = Buffer.from(keyPair.publicKey.data).toString('hex');
 
-console.log("NEAR Treasury Wallet Generated:");
-console.log("Account ID:", accountId);
-console.log("Public Key:", publicKey);
-console.log("Private Key:", privateKey);
-console.log("\nAdd these to your .env file:");
-console.log(`NEXT_PUBLIC_NEAR_TREASURY_ADDRESS=${accountId}`);
-console.log(`NEAR_TREASURY_ACCOUNT_ID=${accountId}`);
-console.log(`NEAR_TREASURY_PRIVATE_KEY=${privateKey}`);
+const output = `NEAR Treasury Wallet Generated:
+Account ID: ${accountId}
+Public Key: ${publicKey}
+Private Key: ${privateKey}
+
+Add these to your .env file:
+NEXT_PUBLIC_NEAR_TREASURY_ADDRESS=${accountId}
+NEAR_TREASURY_ACCOUNT_ID=${accountId}
+NEAR_TREASURY_PRIVATE_KEY=${privateKey}
+`;
+
+fs.writeFileSync("near-wallet.txt", output);
+try {
+  fs.chmodSync("near-wallet.txt", 0o600);
+} catch (_) {
+  // Best effort only; some filesystems do not support chmod.
+}
+console.log("Wallet generated in near-wallet.txt");
+console.log("Private key has been written to the file only. Handle it as a secret and rotate if exposed.");

@@ -12,13 +12,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { ethers } from 'ethers';
-import { getBNBConfig } from '@/lib/bnb/config';
-import { getPushConfig } from '@/lib/push/config';
-import { getSomniaConfig } from '@/lib/somnia/config';
-import { getZGConfig } from '@/lib/zg/config';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
+import { assertBalanceApiAuthorized } from '@/lib/balance/balanceApiGuard';
+import {
+  verifyNearDepositTx,
+  verifyOctDepositDigest,
+  verifyStarknetDepositTx,
+  verifyStellarDepositTx,
+  verifySuiFamilyDepositDigest,
+  verifyTezosDepositTx,
+} from '@/lib/balance/verifyDepositOnChain';
+import { verifyEvmDepositTx } from '@/lib/balance/verifyEvmDepositTx';
 
 interface DepositRequest {
   userAddress: string;
@@ -28,69 +34,13 @@ interface DepositRequest {
   userTier?: 'free' | 'standard' | 'vip';
 }
 
-async function verifyEvmDepositTx(
-  txHash: string,
-  userAddress: string,
-  amount: number,
-  currency: string
-): Promise<boolean> {
-  let rpc = '';
-  let treasury = '';
-  if (currency === 'BNB') {
-    const cfg = getBNBConfig();
-    rpc = cfg.rpcEndpoint;
-    treasury = cfg.treasuryAddress;
-  } else if (currency === 'PC' || currency === 'PUSH') {
-    const cfg = getPushConfig();
-    rpc = cfg.rpcEndpoint;
-    treasury = cfg.treasuryAddress;
-  } else if (currency === 'STT' || currency === 'SOMNIA') {
-    const cfg = getSomniaConfig();
-    rpc = cfg.rpcUrls[0];
-    treasury = String(cfg.treasuryAddress || '');
-  } else if (currency === '0G') {
-    const cfg = getZGConfig();
-    rpc = cfg.rpcUrls[0];
-    treasury = String(cfg.treasuryAddress || '');
-  } else {
-    return true;
-  }
-
-  if (!rpc || !treasury) return false;
-
-  const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
-    Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('RPC timeout')), ms))]);
-
-  try {
-    const provider = new ethers.JsonRpcProvider(rpc);
-    const [tx, receipt] = await Promise.all([
-      withTimeout(provider.getTransaction(txHash), 12_000),
-      withTimeout(provider.getTransactionReceipt(txHash), 12_000),
-    ]);
-    if (!tx || !receipt || receipt.status !== 1) return false;
-
-    if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) {
-      // Privy/relayed BNB deposits can have a relayer "from" address.
-      // Keep strict sender checks for PUSH/SOMNIA, but allow BNB if treasury/value checks pass.
-      if (currency !== 'BNB') return false;
-      console.warn('[verifyEvmDepositTx] BNB sender mismatch; accepting based on treasury/value checks', {
-        userAddress,
-        txFrom: tx.from,
-        txHash,
-      });
-    }
-    if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
-
-    const minWei = ethers.parseEther(amount.toString());
-    return tx.value >= minWei;
-  } catch (err) {
-    console.error('[verifyEvmDepositTx] RPC error:', err);
-    return false;
-  }
-}
+const BYNOMO_SOLANA_MINT = 'Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS';
 
 export async function POST(request: NextRequest) {
   try {
+    const unauthorized = assertBalanceApiAuthorized(request);
+    if (unauthorized) return unauthorized;
+
     // Parse request body
     const body: DepositRequest = await request.json();
     const { userAddress, amount, txHash, currency = 'BNB', userTier = 'free' } = body;
@@ -99,6 +49,14 @@ export async function POST(request: NextRequest) {
     if (!userAddress || amount === undefined || amount === null || !txHash) {
       return NextResponse.json(
         { error: 'Missing required fields: userAddress, amount, txHash' },
+        { status: 400 }
+      );
+    }
+
+    // Guard against NaN / Infinity which bypass > 0 checks
+    if (!Number.isFinite(Number(amount))) {
+      return NextResponse.json(
+        { error: 'Invalid deposit amount' },
         { status: 400 }
       );
     }
@@ -164,9 +122,53 @@ export async function POST(request: NextRequest) {
 
     // For EVM-like chains, verify tx sender/recipient/value on-chain before crediting.
     const normalizedCurrency = currency.toUpperCase();
-    const feeAmount = calculateFeeAmount(amount, userTier);
+    const supportedCurrencies = new Set([
+      'BNB', 'PUSH', 'PC', 'SOMNIA', 'STT', '0G',
+      'INIT', 'APT', 'SOL', 'BYNOMO',
+      'SUI', 'USDC', 'NEAR', 'XLM', 'XTZ', 'STRK', 'OCT',
+    ]);
+    if (!supportedCurrencies.has(normalizedCurrency)) {
+      return NextResponse.json(
+        { error: `Unsupported deposit currency: ${normalizedCurrency}` },
+        { status: 400 }
+      );
+    }
+    // ── Idempotency: reject if this txHash was already credited ──
+    // Check both the raw txHash AND any combinedTxHash variant (e.g. txHash|feeTx:…)
+    // This prevents replay when fee collection generates a combined hash stored in the audit log
+    const { data: existingTxByHash } = await supabase
+      .from('balance_audit_log')
+      .select('id, transaction_hash')
+      .eq('operation_type', 'deposit')
+      .or(`transaction_hash.eq.${txHash},transaction_hash.like.${txHash}|feeTx:%`)
+      .limit(1);
+    if (existingTxByHash && existingTxByHash.length > 0) {
+      return NextResponse.json(
+        { error: 'This transaction has already been credited' },
+        { status: 409 }
+      );
+    }
+
+    // Look up user tier from DB instead of trusting client
+    const depositUserKey = canonicalHouseUserAddress(userAddress);
+    let resolvedTier: 'free' | 'standard' | 'vip' = 'free';
+    try {
+      const { data: tierRow } = await supabase
+        .from('user_balances')
+        .select('tier')
+        .eq('user_address', depositUserKey)
+        .limit(1)
+        .single();
+      if (tierRow?.tier && ['free', 'standard', 'vip'].includes(tierRow.tier)) {
+        resolvedTier = tierRow.tier as 'free' | 'standard' | 'vip';
+      }
+    } catch {
+      // New user — default tier is fine
+    }
+
+    const feeAmount = calculateFeeAmount(amount, resolvedTier);
     const netDepositAmount = amount - feeAmount;
-    const feePercentLabel = getFeePercentLabel(userTier);
+    const feePercentLabel = getFeePercentLabel(resolvedTier);
 
     if (netDepositAmount <= 0) {
       return NextResponse.json(
@@ -197,7 +199,9 @@ export async function POST(request: NextRequest) {
       try {
         const { verifyInitiaDepositTx } = await import('@/lib/initia/backend-client');
         const verified = await verifyInitiaDepositTx(txHash);
-        if (!verified.confirmed || verified.amountINIT < amount * 0.99) {
+        const senderMatches =
+          (verified.sender || '').trim().toLowerCase() === userAddress.trim().toLowerCase();
+        if (!verified.confirmed || !senderMatches || verified.amountINIT < amount * 0.99) {
           return NextResponse.json(
             { error: 'Initia deposit transaction could not be verified on-chain' },
             { status: 400 }
@@ -228,6 +232,90 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Failed to verify Aptos transaction' },
           { status: 400 }
+        );
+      }
+    }
+
+    // Solana (native SOL + BYNOMO SPL)
+    if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
+      try {
+        const { verifySolanaDepositTx } = await import('@/lib/solana/backend-client');
+        const mint = normalizedCurrency === 'BYNOMO' ? BYNOMO_SOLANA_MINT : undefined;
+        const ok = await verifySolanaDepositTx(txHash, userAddress, amount, mint);
+        if (!ok) {
+          return NextResponse.json(
+            { error: 'Solana deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.error('[deposit] Solana verification failed:', verifyErr);
+        return NextResponse.json({ error: 'Failed to verify Solana transaction' }, { status: 400 });
+      }
+    }
+
+    // Sui native + USDC (digest)
+    if (normalizedCurrency === 'SUI' || normalizedCurrency === 'USDC') {
+      const ok = await verifySuiFamilyDepositDigest(
+        txHash,
+        userAddress,
+        amount,
+        normalizedCurrency as 'SUI' | 'USDC',
+      );
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Sui deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (normalizedCurrency === 'NEAR') {
+      const ok = await verifyNearDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'NEAR deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (normalizedCurrency === 'XLM') {
+      const ok = await verifyStellarDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Stellar deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (normalizedCurrency === 'XTZ') {
+      const ok = await verifyTezosDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Tezos deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (normalizedCurrency === 'STRK') {
+      const ok = await verifyStarknetDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Starknet deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (normalizedCurrency === 'OCT') {
+      const ok = await verifyOctDepositDigest(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'OneChain deposit transaction could not be verified on-chain' },
+          { status: 400 },
         );
       }
     }
