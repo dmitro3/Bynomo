@@ -54,7 +54,14 @@ export async function verifyEvmDepositTx(
       if (!tx || !receipt) continue;
 
       if (receipt.status !== 1) return false; // tx reverted — no point retrying
-      if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) return false;
+      if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) {
+        // Privy/relayer BNB deposits may have a different "from" address.
+        // Keep strict sender check for non-BNB chains; allow BNB if treasury/value match.
+        if (currency !== 'BNB') return false;
+        console.warn('[verifyEvmDepositTx] BNB sender mismatch (Privy relay?); accepting on treasury/value checks', {
+          userAddress, txFrom: tx.from, txHash,
+        });
+      }
       if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
 
       const minWei = ethers.parseEther(amount.toString());

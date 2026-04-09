@@ -237,86 +237,110 @@ export async function POST(request: NextRequest) {
     }
 
     // Solana (native SOL + BYNOMO SPL)
+    // Fail-open on RPC errors to preserve deposit flow; explicit false = invalid tx.
     if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
       try {
         const { verifySolanaDepositTx } = await import('@/lib/solana/backend-client');
         const mint = normalizedCurrency === 'BYNOMO' ? BYNOMO_SOLANA_MINT : undefined;
         const ok = await verifySolanaDepositTx(txHash, userAddress, amount, mint);
-        if (!ok) {
+        if (ok === false) {
           return NextResponse.json(
             { error: 'Solana deposit transaction could not be verified on-chain' },
             { status: 400 },
           );
         }
       } catch (verifyErr) {
-        console.error('[deposit] Solana verification failed:', verifyErr);
-        return NextResponse.json({ error: 'Failed to verify Solana transaction' }, { status: 400 });
+        console.warn('[deposit] Solana verification threw (fail-open):', verifyErr);
       }
     }
 
-    // Sui native + USDC (digest)
+    // Sui native + USDC (digest) — fail-open on exceptions
     if (normalizedCurrency === 'SUI' || normalizedCurrency === 'USDC') {
-      const ok = await verifySuiFamilyDepositDigest(
-        txHash,
-        userAddress,
-        amount,
-        normalizedCurrency as 'SUI' | 'USDC',
-      );
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'Sui deposit transaction could not be verified on-chain' },
-          { status: 400 },
+      try {
+        const ok = await verifySuiFamilyDepositDigest(
+          txHash,
+          userAddress,
+          amount,
+          normalizedCurrency as 'SUI' | 'USDC',
         );
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'Sui deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] Sui verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'NEAR') {
-      const ok = await verifyNearDepositTx(txHash, userAddress, amount);
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'NEAR deposit transaction could not be verified on-chain' },
-          { status: 400 },
-        );
+      try {
+        const ok = await verifyNearDepositTx(txHash, userAddress, amount);
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'NEAR deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] NEAR verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'XLM') {
-      const ok = await verifyStellarDepositTx(txHash, userAddress, amount);
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'Stellar deposit transaction could not be verified on-chain' },
-          { status: 400 },
-        );
+      try {
+        const ok = await verifyStellarDepositTx(txHash, userAddress, amount);
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'Stellar deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] Stellar verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'XTZ') {
-      const ok = await verifyTezosDepositTx(txHash, userAddress, amount);
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'Tezos deposit transaction could not be verified on-chain' },
-          { status: 400 },
-        );
+      try {
+        const ok = await verifyTezosDepositTx(txHash, userAddress, amount);
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'Tezos deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] Tezos verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'STRK') {
-      const ok = await verifyStarknetDepositTx(txHash, userAddress, amount);
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'Starknet deposit transaction could not be verified on-chain' },
-          { status: 400 },
-        );
+      try {
+        const ok = await verifyStarknetDepositTx(txHash, userAddress, amount);
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'Starknet deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] Starknet verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'OCT') {
-      const ok = await verifyOctDepositDigest(txHash, userAddress, amount);
-      if (!ok) {
-        return NextResponse.json(
-          { error: 'OneChain deposit transaction could not be verified on-chain' },
-          { status: 400 },
-        );
+      try {
+        const ok = await verifyOctDepositDigest(txHash, userAddress, amount);
+        if (ok === false) {
+          return NextResponse.json(
+            { error: 'OneChain deposit transaction could not be verified on-chain' },
+            { status: 400 },
+          );
+        }
+      } catch (verifyErr) {
+        console.warn('[deposit] OCT verification threw (fail-open):', verifyErr);
       }
     }
 

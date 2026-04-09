@@ -110,15 +110,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
         error: null
       });
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        set({ isLoading: false, error: 'Balance fetch timed out. Retrying...' });
-        // Retry once after a short delay
-        setTimeout(() => get().fetchBalance(address), 3000);
-        return;
-      }
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch balance'
+        error: error instanceof Error && error.name === 'AbortError'
+          ? 'Balance fetch timed out. Please refresh.'
+          : (error instanceof Error ? error.message : 'Failed to fetch balance'),
       });
     }
   },
