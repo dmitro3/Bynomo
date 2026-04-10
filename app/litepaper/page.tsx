@@ -1,6 +1,5 @@
- 'use client';
+'use client';
 
-import type { Metadata } from 'next';
 import MermaidDiagram from '@/components/ui/MermaidDiagram';
 
 // NOTE: metadata moved to runtime UI in client mode.
@@ -71,7 +70,8 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
       'Market universe includes 1,010+ references: crypto (BTC, ETH, SOL, SUI, BNB, …), forex (EUR/USD, GBP/USD, …), metals (Gold, Silver), and equities (AAPL, NVDA, TSLA, NFLX, …) via Pyth Hermes feeds. BYNOMO SPL token price is sourced from DexScreener (mint Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS).',
       'Timeframes: 5s · 10s · 15s · 30s · 60s. Default mode on load: Box, default duration: 5s, default asset: BNB.',
       'Three execution modes: (1) Box Mode — user selects a pre-drawn multiplier tile on the live grid; win when the price line tip reaches the tile start within [priceBottom, priceTop]; multiplier capped at 10× normally and 20× during Blitz. (2) Draw Mode — user draws a custom rectangle on the live chart (max 20s duration, max 20% chart height); dynamic multiplier from band/distance/duration formula, capped at 15×; win when finalPrice is inside [priceBottom, priceTop] at endTime. (3) Classic Mode (binomo) — directional UP/DOWN prediction; win when finalPrice > strikePrice (UP) or < strikePrice (DOWN).',
-      'Blitz Mode overlay: 60s active window, 120s cooldown, repeating. Multiplier boost: 2×, applied to Box cells where baseMultiplier > 2.2 or matching diagonal pattern; clamp max 20. One-time on-chain entry fee per window, paid directly to the platform fee collector wallet (not treasury).',
+      'Blitz Mode overlay: 60s active window, 120s cooldown, repeating. Multiplier boost: 2×, applied to Box cells where baseMultiplier > 2.2 or matching diagonal pattern; clamp max 20. One-time on-chain entry fee per window, paid directly to the platform fee collector wallet (not house ledger). The entry fee is always charged in the wallet’s native gas asset for the connected chain (e.g. SUI on Sui, not the USDC house ledger).',
+      'House ledgers are per currency: on Sui, native SUI and USDC are separate balance rows—UI and settlement use the user’s selected trading currency consistently.',
       'The protocol monetizes through four rails: (1) tiered deposit fees (free 10% / standard 9% / VIP 8%), (2) tiered withdrawal fees (same tier structure), (3) Blitz entry fees paid on-chain per chain, and (4) realized house edge from payout multiplier calibration below fair-odds parity.',
       'Price simulation amplifiers apply to Pyth feed deltas: crypto ×2, metals ×4, forex/stocks ×12, with additive random jitter for chart realism.',
       'Roadmap extensions: P2P matching for Classic mode (removes treasury directional risk), 200+ additional asset references, leverage surfaces (1×–100×), trader profiles, and tournament infrastructure.',
@@ -102,7 +102,7 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     body: [
       'Bynomo operates a chain-agnostic core with chain-specific adapter modules. The trade engine and risk engine are shared; signing, transfer semantics, and explorer linkage are delegated to adapters.',
       'Each supported network has an isolated treasury identity and execution backend, reducing cross-chain blast radius and enabling per-chain operational controls.',
-      'Adapters normalize heterogeneous chains (EVM/BNB/PUSH/SOMNIA/0G, Solana, Sui/OCT, NEAR, Stellar, Tezos, Starknet, Initia) into a common execution contract: transfer, balance read, tx hash, and finality status.',
+      'Adapters normalize heterogeneous chains (EVM/BNB/PUSH/SOMNIA/0G, Solana, Sui/OCT, NEAR, Stellar, Tezos, Starknet, Initia, Aptos) into a common execution contract: transfer, balance read, tx hash, and finality status.',
       'This architecture keeps protocol invariants consistent while allowing chain-native transaction paths.',
     ],
     mermaid: `flowchart TB
@@ -117,6 +117,7 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     CA --> XTZ[Tezos Adapter]
     CA --> STRK[Starknet Adapter]
     CA --> INIT[Initia Adapter]
+    CA --> APT[Aptos Adapter APT]
 
     EVM --> T1[(EVM Treasuries)]
     SOL --> T2[(Solana Treasury)]
@@ -125,7 +126,8 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     XLM --> T5[(Stellar Treasury)]
     XTZ --> T6[(Tezos Treasury)]
     STRK --> T7[(Starknet Treasury)]
-    INIT --> T8[(Initia Treasury)]`,
+    INIT --> T8[(Initia Treasury)]
+    APT --> T9[(Aptos Treasury)]`,
   },
   {
     id: 'trade-lifecycle',
@@ -160,7 +162,7 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     body: [
       'Treasury risk is controlled through payout multiplier calibration, tiered withdrawal thresholds, withdrawal caps, frequency review gates, and account state controls (active / frozen / banned).',
       'Withdrawal cap (real accounts, mainnet currencies): maxWithdrawable = totalDeposited × 1.08, computed from balance_audit_log deposits minus withdrawals plus pending withdrawal_requests. Testnet currencies (PUSH, PC, SOMNIA, STT, OCT, 0G) are exempt.',
-      'Auto-approval thresholds (instant execution if amount ≤ threshold and no frequency flag): BNB 0.08 · SOL 0.5 · BYNOMO 0.5 · SUI 45 · USDC 45 · XLM 300 · XTZ 150 · NEAR 40 · STRK 1500 · INIT 5 · testnets ∞. Amounts above threshold enter a manual review queue in the admin dashboard.',
+      'Auto-approval thresholds (instant execution if amount ≤ threshold and no frequency flag): BNB 0.08 · SOL 0.5 · BYNOMO 0.5 · SUI 45 · USDC 45 · XLM 300 · XTZ 150 · NEAR 40 · STRK 1500 · INIT 5 · APT 10 · testnets ∞. Amounts above threshold enter a manual review queue in the admin dashboard.',
       'Frequency review gate: if a real-account wallet accumulates ≥ 10 completed + pending withdrawals (across all currencies), the next request is automatically queued for manual review with a FREQUENCY_REVIEW stamp, regardless of amount.',
       'Oracle freshness control: price snapshots must be within 60 seconds; manual settlement timeout fires at 300 seconds. Both constants are configurable via env.',
       'Withdrawal requests pass an explicit state machine: pending → accepted → executed (treasury transfer succeeded) or failed → retry path; or pending → rejected. State transitions are authenticated, logged, and irreversible.',
@@ -216,6 +218,7 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     title: '10. Security Architecture',
     body: [
       'Admin endpoints: HMAC session cookie issued by POST /api/admin/auth against DASHBOARD_PASSWORD env; all admin routes call requireAdminAuth before executing. No root middleware — protection is enforced at the route handler level.',
+      'Balance mutation routes (bet, win, deposit, withdraw, payout): when BALANCE_INTERNAL_SECRET is set in production, the server requires the same secret via x-bynomo-balance-key or Authorization: Bearer, paired with NEXT_PUBLIC_BALANCE_API_KEY on the client—blocking unauthenticated bulk abuse of ledger endpoints.',
       'Withdrawal authorization (EVM-like chains — BNB, PUSH, PC, SOMNIA, STT, 0G): client signs an EIP-191 message containing address, amount, currency, and signedAt timestamp; server verifies signature with ethers.verifyMessage and rejects if age > 5 minutes. Non-EVM chains use treasury-side trust model.',
       'Address canonicalization: canonicalHouseUserAddress normalizes all wallet address variants before DB writes, preventing duplicate balance rows from case or format differences across chains.',
       'Database hardening: RLS enabled on all critical tables; anon and authenticated roles have privileges revoked; all privileged writes use the service-role key. Policies are enforce-on-deny-by-default.',
@@ -289,12 +292,12 @@ const sections: Array<{ id: string; title: string; body: string[]; mermaid?: str
     id: 'roadmap',
     title: '14. Technical & Ecosystem Roadmap',
     body: [
-      'Current state (v1.2.0): 12 chains live (SOL, BNB, SUI, NEAR, STRK, XLM, XTZ, INIT, OCT, PUSH, 0G, SOMNIA), three execution modes (Box, Draw, Classic), Blitz mode, full fee system with per-chain collector wallets, withdrawal review queue, ban/unban with balance wipe, and admin dashboard with Game Mode P&L analytics.',
+      'Current state (v1.3.0): 13 networks live—SOL, BNB, Sui (native SUI + USDC ledgers), NEAR, Starknet, Stellar, Tezos, Initia, OneChain (OCT), Push, 0G, Somnia, Aptos—plus BYNOMO SPL on Solana. Three execution modes (Box, Draw, Classic), Blitz mode, full fee system with per-chain collector wallets, withdrawal review queue, ban/unban with balance wipe, admin dashboard with Game Mode P&L analytics, and hardened balance API + multichain treasury backends (e.g. Aptos Ed25519 accounts, configurable NEAR RPC, chain-aware Starknet STRK).',
       'Pre-public-launch traction: 12,567+ bets settled · 249.89 SOL ($46,258) staked volume · ~$4,600 platform revenue · 76 unique wallets · 28 active price feeds · 2h 8m avg session time · +799% traffic growth · 3,421+ community members in 3 days (X: 2,261 · Telegram: 900 · Discord: 260) · 5+ inbound chain ecosystem partnership offers. Accepted for $4M Bagsapp Funding.',
       'Phase 1 — Public launch (active): viral X giveaway launch, per-chain ecosystem blitz (regional groups + executive outreach + all ecosystem projects for each of 12 chains), 100 micro-influencer campaign (1K–20K followers), perpetual referral fee-share with deep links, leaderboard and trader profiles.',
       'Phase 2 (30–90 days): P2P matching for Classic mode (eliminates treasury directional risk). 200+ additional Pyth asset references. Mobile-first redesign and PWA. Bynomo Ambassador Program. Weekly X Podcast/AMA with top traders. Chain foundation grant applications.',
       'Phase 3 (91–180 days): leverage surfaces (1×–100×), trader profiles (PnL, accuracy, risk, trade count), tournament infrastructure, social trading primitives (follow/copy/win-rate visibility), CEX/wallet deep integrations, regional expansion (Southeast Asia, MENA, LatAm).',
-      'Chain expansion model: each new chain follows the adapter pattern — treasury EOA, deposit verification route, withdrawal backend, fee routing, wallet modal integration. Expansion gated by ecosystem grant availability and community adoption evidence.',
+      'Chain expansion model: each new chain follows the adapter pattern — treasury account/EOA, deposit verification route, withdrawal backend, fee routing, wallet modal integration, and on-chain keys that match the funded treasury (full-access keys on NEAR, Ed25519 secrets on Aptos, etc.). Expansion gated by ecosystem grant availability and community adoption evidence.',
       '12-month outcome targets: 100,000+ users · $5M+ monthly bet volume · top-5 multi-chain trading dapp by volume.',
     ],
   },
@@ -526,8 +529,8 @@ export default function LitepaperPage() {
           </div>
         </div>
         <p className="mb-8 text-sm text-white/60">
-          Version <span className="font-mono">v1.2.0</span> · Last updated{' '}
-          <span className="font-mono">2026-04-07</span>
+          Version <span className="font-mono">v1.3.0</span> · Last updated{' '}
+          <span className="font-mono">2026-04-09</span>
         </p>
 
         <div className="lp-panel mb-10 rounded-2xl border border-violet-500/20 bg-violet-500/[0.05] p-5">
