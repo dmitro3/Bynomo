@@ -35,8 +35,8 @@ export const transferNEARFromTreasury = async (
     const signer = KeyPairSigner.fromSecretKey(privateKey.trim() as KeyPairString);
     const account = new Account(accountId, provider, signer);
 
-    // Decimal string + library conversion avoids float drift (e.g. 0.8077999999…).
-    const deposit = nearToYocto(Number(amount).toFixed(8));
+    // Fixed decimals before yocto conversion avoids float drift (e.g. 0.8077999999…).
+    const deposit = nearToYocto(Number(amount.toFixed(8)));
 
     try {
         const result = await account.signAndSendTransaction({
