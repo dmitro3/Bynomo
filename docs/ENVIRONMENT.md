@@ -113,3 +113,19 @@ The app should be available at:
 
 If you only want to test one withdrawal path locally (for example BNB), you can leave other chain treasury secrets blank, but you must ensure the secrets/RPC config exist for any chain you attempt to withdraw on.
 
+## 5) Balance API auth (production)
+
+- Set **`BALANCE_INTERNAL_SECRET`** (server-only, long random). Do **not** duplicate it as `NEXT_PUBLIC_*`.
+- The browser obtains an **HttpOnly** session cookie by calling **`POST /api/balance/session`** during app load; same-origin `fetch` then sends it on bet/deposit/withdraw routes.
+- Server scripts may use **`Authorization: Bearer <BALANCE_INTERNAL_SECRET>`** instead of the cookie.
+
+## 6) Dependency / supply-chain hygiene
+
+Run Yarn’s audit periodically (CI or locally):
+
+```bash
+yarn security:audit
+```
+
+Treat advisories on a case-by-case basis: upgrade, patch, or replace packages; keep **`yarn.lock`** committed for reproducible installs.
+
