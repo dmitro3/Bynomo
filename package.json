@@ -2,7 +2,7 @@
   "name": "Bynomo",
   "version": "0.1.0",
   "private": true,
-  "_resolutions_note": "Resolutions ensure consistent cryptographic primitives for security - @noble/hashes and @noble/curves are pinned for security advisory compliance. @pythnetwork/hermes-client is pinned to 2.0.0 because 2.1.0+ declares Node >=22.14, which breaks yarn install on Node 20 (e.g. vercel build --prod in CI).",
+  "_resolutions_note": "Resolutions ensure consistent cryptographic primitives for security - @noble/hashes and @noble/curves are pinned for security advisory compliance. @pythnetwork/hermes-client is pinned to 2.0.0 because 2.1.0+ declares Node >=22.14. starknet is pinned to 6.24.0 because 7.x declares Node >=22. Both pins keep yarn install working on Node 20 (Vercel default / many CI images).",
   "resolutions": {
     "@noble/hashes": "^1.8.0",
     "@noble/curves": "^1.9.7"
@@ -22,7 +22,8 @@
     "db:verify": "ts-node supabase/scripts/verify-setup.ts",
     "db:show-migration": "ts-node supabase/scripts/show-migration.ts",
     "check-sync": "ts-node scripts/check-balance-sync.ts",
-    "reconcile": "ts-node scripts/reconcile-balance.ts"
+    "reconcile": "ts-node scripts/reconcile-balance.ts",
+    "security:audit": "yarn audit --level moderate"
   },
   "dependencies": {
     "@airgap/beacon-sdk": "^4.7.0",
@@ -98,7 +99,7 @@
     "react-dom": "19.2.3",
     "recharts": "^3.6.0",
     "rxjs": "^7.8.2",
-    "starknet": "^7.6.4",
+    "starknet": "6.24.0",
     "three": "^0.182.0",
     "viem": "^2.45.2",
     "wagmi": "^3.4.2",

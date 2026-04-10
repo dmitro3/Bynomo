@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  BALANCE_SESSION_COOKIE,
+  verifyBalanceSessionCookieValue,
+} from '@/lib/balance/balanceSession';
 
 const HEADER = 'x-bynomo-balance-key';
 
@@ -23,14 +27,17 @@ function matchesAllowedOrigin(urlValue: string | null, allowedOrigins: Set<strin
 }
 
 /**
- * When BALANCE_INTERNAL_SECRET is set, balance mutation routes require the same
- * value in `x-bynomo-balance-key` (or Authorization: Bearer …).
- * Pair with NEXT_PUBLIC_BALANCE_API_KEY in the browser (same value).
- * This blocks anonymous bulk abuse; it is not a substitute for on-chain deposit verification.
+ * When `BALANCE_INTERNAL_SECRET` is set in production, balance mutation routes require one of:
+ * 1) Valid HttpOnly cookie from POST /api/balance/session (signed with the secret — never shipped to the client), or
+ * 2) `Authorization: Bearer <BALANCE_INTERNAL_SECRET>` for trusted server-side / automation callers.
+ *
+ * Optional legacy (not recommended): `NEXT_PUBLIC_BALANCE_API_KEY` + `x-bynomo-balance-key` from a first-party
+ * browser request only — still exposed in the bundle if set; prefer the cookie flow and remove the public var.
  */
 export function assertBalanceApiAuthorized(request: NextRequest): NextResponse | null {
   const secret = process.env.BALANCE_INTERNAL_SECRET?.trim();
-  const publicKey = process.env.NEXT_PUBLIC_BALANCE_API_KEY?.trim();
+  const legacyPublic = process.env.NEXT_PUBLIC_BALANCE_API_KEY?.trim();
+
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       return NextResponse.json(
@@ -41,30 +48,34 @@ export function assertBalanceApiAuthorized(request: NextRequest): NextResponse |
     return null;
   }
 
-  const browserKey = request.headers.get(HEADER)?.trim();
   const bearerToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-
-  if (bearerToken) {
-    if (bearerToken === secret) return null;
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (bearerToken && bearerToken === secret) {
+    return null;
   }
 
-  if (!browserKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const cookieVal = request.cookies.get(BALANCE_SESSION_COOKIE)?.value;
+  if (verifyBalanceSessionCookieValue(cookieVal)) {
+    return null;
   }
 
-  const allowedOrigins = getAllowedOrigins(request);
-  const isFirstPartyBrowserRequest =
-    matchesAllowedOrigin(request.headers.get('origin'), allowedOrigins) ||
-    matchesAllowedOrigin(request.headers.get('referer'), allowedOrigins);
-
-  if (!isFirstPartyBrowserRequest) {
+  const browserKey = request.headers.get(HEADER)?.trim();
+  if (legacyPublic && browserKey === legacyPublic) {
+    const allowedOrigins = getAllowedOrigins(request);
+    const isFirstPartyBrowserRequest =
+      matchesAllowedOrigin(request.headers.get('origin'), allowedOrigins) ||
+      matchesAllowedOrigin(request.headers.get('referer'), allowedOrigins);
+    if (isFirstPartyBrowserRequest) {
+      return null;
+    }
     return NextResponse.json({ error: 'Unauthorized origin' }, { status: 401 });
   }
 
-  if (browserKey !== (publicKey || secret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (browserKey && browserKey === secret) {
+    return NextResponse.json(
+      { error: 'Use POST /api/balance/session for browser auth or Bearer for server callers.' },
+      { status: 401 },
+    );
   }
 
-  return null;
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }

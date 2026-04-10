@@ -502,6 +502,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           stopPriceFeed = undefined;
           return;
         }
+
+        const { ensureBalanceSession } = await import('@/lib/balance/balanceClientHeaders');
+        await ensureBalanceSession().catch(() => {});
+
+        if (cancelled) return;
         setIsReady(true);
       } catch (error) {
         console.error('Error initializing app:', error);
