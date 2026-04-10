@@ -26,7 +26,7 @@ assets_needed = [
     "PLTR", "SQ", "CRM", "INTC", "TSM",
     "SPX", "NDX", "DJI", "DIA", "VIX", "UK100", "DAX", "N225", "HSI", "FTSE100", 
     "CAC40", "GER40",
-    "BRENT", "WTI", "NATGAS", "CORN", "WHEAT", "SOY", "SUGAR", "COFFEE"
+    "BRENT", "WTI", "NATGAS", "SOY", "SUGAR", "COFFEE"
 ]
 
 mapping = {}

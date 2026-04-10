@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { supabase } from '../supabase/client';
+import { balanceMutationHeaders } from '@/lib/balance/balanceClientHeaders';
 
 export interface ProfileState {
     username: string | null;
@@ -80,18 +81,22 @@ export const createProfileSlice: StateCreator<ProfileState> = (set, get) => ({
         if (!address) return;
         set({ isLoadingTrades: true });
         try {
-            const { data, error } = await supabase
-                .from('bet_history')
-                .select('*')
-                .eq('wallet_address', address.toLowerCase())
-                .order('resolved_at', { ascending: false })
-                .limit(10);
-
-            if (data) {
-                set({ recentTrades: data });
+            // bet_history is not readable with the browser anon key after RLS hardening
+            // (see supabase/migrations/004_enable_rls.sql). Use the service-backed API instead.
+            const res = await fetch(
+                `/api/bets/history?wallet=${encodeURIComponent(address)}&limit=10`,
+                { headers: { ...balanceMutationHeaders() } },
+            );
+            if (!res.ok) {
+                console.warn('fetchRecentTrades: API error', res.status);
+                set({ recentTrades: [] });
+                return;
             }
+            const json = (await res.json()) as { bets?: unknown[] };
+            set({ recentTrades: Array.isArray(json.bets) ? json.bets : [] });
         } catch (error) {
             console.error('Error fetching recent trades:', error);
+            set({ recentTrades: [] });
         } finally {
             set({ isLoadingTrades: false });
         }

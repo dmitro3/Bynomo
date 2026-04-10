@@ -1,7 +1,5 @@
     WTI: { name: 'PYTH WTI 20 MARCH 2026 / US DOLLAR', symbol: 'WTI', pair: 'WTI/USD', decimals: 2, logo: '/logos/wti.png', category: 'Metals' },
     BRENT: { name: 'BRENT CRUDE OIL CFD', symbol: 'BRENT', pair: 'BRENT/USD', decimals: 2, logo: '/logos/brent.png', category: 'Metals' },
-    CORN: { name: 'PYTH PRICE IN USD FOR SOYBEAN 14 JULY 2026', symbol: 'CORN', pair: 'CORN/USD', decimals: 2, logo: '/logos/corn.png', category: 'Metals' },
-    WHEAT: { name: 'PYTH PRICE IN USD FOR WHEAT 14 DECEMBER 2026', symbol: 'WHEAT', pair: 'WHEAT/USD', decimals: 2, logo: '/logos/wheat.png', category: 'Metals' },
     SPX: { name: 'VANGUARD FUNDS S&P 500 UCITS ETF USD DIS / EURO', symbol: 'SPX', pair: 'SPX/USD', decimals: 2, logo: '/logos/spx.png', category: 'Stocks' },
     NDX: { name: 'ISHARES S&P 500 GROWTH ETF / US DOLLAR', symbol: 'NDX', pair: 'NDX/USD', decimals: 2, logo: '/logos/ndx.png', category: 'Stocks' },
     DJI: { name: 'DIA / US DOLLAR', symbol: 'DJI', pair: 'DJI/USD', decimals: 2, logo: '/logos/dji.png', category: 'Stocks' },

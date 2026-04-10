@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       sessRes,
     ] = await Promise.all([
       // Explicit column selection to avoid exposing sensitive future columns
-      supabaseService.from('user_balances').select('id, user_address, currency, balance, status, tier, updated_at, created_at').in('user_address', variants),
+      supabaseService.from('user_balances').select('user_address, currency, balance, status, user_tier, updated_at, created_at').in('user_address', variants),
       supabaseService
         .from('balance_audit_log')
         .select(
@@ -250,7 +250,7 @@ export async function GET(request: NextRequest) {
         currency: cur,
         balance: bal,
         status: b.status,
-        user_tier: b.tier,
+        user_tier: (b as { user_tier?: string }).user_tier ?? 'free',
         updated_at: b.updated_at,
         withdrawableNow: can,
       };

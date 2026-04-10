@@ -185,13 +185,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           value: parseEther(depositAmount.toString()),
         });
         toast.info('Transaction submitted. Waiting for confirmation...');
-        try {
-          const { waitForTransactionReceipt } = await import('@wagmi/core');
-          const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
-          await waitForTransactionReceipt(wagmiCfg, { hash: pushHash as `0x${string}`, timeout: 30_000 });
-        } catch {
-          // Proceed with known hash if receipt polling fails.
-        }
+        const { waitForTransactionReceipt } = await import('@wagmi/core');
+        const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+        await waitForTransactionReceipt(wagmiCfg, { hash: pushHash as `0x${string}`, timeout: 60_000 });
         txHash = pushHash;
       } else if (network === 'STRK') {
         const { depositSTRK } = await import('@/lib/starknet/wallet');
@@ -224,6 +220,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         toast.info('Please confirm the transaction in your Tezos wallet...');
         const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: depositAmount }).send();
+        toast.info('Waiting for Tezos inclusion (needed for deposit verification)...');
+        await Promise.race([
+          op.confirmation(1),
+          new Promise<never>((_, rej) =>
+            setTimeout(() => rej(new Error('Tezos confirmation timed out after 2 minutes')), 120_000),
+          ),
+        ]);
         txHash = op.opHash;
       } else if (network === 'XLM') {
         // Stellar deposit via Stellar Wallets Kit
@@ -360,14 +363,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             value: parseEther(depositAmount.toString()),
           });
           toast.info('Transaction submitted. Waiting for on-chain confirmation...');
-          try {
-            const { waitForTransactionReceipt } = await import('@wagmi/core');
-            const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
-            await waitForTransactionReceipt(wagmiCfg, { hash: bnbHash as `0x${string}`, timeout: 30_000 });
-          } catch {
-            // Receipt polling failed (e.g. WalletConnect RPC issue) but tx was already
-            // submitted — proceed with the known hash; the deposit API verifies on-chain.
-          }
+          const { waitForTransactionReceipt } = await import('@wagmi/core');
+          const { config: wagmiCfg } = await import('@/lib/bnb/wagmi');
+          await waitForTransactionReceipt(wagmiCfg, { hash: bnbHash as `0x${string}`, timeout: 60_000 });
           txHash = bnbHash;
         } else {
           if (!authenticated) throw new Error('Not authenticated with Privy');

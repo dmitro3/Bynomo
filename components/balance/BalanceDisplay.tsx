@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOverflowStore } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -18,7 +18,7 @@ import { useToast } from '@/lib/hooks/useToast';
  * Requirements: 8.1
  * 
  * Features:
- * - Display current house balance with USDC symbol
+ * - Display current house balance with chain-appropriate symbol
  * - Refresh button to fetch latest balance
  * - Deposit and Withdraw buttons with modals
  * - Show loading state while fetching
@@ -45,6 +45,20 @@ export const BalanceDisplay: React.FC = () => {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const feePercent = userTier === 'vip' ? 0.08 : userTier === 'standard' ? 0.09 : 0.10;
+
+  // House credits: sync when this panel mounts or wallet / ledger currency changes.
+  // WalletSync only refreshed on-chain balance; fetchBalance loads Supabase house balance.
+  useEffect(() => {
+    if (accountType === 'demo' || !address || !network) return;
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      if (!cancelled) void fetchBalance(address);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [accountType, address, network, selectedCurrency, fetchBalance]);
 
   // Actions from other slices (using the unified store)
   const setAddress = useOverflowStore(state => state.setAddress);
@@ -139,8 +153,10 @@ export const BalanceDisplay: React.FC = () => {
   const activeBalance = accountType === 'real' ? houseBalance : demoBalance;
   const formattedBalance = activeBalance.toFixed(4);
 
-  // Current symbol for display
-  const currentSymbol = network === 'SUI' ? 'USDC'
+  const suiLedgerSymbol = selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
+
+  // Current symbol for display (Sui: native SUI vs USDC ledger row)
+  const currentSymbol = network === 'SUI' ? suiLedgerSymbol
     : network === 'SOL' ? (selectedCurrency || 'SOL')
     : network === 'XLM' ? 'XLM'
     : network === 'XTZ' ? 'XTZ'
@@ -177,8 +193,7 @@ export const BalanceDisplay: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className={`text-xs font-bold font-mono uppercase tracking-wider ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'
               }`}>
-              {accountType === 'demo' ? 'Practice Balance' : 
-               ((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') ? 'Account Info' : 'House Balance'}
+              {accountType === 'demo' ? 'Practice Balance' : 'House Balance'}
             </h3>
 
             <div className="flex items-center gap-2">
@@ -212,6 +227,35 @@ export const BalanceDisplay: React.FC = () => {
                 </div>
               )}
 
+              {network === 'SUI' && accountType === 'real' && (
+                <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
+                  <button
+                    onClick={() => {
+                      setSelectedCurrency('SUI');
+                      setTimeout(() => fetchBalance(address!), 100);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${suiLedgerSymbol === 'SUI'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-white/40 hover:text-white/60'
+                      }`}
+                  >
+                    SUI
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedCurrency('USDC');
+                      setTimeout(() => fetchBalance(address!), 100);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all ${suiLedgerSymbol === 'USDC'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-white/40 hover:text-white/60'
+                      }`}
+                  >
+                    USDC
+                  </button>
+                </div>
+              )}
+
               {/* Refresh Button */}
               {accountType === 'real' && (
                 <button
@@ -238,90 +282,86 @@ export const BalanceDisplay: React.FC = () => {
             </div>
           </div>
 
-          {/* House Balance – shown for all networks */}
-          <>
-            {/* Balance Display */}
-              <div className={`bg-gradient-to-br rounded-lg p-2.5 border ${accountType === 'demo'
-                ? 'from-yellow-500/10 to-transparent border-yellow-500/30'
-                : 'from-purple-600/10 to-transparent border-purple-600/30'
-                }`}>
-                <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5 font-mono">
-                  Available Credits
-                </p>
+          {/* Available house credits + deposit / withdraw (all chains, including SOL native & BNB) */}
+          <div className={`bg-gradient-to-br rounded-lg p-2.5 border ${accountType === 'demo'
+            ? 'from-yellow-500/10 to-transparent border-yellow-500/30'
+            : 'from-purple-600/10 to-transparent border-purple-600/30'
+            }`}>
+            <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5 font-mono">
+              Available Credits
+            </p>
 
-                {isLoading && accountType === 'real' ? (
-                  <div className="flex items-center gap-1.5">
-                    <div className="animate-pulse bg-white/20 h-6 w-24 rounded" />
-                    <span className="text-gray-500 text-xs font-mono">Loading...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex items-center gap-1">
-                      <img
-                        src={
-                          currentSymbol === 'BYNOMO' ? '/overflowlogo.png' :
-                            network === 'SUI' ? '/logos/sui-logo.png' :
-                              network === 'SOL' ? '/logos/solana-sol-logo.png' :
-                                network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
-                                  network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
-                                    network === 'NEAR' ? '/logos/near.png' :
-                                      network === 'STRK' ? '/logos/starknet-strk-logo.svg' :
-                                        network === 'PUSH' ? '/logos/push-logo.png' :
-                                          network === 'SOMNIA' ? '/logos/somnia.jpg' :
-                                            network === 'OCT' ? '/logos/onechain.png' :
-                                              network === 'ZG' ? '/logos/0g.png' :
-                                                network === 'INIT' ? '/logos/initia.png' :
-                                                  network === 'APT' ? '/logos/aptos-logo.png' :
-                                                    '/logos/bnb-bnb-logo.png'
-                        }
-                        alt={currentSymbol}
-                        className="w-4 h-4 object-contain"
-                      />
-                      <p className={`text-xl font-bold font-mono ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'}`}>
-                        {formattedBalance}
-                      </p>
-                    </div>
-                    <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'}`}>
-                      {currentSymbol}
-                    </span>
-                  </div>
-                )}
+            {isLoading && accountType === 'real' ? (
+              <div className="flex items-center gap-1.5">
+                <div className="animate-pulse bg-white/20 h-6 w-24 rounded" />
+                <span className="text-gray-500 text-xs font-mono">Loading...</span>
               </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                {accountType === 'demo' ? (
-                  <button
-                    onClick={() => updateBalance(10000 - demoBalance, 'add')}
-                    className="col-span-2 py-2.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-xl text-xs font-semibold hover:bg-yellow-500/20 transition-all duration-200"
-                  >
-                    Reset Practice Balance
-                  </button>
-                ) : (
-                  <>
-                    <Button
-                      onClick={handleDeposit}
-                      disabled={!address || isLoading}
-                      variant="primary"
-                      size="sm"
-                      className="w-full !px-2 !py-1.5 !text-xs"
-                    >
-                      Deposit
-                    </Button>
-
-                    <Button
-                      onClick={handleWithdraw}
-                      disabled={!address || isLoading || houseBalance <= 0}
-                      variant="secondary"
-                      size="sm"
-                      className="w-full !px-2 !py-1.5 !text-xs"
-                    >
-                      Withdraw
-                    </Button>
-                  </>
-                )}
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <img
+                    src={
+                      currentSymbol === 'BYNOMO' ? '/overflowlogo.png' :
+                        network === 'SUI' ? (suiLedgerSymbol === 'USDC' ? '/logos/usdc-logo.png' : '/logos/sui-logo.png') :
+                          network === 'SOL' ? '/logos/solana-sol-logo.png' :
+                            network === 'XLM' ? '/logos/stellar-xlm-logo.png' :
+                              network === 'XTZ' ? '/logos/tezos-xtz-logo.png' :
+                                network === 'NEAR' ? '/logos/near.png' :
+                                  network === 'STRK' ? '/logos/starknet-strk-logo.svg' :
+                                    network === 'PUSH' ? '/logos/push-logo.png' :
+                                      network === 'SOMNIA' ? '/logos/somnia.jpg' :
+                                        network === 'OCT' ? '/logos/onechain.png' :
+                                          network === 'ZG' ? '/logos/0g.png' :
+                                            network === 'INIT' ? '/logos/initia.png' :
+                                              network === 'APT' ? '/logos/aptos-logo.png' :
+                                                '/logos/bnb-bnb-logo.png'
+                    }
+                    alt={currentSymbol}
+                    className="w-4 h-4 object-contain"
+                  />
+                  <p className={`text-xl font-bold font-mono ${accountType === 'demo' ? 'text-yellow-400' : 'text-purple-400'}`}>
+                    {formattedBalance}
+                  </p>
+                </div>
+                <span className={`text-sm font-mono ${accountType === 'demo' ? 'text-yellow-400/70' : 'text-purple-400/70'}`}>
+                  {currentSymbol}
+                </span>
               </div>
-            </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {accountType === 'demo' ? (
+              <button
+                onClick={() => updateBalance(10000 - demoBalance, 'add')}
+                className="col-span-2 py-2.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-xl text-xs font-semibold hover:bg-yellow-500/20 transition-all duration-200"
+              >
+                Reset Practice Balance
+              </button>
+            ) : (
+              <>
+                <Button
+                  onClick={handleDeposit}
+                  disabled={!address || isLoading}
+                  variant="primary"
+                  size="sm"
+                  className="w-full !px-2 !py-1.5 !text-xs"
+                >
+                  Deposit
+                </Button>
+
+                <Button
+                  onClick={handleWithdraw}
+                  disabled={!address || isLoading || houseBalance <= 0}
+                  variant="secondary"
+                  size="sm"
+                  className="w-full !px-2 !py-1.5 !text-xs"
+                >
+                  Withdraw
+                </Button>
+              </>
+            )}
+          </div>
 
           {/* Info Message */}
           {!address && (

@@ -88,7 +88,7 @@ export const GameBoard: React.FC = () => {
   const [addressCopied, setAddressCopied] = useState(false);
 
   // Unified balance and currency
-  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : network === 'APT' ? 'APT' : 'BNB';
+  const currencySymbol = network === 'SOL' ? (selectedCurrency || 'SOL') : network === 'SUI' ? (selectedCurrency === 'USDC' ? 'USDC' : 'SUI') : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : network === 'APT' ? 'APT' : 'BNB';
   // Per-chain blitz entry fees (paid to the platform fee collector wallet, not treasury).
   const BLITZ_FEES: Record<string, number> = {
     BNB:    0.1,
@@ -107,6 +107,22 @@ export const GameBoard: React.FC = () => {
     APT:    0.1,
   };
   const blitzEntryFee = (network ? BLITZ_FEES[network] : undefined) ?? 0.01;
+
+  // Blitz entry is always paid in the chain native token (Sui path uses native SUI, not USDC house ledger).
+  const blitzEntryCurrencySymbol =
+    network === 'SOL' ? 'SOL'
+      : network === 'SUI' ? 'SUI'
+        : network === 'XLM' ? 'XLM'
+          : network === 'XTZ' ? 'XTZ'
+            : network === 'NEAR' ? 'NEAR'
+              : network === 'STRK' ? 'STRK'
+                : network === 'PUSH' ? 'PC'
+                  : network === 'SOMNIA' ? 'STT'
+                    : network === 'OCT' ? 'OCT'
+                      : network === 'ZG' ? '0G'
+                        : network === 'INIT' ? 'INIT'
+                          : network === 'APT' ? 'APT'
+                            : 'BNB';
 
   // Connection status
   const isWalletConnected = !!address;
@@ -848,11 +864,17 @@ export const GameBoard: React.FC = () => {
                         <div className="flex-1">
                           <p className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Error</p>
                           <p className="text-red-300 text-[11px] leading-tight mt-0.5">
-                            {error.includes('User not found') || error.includes('balance')
-                              ? `Account not found or no balance. Please deposit ${currencySymbol} to your house balance to start trading.`
+                            {error.includes('User not found') ||
+                            error.includes('No house balance') ||
+                            error.includes('Insufficient house') ||
+                            error.includes('balance')
+                              ? `No house credits yet or not enough balance. Deposit ${currencySymbol} from the Wallet tab, then place your bet.`
                               : error}
                           </p>
-                          {(error.includes('User not found') || error.includes('balance')) && (
+                          {(error.includes('User not found') ||
+                            error.includes('No house balance') ||
+                            error.includes('Insufficient house') ||
+                            error.includes('balance')) && (
                             <button
                               onClick={() => {
                                 setActiveTab('wallet');
@@ -1009,7 +1031,7 @@ export const GameBoard: React.FC = () => {
                         ) : !isWalletConnected ? (
                           'Connect Wallet'
                         ) : (
-                          `Enter Blitz Round (${blitzEntryFee} ${currencySymbol})`
+                          `Enter Blitz Round (${blitzEntryFee} ${blitzEntryCurrencySymbol})`
                         )}
                       </button>
 

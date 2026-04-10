@@ -11,8 +11,6 @@ selected = {}
 commodities = {
     "WTI": data.get("WTIJ6"), # Using the futur for now
     "BRENT": data.get("UKOILSPOT"),
-    "CORN": data.get("SON6"), # Future
-    "WHEAT": data.get("WHZ6"), # Future
     "NATGAS": data.get("TGEQ6"), # Future
 }
 

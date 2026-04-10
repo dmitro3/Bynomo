@@ -16,7 +16,7 @@ data = json.loads(json_str[start:])
 mapping = {}
 
 # Priority assets
-priorities = ["SPX", "NDX", "DJI", "VIX", "DAX", "UK100", "N225", "HSI", "CAC40", "GER40", "FTSE100", "WTI", "NATGAS", "CORN", "WHEAT", "SOY", "SUGAR", "COFFEE", "XAU", "XAG"]
+priorities = ["SPX", "NDX", "DJI", "VIX", "DAX", "UK100", "N225", "HSI", "CAC40", "GER40", "FTSE100", "WTI", "NATGAS", "SOY", "SUGAR", "COFFEE", "XAU", "XAG"]
 
 for item in data:
     id_ = "0x" + item.get('id')

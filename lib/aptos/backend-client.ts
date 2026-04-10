@@ -61,14 +61,32 @@ export async function verifyAptosDepositTx(
  * @param toAddress - Recipient address
  * @param amount - Amount in APT
  */
+function normalizeAptosTreasurySecret(raw: string): string {
+  let s = raw.trim();
+  // Petra / CLI AIP-80-style prefix
+  if (s.startsWith('ed25519-priv-')) {
+    s = s.slice('ed25519-priv-'.length).trim();
+  }
+  return s.startsWith('0x') ? s : `0x${s}`;
+}
+
 export async function transferAPTFromTreasury(
   toAddress: string,
   amount: number
 ): Promise<string> {
-  const { Account, Aptos, AptosConfig, Network } = await import('@aptos-labs/ts-sdk');
-  
-  const config = getAptosConfig();
-  const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+  const { Ed25519Account, Aptos, AptosConfig, Network, Ed25519PrivateKey } = await import(
+    '@aptos-labs/ts-sdk'
+  );
+
+  const chainCfg = getAptosConfig();
+  const fullnode = chainCfg.rpcUrls[0]?.replace(/\/$/, '') || 'https://fullnode.mainnet.aptoslabs.com/v1';
+  const networkByChain: Record<string, (typeof Network)[keyof typeof Network]> = {
+    mainnet: Network.MAINNET,
+    testnet: Network.TESTNET,
+    devnet: Network.DEVNET,
+  };
+  const network = networkByChain[chainCfg.network] ?? Network.MAINNET;
+  const aptosConfig = new AptosConfig({ network, fullnode });
   const aptos = new Aptos(aptosConfig);
 
   const secretKeyStr = process.env.APTOS_TREASURY_SECRET_KEY;
@@ -77,15 +95,16 @@ export async function transferAPTFromTreasury(
   }
 
   try {
-    // Load treasury account
-    const adminAccount = Account.fromPrivateKey({ privateKey: (secretKeyStr as any).startsWith('0x') ? (secretKeyStr as any) : `0x${secretKeyStr}` });
+    const hexKey = normalizeAptosTreasurySecret(secretKeyStr);
+    const privateKey = new Ed25519PrivateKey(hexKey);
+    // Avoid Account.fromPrivateKey({ privateKey: string }) — wrong overload and causes "publicKey is not a function".
+    const adminAccount = new Ed25519Account({ privateKey });
 
-    // Build and send transaction
     const transaction = await aptos.transaction.build.simple({
       sender: adminAccount.accountAddress,
       data: {
-        function: "0x1::aptos_account::transfer",
-        functionArguments: [toAddress, Math.floor(amount * 100_000_000)], // 8 decimals
+        function: '0x1::aptos_account::transfer',
+        functionArguments: [toAddress, Math.floor(amount * 100_000_000)],
       },
     });
 

@@ -8,14 +8,16 @@ import { logTransactionError, logInfo } from '@/lib/logging/error-logger';
 
 // Singleton Connection instance
 let connection: Connection | null = null;
+let connectionRpcUrl: string | null = null;
 
 /**
  * Get or create a Solana connection instance
  */
 export function getSolanaConnection(): Connection {
-    if (!connection) {
-        const config = getSolanaConfig();
+    const config = getSolanaConfig();
+    if (!connection || connectionRpcUrl !== config.rpcEndpoint) {
         connection = new Connection(config.rpcEndpoint, 'confirmed');
+        connectionRpcUrl = config.rpcEndpoint;
     }
     return connection;
 }
@@ -177,10 +179,9 @@ export async function getSOLBalance(address: string): Promise<number> {
         config.rpcEndpoint,
         'https://solana-rpc.publicnode.com',
         'https://rpc.ankr.com/solana',
-        'https://api.mainnet-beta.solana.com',
         'https://solana-mainnet.rpc.extrnode.com',
         'https://solana.api.onfinality.io/public',
-        'https://mainnet.helius-rpc.com/?api-key=dummy-key'
+        'https://api.mainnet-beta.solana.com',
     ].filter((value, index, self) => value && self.indexOf(value) === index);
 
     for (const rpc of publicRpcs) {

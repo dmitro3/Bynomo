@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, ChromaticAberrationEffect } from 'postprocessing';
 import * as THREE from 'three';
-import * as faceapi from 'face-api.js';
 import './GridScan.css';
+
+type FaceApiModule = typeof import('face-api.js');
 
 const vert = `
 varying vec2 vUv;
@@ -311,6 +312,7 @@ export const GridScan = ({
 
     const [modelsReady, setModelsReady] = useState(false);
     const [uiFaceActive, setUiFaceActive] = useState(false);
+    const faceApiRef = useRef<FaceApiModule | null>(null);
 
     const lookTarget = useRef(new THREE.Vector2(0, 0));
     const tiltTarget = useRef(0);
@@ -666,9 +668,17 @@ export const GridScan = ({
     }, [enableGyro, uiFaceActive]);
 
     useEffect(() => {
+        if (!enableWebcam) {
+            faceApiRef.current = null;
+            setModelsReady(false);
+            return;
+        }
         let canceled = false;
         const load = async () => {
             try {
+                const faceapi = await import('face-api.js');
+                if (canceled) return;
+                faceApiRef.current = faceapi;
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath),
                     faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelsPath)
@@ -682,7 +692,7 @@ export const GridScan = ({
         return () => {
             canceled = true;
         };
-    }, [modelsPath]);
+    }, [modelsPath, enableWebcam]);
 
     useEffect(() => {
         let stop = false;
@@ -703,6 +713,9 @@ export const GridScan = ({
             } catch {
                 return;
             }
+
+            const faceapi = faceApiRef.current;
+            if (!faceapi) return;
 
             const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 

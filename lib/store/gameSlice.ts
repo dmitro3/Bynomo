@@ -11,6 +11,7 @@ import { TargetCell, PricePoint, ActiveRound } from "@/types/game";
 import { AssetType } from "@/lib/utils/priceFeed";
 import { playWinSound, playLoseSound } from "@/lib/utils/sounds";
 import { balanceMutationHeaders } from "@/lib/balance/balanceClientHeaders";
+import { resolveHouseLedgerCurrency } from "@/lib/balance/houseLedgerCurrency";
 
 // Game Modes
 export type GameMode = 'binomo' | 'box' | 'draw';
@@ -389,23 +390,13 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
 
       set({ isPlacingBet: true, error: null });
 
-      // Get current network and selected currency from store
       const network = (get() as any).network || 'BNB';
       const selectedCurrency = (get() as any).selectedCurrency;
-      let currency = (network === 'SOL' && selectedCurrency) ? selectedCurrency
-        : network === 'PUSH' ? 'PC'
-        : network === 'SOMNIA' ? 'STT'
-        : network === 'ZG' ? '0G'
-        : network === 'OCT' ? 'OCT'
-        : network === 'INIT' ? 'INIT'
-        : network;
-
-      // Handle special address-based currency overrides
-      if (userAddress && (userAddress.endsWith('.near') || userAddress.endsWith('.testnet'))) {
-        currency = 'NEAR';
-      } else if (userAddress && /^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
-        currency = 'XTZ';
-      }
+      const currency = resolveHouseLedgerCurrency({
+        network,
+        selectedCurrency,
+        userAddress,
+      });
 
       // Call API endpoint to place bet from house balance
       const response = await fetch('/api/balance/bet', {
@@ -439,6 +430,24 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
       }
 
       const data = await response.json();
+
+      if (data.duplicate) {
+        await (get() as any).fetchBalance?.(userAddress);
+        set({ isPlacingBet: false, error: null });
+        throw new Error(data.message || 'Bet already processed');
+      }
+
+      if (data.betId == null || data.settlementToken == null) {
+        await (get() as any).fetchBalance?.(userAddress);
+        set({ isPlacingBet: false, error: null });
+        throw new Error('Invalid bet response from server');
+      }
+
+      const remRaw = data.remainingBalance;
+      const rem = typeof remRaw === 'number' ? remRaw : Number(remRaw);
+      if (Number.isFinite(rem)) {
+        (get() as any).setBalance?.(rem);
+      }
 
       // Create ActiveBet object
       const activeBet: ActiveBet = {
@@ -534,7 +543,7 @@ export const createGameSlice: StateCreator<any> = (set, get) => ({
         if (stockSymbols.includes(a)) return 18.0;
         
         // Commodities/Metals
-        const commoditySymbols = ['GOLD', 'SILVER', 'WTI', 'BRENT', 'CORN', 'WHEAT'];
+        const commoditySymbols = ['GOLD', 'SILVER', 'WTI', 'BRENT'];
         if (commoditySymbols.includes(a)) return 10.0;
         
         // Default for Crypto (already volatile)

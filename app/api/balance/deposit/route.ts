@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
-import { ethers } from 'ethers';
+import { isValidAddress } from '@/lib/utils/address';
 import { calculateFeeAmount, collectPlatformFeeFromTreasury, getFeePercentLabel } from '@/lib/fees/platformFee';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
@@ -61,42 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate address (support BNB, Solana, Sui, Starknet, Stellar and Tezos)
-    let isValid = false;
-
-    // Check if it's a valid EVM address
-    if (ethers.isAddress(userAddress)) {
-      isValid = true;
-    } else if (/^0x[0-9a-fA-F]{64}$/.test(userAddress)) {
-      // Check if it's a valid Sui address
-      isValid = true;
-    } else if (/^0x[0-9a-fA-F]{1,64}$/.test(userAddress)) {
-      // Check if it's a valid Starknet address
-      isValid = true;
-    } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(userAddress)) {
-      // Check if it's a valid Tezos address
-      isValid = true;
-    } else if (/^init1[a-z0-9]{38}$/.test(userAddress)) {
-      // Check if it's a valid Initia bech32 address
-      isValid = true;
-    } else {
-      // Check if it's a valid Solana address
-      try {
-        const { PublicKey } = await import('@solana/web3.js');
-        const pk = new PublicKey(userAddress);
-        isValid = pk.toBuffer().length === 32;
-      } catch (e) {
-        // Check if it's a valid Stellar address (starts with G, 56 characters)
-        if (/^G[A-Z2-7]{55}$/.test(userAddress)) {
-          isValid = true;
-        } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+\.(near|testnet)$/.test(userAddress)) {
-          // Check if it's a valid NEAR address (named account ending in .near/.testnet)
-          isValid = true;
-        } else {
-          isValid = false;
-        }
-      }
-    }
+    const isValid = await isValidAddress(userAddress);
 
     if (!isValid) {
       return NextResponse.json(
@@ -237,125 +202,94 @@ export async function POST(request: NextRequest) {
     }
 
     // Solana (native SOL + BYNOMO SPL)
-    // Fail-open on RPC errors to preserve deposit flow; explicit false = invalid tx.
     if (normalizedCurrency === 'SOL' || normalizedCurrency === 'BYNOMO') {
       try {
         const { verifySolanaDepositTx } = await import('@/lib/solana/backend-client');
         const mint = normalizedCurrency === 'BYNOMO' ? BYNOMO_SOLANA_MINT : undefined;
         const ok = await verifySolanaDepositTx(txHash, userAddress, amount, mint);
-        if (ok === false) {
+        if (!ok) {
           return NextResponse.json(
             { error: 'Solana deposit transaction could not be verified on-chain' },
             { status: 400 },
           );
         }
       } catch (verifyErr) {
-        console.warn('[deposit] Solana verification threw (fail-open):', verifyErr);
+        console.error('[deposit] Solana verification failed:', verifyErr);
+        return NextResponse.json({ error: 'Failed to verify Solana transaction' }, { status: 400 });
       }
     }
 
-    // Sui native + USDC (digest) — fail-open on exceptions
+    // Sui native + USDC (digest)
     if (normalizedCurrency === 'SUI' || normalizedCurrency === 'USDC') {
-      try {
-        const ok = await verifySuiFamilyDepositDigest(
-          txHash,
-          userAddress,
-          amount,
-          normalizedCurrency as 'SUI' | 'USDC',
+      const ok = await verifySuiFamilyDepositDigest(
+        txHash,
+        userAddress,
+        amount,
+        normalizedCurrency as 'SUI' | 'USDC',
+      );
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Sui deposit transaction could not be verified on-chain' },
+          { status: 400 },
         );
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'Sui deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] Sui verification threw (fail-open):', verifyErr);
       }
     }
 
     if (normalizedCurrency === 'NEAR') {
-      try {
-        const ok = await verifyNearDepositTx(txHash, userAddress, amount);
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'NEAR deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] NEAR verification threw (fail-open):', verifyErr);
+      const ok = await verifyNearDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'NEAR deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
       }
     }
 
     if (normalizedCurrency === 'XLM') {
-      try {
-        const ok = await verifyStellarDepositTx(txHash, userAddress, amount);
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'Stellar deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] Stellar verification threw (fail-open):', verifyErr);
+      const ok = await verifyStellarDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Stellar deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
       }
     }
 
     if (normalizedCurrency === 'XTZ') {
-      try {
-        const ok = await verifyTezosDepositTx(txHash, userAddress, amount);
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'Tezos deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] Tezos verification threw (fail-open):', verifyErr);
+      const ok = await verifyTezosDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Tezos deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
       }
     }
 
     if (normalizedCurrency === 'STRK') {
-      try {
-        const ok = await verifyStarknetDepositTx(txHash, userAddress, amount);
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'Starknet deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] Starknet verification threw (fail-open):', verifyErr);
+      const ok = await verifyStarknetDepositTx(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Starknet deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
       }
     }
 
     if (normalizedCurrency === 'OCT') {
-      try {
-        const ok = await verifyOctDepositDigest(txHash, userAddress, amount);
-        if (ok === false) {
-          return NextResponse.json(
-            { error: 'OneChain deposit transaction could not be verified on-chain' },
-            { status: 400 },
-          );
-        }
-      } catch (verifyErr) {
-        console.warn('[deposit] OCT verification threw (fail-open):', verifyErr);
+      const ok = await verifyOctDepositDigest(txHash, userAddress, amount);
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'OneChain deposit transaction could not be verified on-chain' },
+          { status: 400 },
+        );
       }
     }
 
     // Tiered platform/protocol fee: move the fee portion from treasury to a dedicated collector wallet.
     // A failure here must NOT block the user's deposit — log the error and continue.
-    // Cap at 25 s so that slow RPCs (e.g. Solana sendAndConfirmTransaction) never stall the response.
     let feeTxHash: string | null = null;
     try {
-      const feeTimeout = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), 25_000)
-      );
-      feeTxHash = await Promise.race([
-        collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount),
-        feeTimeout,
-      ]);
+      feeTxHash = await collectPlatformFeeFromTreasury(normalizedCurrency, feeAmount);
     } catch (feeErr) {
       console.error('[deposit] Fee collection failed (non-blocking):', feeErr);
     }

@@ -32,20 +32,20 @@ interface CellBet {
 
 // Component to safely display asset logos with fallback
 const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: string; logo: string; category: 'Crypto' | 'Metals' | 'Forex' | 'Stocks' | 'Commodities'; decimals: number }> = {
-  BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: 'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png', category: 'Crypto', decimals: 2 },
-  ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: 'https://assets.coingecko.com/coins/images/279/standard/ethereum.png', category: 'Crypto', decimals: 2 },
-  SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: 'https://assets.coingecko.com/coins/images/4128/standard/solana.png', category: 'Crypto', decimals: 2 },
-  SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', logo: 'https://assets.coingecko.com/coins/images/26375/standard/sui-ocean-square.png', category: 'Crypto', decimals: 3 },
-  TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', logo: 'https://assets.coingecko.com/coins/images/1094/standard/tron-logo.png', category: 'Crypto', decimals: 4 },
-  XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', logo: 'https://assets.coingecko.com/coins/images/44/standard/xrp-symbol-white-128.png', category: 'Crypto', decimals: 4 },
-  DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', logo: 'https://assets.coingecko.com/coins/images/5/standard/dogecoin.png', category: 'Crypto', decimals: 5 },
-  ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', logo: 'https://assets.coingecko.com/coins/images/975/standard/cardano.png', category: 'Crypto', decimals: 4 },
-  BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', logo: 'https://assets.coingecko.com/coins/images/780/standard/bitcoin-cash-circle.png', category: 'Crypto', decimals: 2 },
-  BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', logo: 'https://assets.coingecko.com/coins/images/825/standard/bnb-icon2_2x.png', category: 'Crypto', decimals: 2 },
-  XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', logo: 'https://assets.coingecko.com/coins/images/100/standard/Stellar_symbol_black_RGB.png', category: 'Crypto', decimals: 4 },
-  XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', logo: 'https://assets.coingecko.com/coins/images/976/standard/Tezos-logo.png', category: 'Crypto', decimals: 3 },
-  NEAR: { name: 'Near Protocol', symbol: 'NEAR', pair: 'NEAR/USD', logo: 'https://assets.coingecko.com/coins/images/10365/standard/near.jpg', category: 'Crypto', decimals: 3 },
-  APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', logo: 'https://assets.coingecko.com/coins/images/26455/standard/aptos_round.png', category: 'Crypto', decimals: 2 },
+  BTC: { name: 'Bitcoin', symbol: 'BTC', pair: 'BTC/USD', logo: '/logos/bitcoin-btc-logo.png', category: 'Crypto', decimals: 2 },
+  ETH: { name: 'Ethereum', symbol: 'ETH', pair: 'ETH/USD', logo: '/logos/ethereum-eth-logo.png', category: 'Crypto', decimals: 2 },
+  SOL: { name: 'Solana', symbol: 'SOL', pair: 'SOL/USD', logo: '/logos/solana-sol-logo.png', category: 'Crypto', decimals: 2 },
+  SUI: { name: 'Sui', symbol: 'SUI', pair: 'SUI/USD', logo: '/logos/sui-logo.png', category: 'Crypto', decimals: 3 },
+  TRX: { name: 'Tron', symbol: 'TRX', pair: 'TRX/USD', logo: '/logos/tron-trx-logo.png', category: 'Crypto', decimals: 4 },
+  XRP: { name: 'Ripple', symbol: 'XRP', pair: 'XRP/USD', logo: '/logos/xrp-xrp-logo.png', category: 'Crypto', decimals: 4 },
+  DOGE: { name: 'Dogecoin', symbol: 'DOGE', pair: 'DOGE/USD', logo: '/logos/dogecoin-doge-logo.png', category: 'Crypto', decimals: 5 },
+  ADA: { name: 'Cardano', symbol: 'ADA', pair: 'ADA/USD', logo: '/logos/cardano-ada-logo.png', category: 'Crypto', decimals: 4 },
+  BCH: { name: 'Bitcoin Cash', symbol: 'BCH', pair: 'BCH/USD', logo: '/logos/bitcoin-cash-bch-logo.png', category: 'Crypto', decimals: 2 },
+  BNB: { name: 'Binance Coin', symbol: 'BNB', pair: 'BNB/USD', logo: '/logos/bnb-bnb-logo.png', category: 'Crypto', decimals: 2 },
+  XLM: { name: 'Stellar', symbol: 'XLM', pair: 'XLM/USD', logo: '/logos/stellar-xlm-logo.png', category: 'Crypto', decimals: 4 },
+  XTZ: { name: 'Tezos', symbol: 'XTZ', pair: 'XTZ/USD', logo: '/logos/tezos-xtz-logo.png', category: 'Crypto', decimals: 3 },
+  NEAR: { name: 'Near Protocol', symbol: 'NEAR', pair: 'NEAR/USD', logo: '/logos/near.png', category: 'Crypto', decimals: 3 },
+  APT: { name: 'Aptos', symbol: 'APT', pair: 'APT/USD', logo: '/logos/aptos-logo.png', category: 'Crypto', decimals: 2 },
   
   // Metals
   GOLD: { name: 'Gold', symbol: 'GOLD', pair: 'XAU/USD', logo: '/logos/gold.jpg', category: 'Metals', decimals: 2 },
@@ -122,8 +122,6 @@ const ASSET_CONFIG: Record<AssetType, { name: string; symbol: string; pair: stri
   // Commodities
   WTI: { name: 'Crude Oil WTI', symbol: 'WTI', pair: 'WTI/USD', logo: 'OIL', category: 'Commodities', decimals: 2 },
   BRENT: { name: 'Crude Oil Brent', symbol: 'BRENT', pair: 'BRENT/USD', logo: 'OIL', category: 'Commodities', decimals: 2 },
-  CORN: { name: 'Corn', symbol: 'CORN', pair: 'CORN/USD', logo: 'CORN', category: 'Commodities', decimals: 3 },
-  WHEAT: { name: 'Wheat', symbol: 'WHEAT', pair: 'WHEAT/USD', logo: 'WHEAT', category: 'Commodities', decimals: 3 },
 };
 
 
@@ -274,7 +272,7 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
 
   // Special handling for different asset types
   const isMetal = asset === 'GOLD' || asset === 'SILVER';
-  const isCommodity = ['WTI', 'BRENT', 'CORN', 'WHEAT'].includes(asset);
+  const isCommodity = ['WTI', 'BRENT'].includes(asset);
   const isNear = asset === 'NEAR';
   const isForex = ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(asset);
 
@@ -311,6 +309,7 @@ const AssetIcon = ({ src, asset, className }: { src: string; asset: string; clas
         alt={asset}
         className={finalImageClass}
         onError={handleImageError}
+        {...(!currentSrc.includes('clearbit') && !currentSrc.includes('google.com') ? { crossOrigin: 'anonymous' } : {})}
       />
     </div>
   );
@@ -338,6 +337,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
   const blitzMultiplier = useStore((state) => state.blitzMultiplier);
   const lastResult = useStore((state) => state.lastResult);
   const network = useStore((state) => state.network);
+  const selectedCurrency = useStore((state) => state.selectedCurrency);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -406,20 +406,17 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
       case 'XLM': return 'XLM';
-      case 'SUI': return 'USDC';
+      case 'SUI': return selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
       case 'STRK': return 'STRK';
       case 'PUSH': return 'PC';
       case 'SOMNIA': return 'STT';
       case 'OCT': return 'OCT';
       case 'ZG': return '0G';
       case 'INIT': return 'INIT';
-      case 'SOL': {
-        const state = useStore.getState() as any;
-        return state.selectedCurrency || 'SOL';
-      }
+      case 'SOL': return selectedCurrency || 'SOL';
       default: return 'BNB';
     }
-  }, [network]);
+  }, [network, selectedCurrency]);
 
   const currentAssetConfig = ASSET_CONFIG[selectedAsset] || ASSET_CONFIG.BTC;
 
@@ -453,13 +450,51 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     setIsLoadingPrice(true); // Show loading when switching assets
   }, [selectedAsset]);
 
+  // Box mode: map active bets onto grid cells so crossing / settlement runs (cellBets was never filled after placement).
+  useEffect(() => {
+    if (gameMode !== 'box') {
+      setCellBets(new Map());
+      return;
+    }
+    const next = new Map<string, CellBet>();
+    for (const bet of activeBets as Array<{
+      mode: string;
+      status: string;
+      cellId?: string;
+      id: string;
+      amount: number;
+      multiplier: number;
+      direction: 'UP' | 'DOWN';
+      asset: AssetType;
+    }>) {
+      if (
+        bet.mode === 'box' &&
+        bet.status === 'active' &&
+        bet.cellId &&
+        bet.asset === selectedAsset
+      ) {
+        next.set(bet.cellId, {
+          cellId: bet.cellId,
+          betId: bet.id,
+          amount: bet.amount,
+          multiplier: bet.multiplier,
+          direction: bet.direction,
+        });
+      }
+    }
+    setCellBets(next);
+  }, [activeBets, gameMode, selectedAsset]);
+
   // Persisted watchlist for quick switching.
   useEffect(() => {
     try {
       const raw = localStorage.getItem('bynomo_watchlist_assets');
       if (raw) {
         const parsed = JSON.parse(raw) as AssetType[];
-        if (Array.isArray(parsed)) setWatchlist(parsed);
+        if (Array.isArray(parsed)) {
+          const valid = new Set(Object.keys(ASSET_CONFIG) as AssetType[]);
+          setWatchlist(parsed.filter((a): a is AssetType => valid.has(a)));
+        }
       }
     } catch (e) {
       console.error('Failed to load watchlist', e);
@@ -559,7 +594,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
     const baseRange = (
       ['EUR', 'GBP', 'JPY', 'AUD', 'CAD'].includes(selectedAsset) ? 0.0006 : // Forex: High zoom
       ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'NVDA', 'TSLA', 'META', 'NFLX', 'AMD', 'BABA', 'DIS', 'JPM', 'V', 'MA', 'PYPL', 'COIN', 'MSTR', 'UBER', 'PLTR', 'CRM', 'INTC', 'TSM', 'SPX', 'NDX', 'DJI'].includes(selectedAsset) ? 0.0007 : // Stocks/Indices: High zoom
-      ['GOLD', 'SILVER', 'WTI', 'BRENT', 'CORN', 'WHEAT'].includes(selectedAsset) ? 0.0010 : // Metals/Commodities: Medium zoom
+      ['GOLD', 'SILVER', 'WTI', 'BRENT'].includes(selectedAsset) ? 0.0010 : // Metals/Commodities: Medium zoom
       selectedAsset === 'BTC' ? 0.0015 :
       selectedAsset === 'ETH' ? 0.0018 :
       selectedAsset === 'SOL' ? 0.0025 :
@@ -755,6 +790,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
           endTime,
         }
       );
+    } catch (error) {
+      console.error('Failed to place draw bet:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to place bet');
     } finally {
       setPendingBox(null);
     }
@@ -1320,6 +1358,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
                   }
                 } catch (error) {
                   console.error('Failed to place box bet:', error);
+                  toast.error(error instanceof Error ? error.message : 'Failed to place bet');
                 }
               }
             };
@@ -1998,8 +2037,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({ betAmount, setBetAmount })
       {showInsufficientFunds && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
           <div className="px-4 py-2 bg-orange-500/20 backdrop-blur-md border border-orange-400/40 rounded-xl">
-            <p className="text-orange-300 text-sm font-medium">
-              Insufficient balance
+            <p className="text-orange-300 text-sm font-medium text-center max-w-[240px]">
+              Not enough house credits — deposit in the Wallet tab first
             </p>
           </div>
         </div>

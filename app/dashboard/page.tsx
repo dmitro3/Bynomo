@@ -456,9 +456,13 @@ export default function AdminDashboard() {
             });
             if (res.ok) {
                 fetchData();
+                return;
             }
+            const err = await res.json().catch(() => ({}));
+            alert(err?.error || `Failed to generate codes (HTTP ${res.status})`);
         } catch (error) {
             console.error('Failed to generate codes:', error);
+            alert('Failed to generate codes. Check the console and server logs.');
         }
     };
 

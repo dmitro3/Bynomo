@@ -62,17 +62,18 @@ export const somniaTestnet = defineChain({
 
 export const config = createConfig(
     getDefaultConfig({
-        // ConnectKit ships Family (Aave) Accounts by default; it lazy-connects and logs
-        // "FamilyAccountsSdk.connect()" errors for everyone not using that wallet.
-        enableFamily: false,
-
         chains: [bsc, somniaTestnet, pushChainDonut, zgMainnet],
         transports: {
             [somniaTestnet.id]: http(process.env.NEXT_PUBLIC_SOMNIA_TESTNET_RPC || 'https://dream-rpc.somnia.network'),
-            [bsc.id]: http(process.env.NEXT_PUBLIC_BNB_RPC_ENDPOINT || 'https://bsc-dataseed.binance.org/'),
+            [bsc.id]: http(),
             [pushChainDonut.id]: http('https://evm.donut.rpc.push.org'),
             [zgMainnet.id]: http(process.env.NEXT_PUBLIC_ZG_MAINNET_RPC || 'https://evmrpc.0g.ai'),
         },
+
+        // Family/Aave Wallet connector lazy-inits an EIP-1193 provider and often logs
+        // "Failed to establish lazy connection" before the user opens ConnectKit. MetaMask,
+        // Coinbase, and WalletConnect stay available.
+        enableFamily: false,
 
         // Required API Keys
         walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'dummy-id',

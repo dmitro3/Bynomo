@@ -37,41 +37,21 @@ export async function verifyEvmDepositTx(
   const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
     Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('RPC timeout')), ms))]);
 
-  const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+  try {
+    const provider = new ethers.JsonRpcProvider(rpc);
+    const [tx, receipt] = await Promise.all([
+      withTimeout(provider.getTransaction(txHash), 12_000),
+      withTimeout(provider.getTransactionReceipt(txHash), 12_000),
+    ]);
+    if (!tx || !receipt || receipt.status !== 1) return false;
 
-  // Retry up to 4 times with increasing delays — the RPC may not have indexed the tx yet.
-  const attempts = [0, 2000, 5000, 10000]; // immediate, +2s, +5s, +10s
-  for (const wait of attempts) {
-    if (wait > 0) await delay(wait);
-    try {
-      const provider = new ethers.JsonRpcProvider(rpc);
-      const [tx, receipt] = await Promise.all([
-        withTimeout(provider.getTransaction(txHash), 12_000),
-        withTimeout(provider.getTransactionReceipt(txHash), 12_000),
-      ]);
+    if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) return false;
+    if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
 
-      // Tx not indexed yet — try next attempt
-      if (!tx || !receipt) continue;
-
-      if (receipt.status !== 1) return false; // tx reverted — no point retrying
-      if (!tx.from || tx.from.toLowerCase() !== userAddress.toLowerCase()) {
-        // Privy/relayer BNB deposits may have a different "from" address.
-        // Keep strict sender check for non-BNB chains; allow BNB if treasury/value match.
-        if (currency !== 'BNB') return false;
-        console.warn('[verifyEvmDepositTx] BNB sender mismatch (Privy relay?); accepting on treasury/value checks', {
-          userAddress, txFrom: tx.from, txHash,
-        });
-      }
-      if (!tx.to || tx.to.toLowerCase() !== treasury.toLowerCase()) return false;
-
-      const minWei = ethers.parseEther(amount.toString());
-      return tx.value >= minWei;
-    } catch (err) {
-      console.error('[verifyEvmDepositTx] RPC error (will retry):', err);
-      // Continue to next attempt
-    }
+    const minWei = ethers.parseEther(amount.toString());
+    return tx.value >= minWei;
+  } catch (err) {
+    console.error('[verifyEvmDepositTx] RPC error:', err);
+    return false;
   }
-
-  console.error('[verifyEvmDepositTx] All attempts exhausted for', txHash);
-  return false;
 }

@@ -23,6 +23,11 @@ function getSettlementSecret(): string {
   return secret;
 }
 
+/** True when the server can sign settlement tokens for bets (env is set). */
+export function isBalanceSettlementSigningConfigured(): boolean {
+  return Boolean(process.env.BALANCE_SETTLEMENT_SECRET?.trim());
+}
+
 function base64urlEncode(value: string): string {
   return Buffer.from(value, 'utf8').toString('base64url');
 }

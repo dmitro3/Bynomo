@@ -7,6 +7,20 @@
 const RPC_URL = process.env.NEXT_PUBLIC_TEZOS_RPC_URL || 'https://rpc.tzkt.io/mainnet';
 
 /**
+ * TzKT REST base URL for the same network as {@link RPC_URL}.
+ * Mainnet indexer cannot see Ghostnet ops (and vice versa).
+ */
+export function getTezosTzktApiBase(): string {
+  const explicit = process.env.TEZOS_TZKT_API_URL || process.env.NEXT_PUBLIC_TEZOS_TZKT_API_URL;
+  if (explicit?.trim()) return explicit.trim().replace(/\/$/, '');
+  const rpc = RPC_URL.toLowerCase();
+  if (/\bghostnet\b/.test(rpc) || rpc.includes('/ghostnet')) {
+    return 'https://api.ghostnet.tzkt.io';
+  }
+  return 'https://api.tzkt.io';
+}
+
+/**
  * Get a TezosToolkit instance configured with the RPC URL.
  */
 export const getTezosClient = async () => {

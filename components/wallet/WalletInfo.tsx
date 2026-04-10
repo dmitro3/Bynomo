@@ -37,8 +37,10 @@ export const WalletInfo: React.FC = () => {
     }
   };
 
+  const suiWalletSymbol = selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
+
   const currencySymbol =
-    network === 'SUI' ? 'USDC' :
+    network === 'SUI' ? suiWalletSymbol :
       network === 'SOL' ? (selectedCurrency || 'SOL') :
         network === 'XLM' ? 'XLM' :
           network === 'XTZ' ? 'XTZ' :
@@ -69,7 +71,7 @@ export const WalletInfo: React.FC = () => {
 
   const networkLogo =
     network === 'SOMNIA' ? '/logos/somnia.jpg' :
-      network === 'SUI' ? '/logos/sui-logo.png' :
+      network === 'SUI' ? (suiWalletSymbol === 'USDC' ? '/logos/usdc-logo.png' : '/logos/sui-logo.png') :
         (network === 'SOL' && selectedCurrency === 'BYNOMO') ? '/overflowlogo.png' :
           network === 'SOL' ? '/logos/solana-sol-logo.png' :
             network === 'XLM' ? '/logos/stellar-xlm-logo.png' :

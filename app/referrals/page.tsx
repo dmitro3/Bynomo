@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useStore } from '@/lib/store';
 import GridScan from '@/components/ui/GridScan';
 import { useToast } from '@/lib/hooks/useToast';
+import { openReferralShareOnX } from '@/lib/referral/shareOnX';
 import { Wallet, Share2, Trophy, Zap, Shield, ChevronRight } from 'lucide-react';
 
 export default function ReferralPage() {
@@ -49,8 +51,8 @@ export default function ReferralPage() {
     };
 
     const shareOnX = () => {
-        const text = encodeURIComponent(`Trade with millisecond precision on @BYNOMOProtocol! 🚀\n\nJoin using my referral link and earn rewards:`);
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(referralLink)}`, '_blank');
+        if (!referralLink) return;
+        openReferralShareOnX(referralLink);
     };
 
     return (
@@ -254,21 +256,25 @@ export default function ReferralPage() {
                     </motion.div>
 
                     {/* Navigation Card */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
-                        className="md:col-span-7 md:row-span-1 bg-[#050505] border border-white/[0.02] rounded-[2.5rem] p-10 flex items-center justify-between group cursor-pointer hover:bg-white/[0.02] transition-all"
-                        onClick={() => window.location.href = '/'}
+                    <Link
+                        href="/trade"
+                        className="md:col-span-7 md:row-span-1 block rounded-[2.5rem] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#02040a]"
                     >
-                        <div className="space-y-2">
-                            <h4 className="text-2xl font-black tracking-tighter uppercase">Back to Trading Floor</h4>
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Execution Terminal v4.0</p>
-                        </div>
-                        <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all">
-                            <ChevronRight className="w-6 h-6" />
-                        </div>
-                    </motion.div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.6, delay: 0.6 }}
+                            className="bg-[#050505] border border-white/[0.02] rounded-[2.5rem] p-10 flex items-center justify-between group cursor-pointer hover:bg-white/[0.02] transition-all h-full"
+                        >
+                            <div className="space-y-2">
+                                <h4 className="text-2xl font-black tracking-tighter uppercase">Back to Trading Floor</h4>
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Execution Terminal v4.0</p>
+                            </div>
+                            <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all">
+                                <ChevronRight className="w-6 h-6" />
+                            </div>
+                        </motion.div>
+                    </Link>
                 </div>
             </div>
         </main>
