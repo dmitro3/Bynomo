@@ -167,9 +167,7 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(addr);
       }
-      if (accountType !== 'demo') {
-        queueMicrotask(() => fetchBalance(addr));
-      }
+      queueMicrotask(() => fetchBalance(addr));
       return;
     }
 
@@ -182,9 +180,7 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(suiAccount.address);
       }
-      if (accountType !== 'demo') {
-        queueMicrotask(() => fetchBalance(suiAccount.address));
-      }
+      queueMicrotask(() => fetchBalance(suiAccount.address));
       return;
     }
 
@@ -197,9 +193,7 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(suiAccount.address);
       }
-      if (accountType !== 'demo') {
-        queueMicrotask(() => fetchBalance(suiAccount.address));
-      }
+      queueMicrotask(() => fetchBalance(suiAccount.address));
       return;
     }
 
@@ -212,9 +206,7 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(initiaAddress);
       }
-      if (accountType !== 'demo') {
-        queueMicrotask(() => fetchBalance(initiaAddress));
-      }
+      queueMicrotask(() => fetchBalance(initiaAddress));
       return;
     }
 
@@ -228,9 +220,7 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(aptosAddr);
       }
-      if (accountType !== 'demo') {
-        queueMicrotask(() => fetchBalance(aptosAddr));
-      }
+      queueMicrotask(() => fetchBalance(aptosAddr));
       return;
     }
 
@@ -244,9 +234,7 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(wagmiAddress));
-        }
+        queueMicrotask(() => fetchBalance(wagmiAddress));
         return;
       }
       // Still waiting for user to switch network — keep existing state
@@ -264,9 +252,7 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(wagmiAddress));
-        }
+        queueMicrotask(() => fetchBalance(wagmiAddress));
         return;
       }
       // Wallet connected but on wrong chain — auto-switch to Somnia
@@ -289,9 +275,7 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(wagmiAddress));
-        }
+        queueMicrotask(() => fetchBalance(wagmiAddress));
         return;
       }
       // Wallet connected but on wrong chain — auto-switch to 0G
@@ -314,9 +298,7 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(wagmiAddress));
-        }
+        queueMicrotask(() => fetchBalance(wagmiAddress));
         return;
       }
       // Wallet connected but on wrong chain — auto-switch to BSC
@@ -333,9 +315,7 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(addr);
         }
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(addr));
-        }
+        queueMicrotask(() => fetchBalance(addr));
         return;
       }
     }
@@ -366,9 +346,7 @@ function WalletSync() {
         setNetwork('STRK');
         refreshWalletBalance();
         fetchProfile(injectedStarknetAddress);
-        if (accountType !== 'demo') {
-          queueMicrotask(() => fetchBalance(injectedStarknetAddress));
-        }
+        queueMicrotask(() => fetchBalance(injectedStarknetAddress));
         return;
       }
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'STRK') return;
