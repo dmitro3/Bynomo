@@ -225,8 +225,8 @@ export async function POST(request: NextRequest) {
     // Testnets (Somnia/Push) are always instant.
     const AUTO_THRESHOLDS: Record<string, number> = {
       BNB:    0.08,
-      SOL:    0.45,
-      BYNOMO: 0.45,
+      SOL:    0.5,
+      BYNOMO: 0.5,
       SUI:    45,
       USDC:   45,
       XLM:    300,
@@ -244,9 +244,14 @@ export async function POST(request: NextRequest) {
     };
 
     const threshold = AUTO_THRESHOLDS[normalizedCurrency] ?? 0;
-    const supportsVerifiedInstantWithdrawal = allowTestBypass || requiresIntentSignature;
+    // EVM-like chains: user must have passed signed-intent checks above (or test bypass).
+    // Solana / Sui / etc.: no EIP-191 intent — instant path is gated by amount + frequency only.
+    const supportsVerifiedInstantWithdrawal =
+      allowTestBypass ||
+      !requiresIntentSignature ||
+      Boolean(authorizationSignature);
     const requiresChainManualReview = isRealAccount && !supportsVerifiedInstantWithdrawal;
-    // requiresManualApproval: either amount exceeds auto-threshold OR frequency guard triggered
+    // requiresManualApproval: amount above auto-threshold, frequency guard, or unverified chain path
     const requiresManualApproval =
       isRealAccount && (requiresChainManualReview || amount > threshold || triggersFrequencyReview);
 

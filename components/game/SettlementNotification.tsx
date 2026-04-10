@@ -13,6 +13,9 @@ export const SettlementNotification: React.FC = () => {
     const clearLastResult = useOverflowStore(state => state.clearLastResult);
     const accountType = useOverflowStore(state => state.accountType);
     const network = useOverflowStore(state => state.network);
+    const selectedCurrency = useOverflowStore(state => state.selectedCurrency);
+
+    const suiFallbackSymbol = selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
 
     const [visible, setVisible] = useState(false);
 
@@ -53,10 +56,10 @@ export const SettlementNotification: React.FC = () => {
 
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-tighter leading-none opacity-60">
-                                    {(lastResult.currency || (network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB'))} {lastResult.won ? 'PROFIT' : 'LOSS'}
+                                    {(lastResult.currency || (network === 'SOL' ? 'SOL' : network === 'SUI' ? suiFallbackSymbol : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB'))} {lastResult.won ? 'PROFIT' : 'LOSS'}
                                 </span>
                                 <span className="text-sm font-mono font-black tracking-tight leading-tight">
-                                    {lastResult.won ? '+' : '-'}{Math.abs(lastResult.won ? lastResult.payout : lastResult.amount).toFixed(4)} <span className="text-[10px] opacity-70">{(lastResult.currency || (network === 'SOL' ? 'SOL' : network === 'SUI' ? 'USDC' : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB'))}</span>
+                                    {lastResult.won ? '+' : '-'}{Math.abs(lastResult.won ? lastResult.payout : lastResult.amount).toFixed(4)} <span className="text-[10px] opacity-70">{(lastResult.currency || (network === 'SOL' ? 'SOL' : network === 'SUI' ? suiFallbackSymbol : network === 'XLM' ? 'XLM' : network === 'XTZ' ? 'XTZ' : network === 'NEAR' ? 'NEAR' : network === 'STRK' ? 'STRK' : network === 'PUSH' ? 'PC' : network === 'SOMNIA' ? 'STT' : network === 'OCT' ? 'OCT' : network === 'ZG' ? '0G' : network === 'INIT' ? 'INIT' : 'BNB'))}</span>
                                 </span>
                             </div>
 

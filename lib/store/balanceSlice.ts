@@ -8,6 +8,7 @@
 
 import { StateCreator } from "zustand";
 import { balanceMutationHeaders } from "@/lib/balance/balanceClientHeaders";
+import { resolveHouseLedgerCurrency } from "@/lib/balance/houseLedgerCurrency";
 
 export interface BalanceState {
   // State
@@ -52,29 +53,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    */
   fetchBalance: async (address: string) => {
     const { accountType } = get();
-    // Access network and currency from combined store if available
-    let network = (get() as any).network || 'BNB';
-    const selectedCurrency = (get() as any).selectedCurrency;
-    let currency =
-      (network === 'SOL' && selectedCurrency)
-        ? selectedCurrency
-        : network === 'PUSH'
-          ? 'PC'
-          : network === 'SOMNIA'
-            ? 'STT'
-            : network === 'OCT'
-              ? 'OCT'
-              : network === 'ZG'
-                ? '0G'
-                : network === 'INIT'
-                  ? 'INIT'
-                  : network;
-
-    if (address && (address.endsWith('.near') || address.endsWith('.testnet'))) {
-      currency = 'NEAR';
-    } else if (address && /^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
-      currency = 'XTZ';
-    }
+    const currency = resolveHouseLedgerCurrency({
+      network: (get() as any).network || 'BNB',
+      selectedCurrency: (get() as any).selectedCurrency,
+      userAddress: address,
+    });
 
     // Skip API fetch for demo mode as it uses local state only
     if (!address || accountType === 'demo' || address.startsWith('0xDEMO')) {
@@ -161,29 +144,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
    * @param txHash - Transaction hash for audit trail
    */
   depositFunds: async (address: string, amount: number, txHash: string) => {
-    let network = (get() as any).network || 'BNB';
-    const selectedCurrency = (get() as any).selectedCurrency;
-    let currency =
-      (network === 'SOL' && selectedCurrency)
-        ? selectedCurrency
-        : (network === 'SUI' && selectedCurrency)
-          ? selectedCurrency
-          : network === 'PUSH'
-            ? 'PC'
-            : network === 'SOMNIA'
-              ? 'STT'
-              : network === 'OCT'
-                ? 'OCT'
-                : network === 'ZG'
-                  ? '0G'
-                  : network === 'INIT'
-                    ? 'INIT'
-                    : network;
-
-    // Override network for NEAR addresses
-    if (address.endsWith('.near') || address.endsWith('.testnet')) {
-      currency = 'NEAR';
-    }
+    const currency = resolveHouseLedgerCurrency({
+      network: (get() as any).network || 'BNB',
+      selectedCurrency: (get() as any).selectedCurrency,
+      userAddress: address,
+    });
 
     try {
       set({ isLoading: true, error: null });
@@ -241,22 +206,11 @@ export const createBalanceSlice: StateCreator<BalanceState> = (set, get) => ({
     amount: number,
     security?: { signature?: string; signedAt?: number }
   ) => {
-    const network = (get() as any).network || 'BNB';
-    const selectedCurrency = (get() as any).selectedCurrency;
-    const currency =
-      (network === 'SOL' && selectedCurrency)
-        ? selectedCurrency
-        : network === 'PUSH'
-          ? 'PC'
-          : network === 'SOMNIA'
-            ? 'STT'
-            : network === 'OCT'
-              ? 'OCT'
-              : network === 'ZG'
-                ? '0G'
-                : network === 'INIT'
-                  ? 'INIT'
-                  : network;
+    const currency = resolveHouseLedgerCurrency({
+      network: (get() as any).network || 'BNB',
+      selectedCurrency: (get() as any).selectedCurrency,
+      userAddress: address,
+    });
 
     try {
       set({ isLoading: true, error: null });

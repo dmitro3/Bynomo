@@ -13,18 +13,36 @@ import { NextResponse } from 'next/server';
 const TEST_USER = '0x1111111111111111111111111111111111111111';
 const TEST_USER_B = '0x4444444444444444444444444444444444444444';
 
+const defaultBalanceRows = [
+  { user_address: TEST_USER.toLowerCase(), balance: 100000, status: 'active' },
+];
+
 jest.mock('@/lib/bans/walletBan', () => ({
   isWalletGloballyBanned: jest.fn().mockResolvedValue(false),
 }));
 
-jest.mock('@/lib/supabase/serviceClient', () => ({
-  supabaseService: {
+jest.mock('@/lib/supabase/serviceClient', () => {
+  const balanceEq = jest.fn();
+  const svc = {
     rpc: jest.fn(),
-    from: jest.fn().mockReturnValue({
-      insert: jest.fn().mockResolvedValue({ error: null }),
+    from: jest.fn((table: string) => {
+      if (table === 'user_balances') {
+        return {
+          select: jest.fn().mockReturnValue({
+            in: jest.fn().mockReturnValue({
+              eq: balanceEq,
+            }),
+          }),
+        };
+      }
+      return {
+        insert: jest.fn().mockResolvedValue({ error: null }),
+      };
     }),
-  },
-}));
+  };
+  (svc as { __balanceEq?: typeof balanceEq }).__balanceEq = balanceEq;
+  return { supabaseService: svc };
+});
 
 // Mock NextResponse.json to return a proper Response object
 jest.mock('next/server', () => {
@@ -46,9 +64,11 @@ jest.mock('next/server', () => {
 describe('POST /api/balance/bet', () => {
   const mockRpc = supabaseService.rpc as jest.MockedFunction<typeof supabaseService.rpc>;
   const mockNextResponseJson = NextResponse.json as jest.MockedFunction<typeof NextResponse.json>;
-  
+  const mockBalanceEq = (supabaseService as { __balanceEq?: jest.Mock }).__balanceEq!;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockBalanceEq.mockResolvedValue({ data: defaultBalanceRows, error: null });
   });
 
   it('should successfully process a bet and return remaining balance', async () => {
@@ -312,20 +332,9 @@ describe('POST /api/balance/bet', () => {
     });
   });
 
-  it('should return 400 for user not found', async () => {
-    // Mock stored procedure returning user not found error
-    const mockResult = {
-      success: false,
-      error: 'User not found',
-      new_balance: null,
-    };
+  it('should return 400 when no house balance row exists (deposit first)', async () => {
+    mockBalanceEq.mockResolvedValueOnce({ data: [], error: null });
 
-    mockRpc.mockResolvedValue({
-      data: mockResult,
-      error: null,
-    } as any);
-
-    // Create mock request
     const requestBody = {
       userAddress: TEST_USER_B,
       betAmount: 5.0,
@@ -346,15 +355,12 @@ describe('POST /api/balance/bet', () => {
       body: JSON.stringify(requestBody),
     });
 
-    // Call the endpoint
     const response = await POST(request);
     const json = await response.json();
 
-    // Verify response
     expect(response.status).toBe(400);
-    expect(json).toEqual({
-      error: 'User not found',
-    });
+    expect(json.error).toContain('No house balance');
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it('should return 503 for database connection errors', async () => {

@@ -9,5 +9,7 @@
 export function canonicalHouseUserAddress(address: string): string {
   const t = address.trim();
   if (t.startsWith('0x')) return t.toLowerCase();
+  // NEAR implicit account IDs are 64 hex chars; chain convention is lowercase.
+  if (/^[0-9a-fA-F]{64}$/.test(t)) return t.toLowerCase();
   return t;
 }

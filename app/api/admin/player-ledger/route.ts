@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoBetHistoryRow } from '@/lib/admin/walletAddressVariants';
+import { resolveHouseLedgerCurrency } from '@/lib/balance/houseLedgerCurrency';
 import { requireAdminAuth } from '@/lib/admin/requireAdminAuth';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
@@ -90,7 +91,7 @@ export async function GET(_request: NextRequest) {
             for (;;) {
                 const { data, error: betErr } = await supabase
                     .from('bet_history')
-                    .select('id, wallet_address, amount, payout, won, network')
+                    .select('id, wallet_address, amount, payout, won, network, asset')
                     .order('id', { ascending: true })
                     .range(from, from + PAGE - 1);
                 if (betErr) throw betErr;
@@ -179,20 +180,38 @@ export async function GET(_request: NextRequest) {
             map[k].current_balance += Number(b.balance);
         });
 
-        // Fold in real bet stats
+        // Fold in real bet stats (one row per wallet + resolved house currency)
         (betRows ?? [])
             .filter((b: any) => !isDemoBetHistoryRow(b))
             .forEach((b: any) => {
-                // Bet history only stores wallet_address (no explicit currency column
-                // matching user_balances). Look for any row belonging to this address.
                 const bw = canonicalHouseUserAddress(b.wallet_address ?? '');
-                const entries = Object.values(map).filter(r => r.user_address === bw);
-                entries.forEach(row => {
-                    row.total_bets += 1;
-                    row.total_wagered += Number(b.amount ?? 0);
-                    row.total_payout  += Number(b.payout ?? 0);
-                    if (b.won) row.total_wins += 1;
+                const cur = resolveHouseLedgerCurrency({
+                    network: b.network ?? 'BNB',
+                    selectedCurrency: b.asset,
                 });
+                if (!isAddressCompatible(bw, cur)) return;
+                const k = key(bw, cur);
+                if (!map[k]) {
+                    map[k] = {
+                        user_address: bw,
+                        currency: cur,
+                        total_deposited: 0,
+                        total_withdrawn: 0,
+                        current_balance: 0,
+                        total_bets: 0,
+                        total_wins: 0,
+                        total_wagered: 0,
+                        total_payout: 0,
+                        total_fees_paid: 0,
+                        username: profileMap[bw] ?? null,
+                        first_deposit_at: null,
+                    };
+                }
+                const row = map[k];
+                row.total_bets += 1;
+                row.total_wagered += Number(b.amount ?? 0);
+                row.total_payout += Number(b.payout ?? 0);
+                if (b.won) row.total_wins += 1;
             });
 
         // Back-calculate historical fees for rows that pre-date explicit fee logging.

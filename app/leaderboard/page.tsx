@@ -67,6 +67,7 @@ export default function LeaderboardPage() {
             case 'XTZ': return '/logos/tezos-xtz-logo.png';
             case 'NEAR': return '/logos/near.png';
             case 'STRK': return '/logos/starknet-strk-logo.svg';
+            case 'APT': return '/logos/aptos-logo.png';
             default: return '/logos/bnb-bnb-logo.png';
         }
     };
@@ -74,12 +75,13 @@ export default function LeaderboardPage() {
     const getCurrencySymbol = (network: string) => {
         switch (network) {
             case 'SOL': return 'SOL';
-            case 'SUI': return 'USDC';
+            case 'SUI': return 'SUI';
             case 'BNB': return 'BNB';
             case 'XLM': return 'XLM';
             case 'XTZ': return 'XTZ';
             case 'NEAR': return 'NEAR';
             case 'STRK': return 'STRK';
+            case 'APT': return 'APT';
             default: return 'BNB';
         }
     };
@@ -155,7 +157,7 @@ export default function LeaderboardPage() {
 
                 {/* Leaderboard Table */}
                 <div className="flex flex-wrap gap-2 mb-5">
-                    {['ALL', 'BNB', 'SOL', 'SUI', 'XLM', 'XTZ', 'NEAR', 'STRK', 'PUSH', 'SOMNIA'].map((n) => (
+                    {['ALL', 'BNB', 'SOL', 'SUI', 'APT', 'XLM', 'XTZ', 'NEAR', 'STRK', 'PUSH', 'SOMNIA'].map((n) => (
                         <button key={n} onClick={() => setNetworkFilter(n)} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${networkFilter === n ? 'bg-white/15 text-white' : 'bg-white/5 text-white/40'}`}>{n}</button>
                     ))}
                     {['ALL', 'BTC', 'ETH', 'SOL', 'BNB', 'GOLD', 'NVDA', 'TSLA'].map((a) => (

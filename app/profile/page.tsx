@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useStore, useHouseBalance, useWalletAddress, useIsConnected, useUserTier } from '@/lib/store';
+import { useToast } from '@/lib/hooks/useToast';
+import { openReferralShareOnX, referralLandingUrl } from '@/lib/referral/shareOnX';
 import { Wallet, Trophy, User as UserIcon, History, Link as LinkIcon, Share2, Check, Edit2, Zap, Shield, Crown, LayoutGrid, Activity, ExternalLink, Key, ShieldCheck, ChevronRight } from 'lucide-react';
 
 const TIER_DATA = [
@@ -65,15 +67,48 @@ export default function ProfilePage() {
         referralCount,
         accessCode,
         network,
-        fetchRecentTrades
+        fetchRecentTrades,
+        fetchReferralInfo,
+        demoBalance,
+        accountType,
+        fetchBalance,
+        selectedCurrency,
     } = useStore();
 
-    // Fetch recent trades on mount
+    const ledgerCurrencySymbol = useMemo(() => {
+        switch (network) {
+            case 'XTZ': return 'XTZ';
+            case 'NEAR': return 'NEAR';
+            case 'XLM': return 'XLM';
+            case 'SUI': return selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
+            case 'STRK': return 'STRK';
+            case 'PUSH': return 'PC';
+            case 'SOMNIA': return 'STT';
+            case 'OCT': return 'OCT';
+            case 'ZG': return '0G';
+            case 'INIT': return 'INIT';
+            case 'APT': return 'APT';
+            case 'SOL': return selectedCurrency || 'SOL';
+            default: return 'BNB';
+        }
+    }, [network, selectedCurrency]);
+
+    const treasuryAmount = accountType === 'demo' ? demoBalance : houseBalance;
+
+    // Sync house credits from API on profile (trade page does this; /profile did not).
+    useEffect(() => {
+        if (isConnected && address && accountType === 'real') {
+            fetchBalance(address);
+        }
+    }, [isConnected, address, accountType, fetchBalance]);
+
+    // Fetch recent trades + referral row (same auth headers as /api/referral)
     useEffect(() => {
         if (isConnected && address) {
             fetchRecentTrades(address);
+            fetchReferralInfo(address);
         }
-    }, [isConnected, address, fetchRecentTrades]);
+    }, [isConnected, address, fetchRecentTrades, fetchReferralInfo]);
 
     const currentTierIndex = TIER_DATA.findIndex(t => t.id === userTier);
     const safeTierIndex = currentTierIndex === -1 ? 0 : currentTierIndex;
@@ -84,6 +119,7 @@ export default function ProfilePage() {
     const [isEditing, setIsEditing] = useState(false);
     const [newUsername, setNewUsername] = useState('');
     const [copySuccess, setCopySuccess] = useState<string | null>(null);
+    const toast = useToast();
 
     useEffect(() => {
         if (username) {
@@ -185,8 +221,16 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-1">Treasury Balance</p>
-                            <p className="text-xl font-bold font-mono">{houseBalance.toFixed(2)} <span className="text-xs text-white/40">{network}</span></p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-1">
+                                {accountType === 'demo' ? 'Practice balance' : 'House credits'}
+                            </p>
+                            <p className="text-xl font-bold font-mono">
+                                {treasuryAmount.toFixed(4)}{' '}
+                                <span className="text-xs text-white/40">{ledgerCurrencySymbol}</span>
+                            </p>
+                            {accountType === 'demo' && (
+                                <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-400/80 mt-0.5">Demo mode — not on-chain</p>
+                            )}
                         </div>
                         <div className="w-[1px] h-10 bg-white/5 mx-2 hidden md:block" />
                         <Link href="/referrals" className="px-5 py-3 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-all active:scale-95 shadow-xl">
@@ -302,10 +346,10 @@ export default function ProfilePage() {
                                                         {trade.direction}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 font-mono text-[10px] text-white/30">{trade.amount.toFixed(2)}</td>
+                                                <td className="px-6 py-4 font-mono text-[10px] text-white/30">{Number(trade.amount).toFixed(2)}</td>
                                                 <td className="px-6 py-4 text-right font-black text-xs">
                                                     <span className={trade.won ? 'text-emerald-400' : 'text-white/10'}>
-                                                        {trade.won ? `+${trade.payout.toFixed(2)}` : `-${trade.amount.toFixed(2)}`}
+                                                        {trade.won ? `+${Number(trade.payout).toFixed(2)}` : `-${Number(trade.amount).toFixed(2)}`}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -332,7 +376,17 @@ export default function ProfilePage() {
                                             {copySuccess === 'Code' ? <Check className="w-4 h-4 text-emerald-400" /> : <LinkIcon className="w-4 h-4" />}
                                         </button>
                                     </div>
-                                    <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join BYNOMO: ${referralCode}`, '_blank')} className="w-full py-4 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!referralCode?.trim()) {
+                                                toast.error('Referral code not ready yet');
+                                                return;
+                                            }
+                                            openReferralShareOnX(referralLandingUrl(referralCode));
+                                        }}
+                                        className="w-full py-4 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all"
+                                    >
                                         Share Access
                                     </button>
                                 </div>

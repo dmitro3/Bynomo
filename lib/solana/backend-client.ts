@@ -10,10 +10,86 @@ import {
     Transaction,
     SystemProgram,
     LAMPORTS_PER_SOL,
-    sendAndConfirmTransaction
+    TransactionExpiredBlockheightExceededError,
 } from '@solana/web3.js';
 import { getSolanaConfig } from './config';
 import bs58 from 'bs58';
+
+/**
+ * Confirm a signature using only HTTP polling (getSignatureStatus + getBlockHeight).
+ * Avoids `signatureSubscribe`, which many public RPCs implement incorrectly and which
+ * causes sendAndConfirmTransaction to hang until the blockhash expires (~60–90s).
+ */
+async function confirmSignatureWithPolling(
+    connection: Connection,
+    signature: string,
+    lastValidBlockHeight: number,
+    commitment: 'confirmed' | 'finalized' = 'confirmed',
+): Promise<void> {
+    const pollMs = 400;
+    const maxWallMs = 75_000;
+    const start = Date.now();
+
+    const satisfies = (status: string | null | undefined) => {
+        if (!status) return false;
+        if (commitment === 'finalized') return status === 'finalized';
+        return status === 'confirmed' || status === 'finalized';
+    };
+
+    while (Date.now() - start < maxWallMs) {
+        const [statusRes, blockHeight] = await Promise.all([
+            connection.getSignatureStatus(signature),
+            connection.getBlockHeight(commitment),
+        ]);
+
+        const v = statusRes?.value;
+        if (v?.err) {
+            throw new Error(`Transaction failed: ${JSON.stringify(v.err)}`);
+        }
+        if (v && satisfies(v.confirmationStatus ?? null)) {
+            return;
+        }
+
+        if (blockHeight > lastValidBlockHeight) {
+            const again = await connection.getSignatureStatus(signature);
+            const v2 = again?.value;
+            if (!v2?.err && v2 && satisfies(v2.confirmationStatus ?? null)) {
+                return;
+            }
+            throw new TransactionExpiredBlockheightExceededError(signature);
+        }
+
+        await new Promise((r) => setTimeout(r, pollMs));
+    }
+
+    const final = await connection.getSignatureStatus(signature);
+    const fv = final?.value;
+    if (!fv?.err && fv && satisfies(fv.confirmationStatus ?? null)) {
+        return;
+    }
+    throw new Error('SOL transaction confirmation timed out');
+}
+
+async function sendSignedTransactionAndConfirmPolling(
+    connection: Connection,
+    transaction: Transaction,
+    signers: Keypair[],
+): Promise<string> {
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = signers[0]!.publicKey;
+    transaction.sign(...signers);
+
+    const raw = transaction.serialize();
+    const signature = await connection.sendRawTransaction(raw, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        maxRetries: 5,
+    });
+
+    await confirmSignatureWithPolling(connection, signature, lastValidBlockHeight, 'confirmed');
+    return signature;
+}
 
 /**
  * Verifies a native SOL or SPL deposit to the configured treasury (signature = tx id).
@@ -125,22 +201,35 @@ export async function transferSOLFromTreasury(
             );
         }
 
-        const transaction = new Transaction().add(
-            SystemProgram.transfer({
-                fromPubkey: treasuryKeypair.publicKey,
-                toPubkey: toPublicKey,
-                lamports: Math.floor(amountSOL * LAMPORTS_PER_SOL),
-            })
-        );
-
-        const signature = await sendAndConfirmTransaction(
-            connection,
-            transaction,
-            [treasuryKeypair]
-        );
-
-        console.log(`SOL Withdrawal transaction confirmed: ${signature}`);
-        return signature;
+        const maxAttempts = 3;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const transaction = new Transaction().add(
+                    SystemProgram.transfer({
+                        fromPubkey: treasuryKeypair.publicKey,
+                        toPubkey: toPublicKey,
+                        lamports: Math.floor(amountSOL * LAMPORTS_PER_SOL),
+                    }),
+                );
+                const signature = await sendSignedTransactionAndConfirmPolling(
+                    connection,
+                    transaction,
+                    [treasuryKeypair],
+                );
+                console.log(`SOL Withdrawal transaction confirmed: ${signature}`);
+                return signature;
+            } catch (err) {
+                lastErr = err;
+                const retry =
+                    err instanceof TransactionExpiredBlockheightExceededError ||
+                    (err instanceof Error &&
+                        /timed out|block height exceeded|429|Too many|fetch failed|ECONNRESET/i.test(err.message));
+                if (!retry || attempt === maxAttempts - 1) break;
+                await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+            }
+        }
+        throw lastErr;
     } catch (error) {
         console.error('Failed to transfer SOL from treasury:', error);
         // Surface clean message for known simulation/insufficient-funds errors
@@ -205,23 +294,36 @@ export async function transferTokenFromTreasury(
             toPublicKey
         );
 
-        const transaction = new Transaction().add(
-            createTransferInstruction(
-                fromTokenAccount.address,
-                toTokenAccount.address,
-                treasuryKeypair.publicKey,
-                Math.floor(amount * Math.pow(10, decimals))
-            )
-        );
-
-        const signature = await sendAndConfirmTransaction(
-            connection,
-            transaction,
-            [treasuryKeypair]
-        );
-
-        console.log(`Token Withdrawal transaction confirmed: ${signature}`);
-        return signature;
+        const maxAttempts = 3;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const transaction = new Transaction().add(
+                    createTransferInstruction(
+                        fromTokenAccount.address,
+                        toTokenAccount.address,
+                        treasuryKeypair.publicKey,
+                        Math.floor(amount * Math.pow(10, decimals)),
+                    ),
+                );
+                const signature = await sendSignedTransactionAndConfirmPolling(
+                    connection,
+                    transaction,
+                    [treasuryKeypair],
+                );
+                console.log(`Token Withdrawal transaction confirmed: ${signature}`);
+                return signature;
+            } catch (err) {
+                lastErr = err;
+                const retry =
+                    err instanceof TransactionExpiredBlockheightExceededError ||
+                    (err instanceof Error &&
+                        /timed out|block height exceeded|429|Too many|fetch failed|ECONNRESET/i.test(err.message));
+                if (!retry || attempt === maxAttempts - 1) break;
+                await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+            }
+        }
+        throw lastErr;
     } catch (error) {
         console.error('Failed to transfer token from treasury:', error);
         if (error instanceof Error) {

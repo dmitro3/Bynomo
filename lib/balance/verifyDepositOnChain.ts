@@ -1,4 +1,5 @@
 import { NEAR_CONFIG } from '@/lib/near/config';
+import { getTezosTzktApiBase } from '@/lib/tezos/client';
 import { getStarknetConfig } from '@/lib/starknet/config';
 import { getOneChainConfig } from '@/lib/onechain/config';
 import { verifyPaymentProof } from '@/lib/sui/verify-payment';
@@ -151,28 +152,86 @@ export async function verifyStellarDepositTx(
   }
 }
 
+function tezosTzktAddress(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v.trim().toLowerCase();
+  if (typeof v === 'object' && v !== null && 'address' in v) {
+    const a = (v as { address?: string }).address;
+    return typeof a === 'string' ? a.trim().toLowerCase() : '';
+  }
+  return '';
+}
+
+function tezosDepositMatchesRecord(
+  rec: Record<string, unknown>,
+  source: string,
+  treasury: string,
+  amountXtz: number,
+): boolean {
+  if (String(rec.status ?? '').toLowerCase() !== 'applied') return false;
+  const typ = rec.type != null ? String(rec.type).toLowerCase() : '';
+  if (typ !== '' && typ !== 'transaction') return false;
+  const sender = tezosTzktAddress(rec.sender);
+  const target = tezosTzktAddress(rec.target);
+  if (sender !== source || target !== treasury) return false;
+  const mutez = Number(rec.amount ?? 0);
+  if (!Number.isFinite(mutez)) return false;
+  return mutez / 1e6 >= amountXtz * 0.99;
+}
+
+async function verifyTezosDepositOnce(
+  base: string,
+  txHash: string,
+  source: string,
+  treasury: string,
+  amountXtz: number,
+): Promise<boolean> {
+  const h = encodeURIComponent(txHash.trim());
+
+  const txRes = await withTimeout(fetch(`${base}/v1/transactions/${h}`), 12_000);
+  if (txRes.ok) {
+    const tx = (await txRes.json()) as Record<string, unknown>;
+    if (tx && typeof tx === 'object' && !Array.isArray(tx) && tezosDepositMatchesRecord(tx, source, treasury, amountXtz)) {
+      return true;
+    }
+  }
+
+  const opRes = await withTimeout(
+    fetch(`${base}/v1/operations?hash=${h}&limit=20`),
+    12_000,
+  );
+  if (!opRes.ok) return false;
+  const list = (await opRes.json()) as unknown;
+  if (!Array.isArray(list)) return false;
+  for (const item of list) {
+    if (item && typeof item === 'object' && tezosDepositMatchesRecord(item as Record<string, unknown>, source, treasury, amountXtz)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function verifyTezosDepositTx(
   txHash: string,
   sourceAddress: string,
   amountXtz: number,
 ): Promise<boolean> {
   if (!TEZOS_TREASURY || !Number.isFinite(amountXtz) || amountXtz <= 0) return false;
-  try {
-    const res = await withTimeout(
-      fetch(`https://api.tzkt.io/v1/transactions/${txHash}`),
-      12_000,
-    );
-    if (!res.ok) return false;
-    const tx = (await res.json()) as any;
-    if (tx.status !== 'applied') return false;
-    if (tx.sender?.address?.toLowerCase() !== sourceAddress.toLowerCase()) return false;
-    if (tx.target?.address?.toLowerCase() !== TEZOS_TREASURY.toLowerCase()) return false;
-    const amt = Number(tx.amount ?? 0) / 1e6;
-    return amt >= amountXtz * 0.99;
-  } catch (e) {
-    console.error('[verifyTezosDepositTx]', e);
-    return false;
+  const base = getTezosTzktApiBase();
+  const source = sourceAddress.trim().toLowerCase();
+  const treasury = TEZOS_TREASURY.trim().toLowerCase();
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    try {
+      if (await verifyTezosDepositOnce(base, txHash, source, treasury, amountXtz)) return true;
+    } catch (e) {
+      console.error('[verifyTezosDepositTx]', e);
+    }
   }
+  return false;
 }
 
 function normalizeHex(value?: string | null): string | null {

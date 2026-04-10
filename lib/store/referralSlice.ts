@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { balanceMutationHeaders } from '@/lib/balance/balanceClientHeaders';
 
 export interface ReferralState {
     referralCode: string | null;
@@ -29,8 +30,13 @@ export const createReferralSlice: StateCreator<ReferralState> = (set, get) => ({
 
     fetchReferralInfo: async (address: string) => {
         try {
-            const res = await fetch(`/api/referral?address=${encodeURIComponent(address)}`);
-            if (!res.ok) return;
+            const res = await fetch(`/api/referral?address=${encodeURIComponent(address)}`, {
+                headers: { ...balanceMutationHeaders() },
+            });
+            if (!res.ok) {
+                console.warn('fetchReferralInfo: API returned', res.status);
+                return;
+            }
             const { referral } = await res.json();
             if (referral) {
                 set({ referralCode: referral.referral_code, referralCount: referral.referral_count });
@@ -48,10 +54,16 @@ export const createReferralSlice: StateCreator<ReferralState> = (set, get) => ({
             const referredByCode = get().referredBy;
             const res = await fetch('/api/referral', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...balanceMutationHeaders(),
+                },
                 body: JSON.stringify({ address, referredByCode: referredByCode ?? undefined }),
             });
-            if (!res.ok) return '';
+            if (!res.ok) {
+                console.warn('createReferralCode: API returned', res.status);
+                return '';
+            }
             const data = await res.json();
             set({ referralCode: data.referral_code, referralCount: data.referral_count ?? 0 });
             return data.referral_code ?? '';

@@ -30,6 +30,7 @@ export const Leaderboard: React.FC = () => {
             case 'XTZ': return '/logos/tezos-xtz-logo.png';
             case 'NEAR': return '/logos/near.png';
             case 'STRK': return '/logos/starknet-strk-logo.svg';
+            case 'APT': return '/logos/aptos-logo.png';
             case 'PUSH': return '/logos/push-logo.png';
             default: return '/logos/bnb-bnb-logo.png';
         }
@@ -38,12 +39,13 @@ export const Leaderboard: React.FC = () => {
     const getCurrencySymbol = (network: string) => {
         switch (network) {
             case 'SOL': return 'SOL';
-            case 'SUI': return 'USDC';
+            case 'SUI': return 'SUI';
             case 'BNB': return 'BNB';
             case 'XLM': return 'XLM';
             case 'XTZ': return 'XTZ';
             case 'NEAR': return 'NEAR';
             case 'STRK': return 'STRK';
+            case 'APT': return 'APT';
             case 'PUSH': return 'PC';
             case 'SOMNIA': return 'STT';
             case 'OCT': return 'OCT';

@@ -220,6 +220,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         toast.info('Please confirm the transaction in your Tezos wallet...');
         const op = await tezos.wallet.transfer({ to: treasuryAddress, amount: depositAmount }).send();
+        toast.info('Waiting for Tezos inclusion (needed for deposit verification)...');
+        await Promise.race([
+          op.confirmation(1),
+          new Promise<never>((_, rej) =>
+            setTimeout(() => rej(new Error('Tezos confirmation timed out after 2 minutes')), 120_000),
+          ),
+        ]);
         txHash = op.opHash;
       } else if (network === 'XLM') {
         // Stellar deposit via Stellar Wallets Kit

@@ -38,12 +38,18 @@ export function getSolanaConfig(): SolanaConfig {
 
     const publicRpcs = [
         'https://solana-rpc.publicnode.com',
-        'https://api.mainnet-beta.solana.com',
-        'https://solana-mainnet.rpc.extrnode.com',
         'https://rpc.ankr.com/solana',
+        'https://solana-mainnet.rpc.extrnode.com',
+        'https://api.mainnet-beta.solana.com',
     ];
 
-    const rpcEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || publicRpcs[0];
+    const envRpc = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT?.trim();
+    const envNorm = envRpc?.replace(/\/+$/, '') ?? '';
+    // The public Solana Labs endpoint often returns 403 for browser / anonymous traffic.
+    const isFlakyPublicCluster =
+      envNorm === 'https://api.mainnet-beta.solana.com' ||
+      envNorm === 'http://api.mainnet-beta.solana.com';
+    const rpcEndpoint = isFlakyPublicCluster ? publicRpcs[0] : envRpc || publicRpcs[0];
     const treasuryAddress = process.env.NEXT_PUBLIC_SOL_TREASURY_ADDRESS;
 
     // Validate required environment variables

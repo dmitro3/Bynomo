@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* Smaller dev cold compiles: tree-shake heavy barrel-export packages */
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "recharts",
+      "@tanstack/react-query",
+    ],
+  },
   typescript: {
     // Ignore TypeScript errors in near-docs folder during build
     ignoreBuildErrors: false,
@@ -35,7 +43,7 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          // COOP same-origin breaks Coinbase Smart Wallet and other popup-based wallets (opener communication).
         ],
       },
       {

@@ -77,6 +77,7 @@ function WalletSync() {
     setIsConnected,
     setNetwork,
     refreshWalletBalance,
+    fetchBalance,
     fetchProfile,
     preferredNetwork
   } = useOverflowStore();
@@ -133,6 +134,7 @@ function WalletSync() {
             setNetwork('XLM');
             refreshWalletBalance();
             fetchProfile(restoredAddress);
+            queueMicrotask(() => fetchBalance(restoredAddress));
           }
         } catch (e) {
           console.error("Stellar restore failed", e);
@@ -140,7 +142,7 @@ function WalletSync() {
       };
       checkStellar();
     }
-  }, [preferredNetwork, address, setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile]);
+  }, [preferredNetwork, address, setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchBalance, fetchProfile]);
 
   // Main Sync Effect
   useEffect(() => {
@@ -165,6 +167,9 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(addr);
       }
+      if (accountType !== 'demo') {
+        queueMicrotask(() => fetchBalance(addr));
+      }
       return;
     }
 
@@ -176,6 +181,9 @@ function WalletSync() {
         setNetwork('SUI');
         refreshWalletBalance();
         fetchProfile(suiAccount.address);
+      }
+      if (accountType !== 'demo') {
+        queueMicrotask(() => fetchBalance(suiAccount.address));
       }
       return;
     }
@@ -189,6 +197,9 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(suiAccount.address);
       }
+      if (accountType !== 'demo') {
+        queueMicrotask(() => fetchBalance(suiAccount.address));
+      }
       return;
     }
 
@@ -200,6 +211,9 @@ function WalletSync() {
         setNetwork('INIT');
         refreshWalletBalance();
         fetchProfile(initiaAddress);
+      }
+      if (accountType !== 'demo') {
+        queueMicrotask(() => fetchBalance(initiaAddress));
       }
       return;
     }
@@ -214,6 +228,9 @@ function WalletSync() {
         refreshWalletBalance();
         fetchProfile(aptosAddr);
       }
+      if (accountType !== 'demo') {
+        queueMicrotask(() => fetchBalance(aptosAddr));
+      }
       return;
     }
 
@@ -226,6 +243,9 @@ function WalletSync() {
           setNetwork('PUSH');
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
+        }
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(wagmiAddress));
         }
         return;
       }
@@ -243,6 +263,9 @@ function WalletSync() {
           setNetwork('SOMNIA');
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
+        }
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(wagmiAddress));
         }
         return;
       }
@@ -266,6 +289,9 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(wagmiAddress));
+        }
         return;
       }
       // Wallet connected but on wrong chain — auto-switch to 0G
@@ -288,6 +314,9 @@ function WalletSync() {
           refreshWalletBalance();
           fetchProfile(wagmiAddress);
         }
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(wagmiAddress));
+        }
         return;
       }
       // Wallet connected but on wrong chain — auto-switch to BSC
@@ -303,6 +332,9 @@ function WalletSync() {
           setNetwork('BNB');
           refreshWalletBalance();
           fetchProfile(addr);
+        }
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(addr));
         }
         return;
       }
@@ -334,6 +366,9 @@ function WalletSync() {
         setNetwork('STRK');
         refreshWalletBalance();
         fetchProfile(injectedStarknetAddress);
+        if (accountType !== 'demo') {
+          queueMicrotask(() => fetchBalance(injectedStarknetAddress));
+        }
         return;
       }
       if (useOverflowStore.getState().address && useOverflowStore.getState().network === 'STRK') return;
@@ -388,7 +423,7 @@ function WalletSync() {
     initiaAddress, initiaConnected,
     preferredNetwork, address, accountType,
     storeIsConnected, storeNetwork,
-    setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchProfile,
+    setAddress, setIsConnected, setNetwork, refreshWalletBalance, fetchBalance, fetchProfile,
     switchChain
   ]);
 
@@ -490,7 +525,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cm7377f0a00gup9u2w4m3v6be';
+  const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim() || '';
 
   return (
     <WagmiProvider config={wagmiConfig}>

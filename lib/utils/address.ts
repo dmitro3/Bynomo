@@ -23,7 +23,8 @@ export const isValidAddress = async (address: string): Promise<boolean> => {
     // 5. Sui (SUI) - 0x followed by 64 hex characters
     if (/^0x[0-9a-fA-F]{64}$/.test(address)) return true;
 
-    // 6. NEAR - Named account IDs
+    // 6. NEAR - Implicit accounts (64 hex chars, no 0x) or named *.near / *.testnet
+    if (/^[0-9a-f]{64}$/i.test(address)) return true;
     if (/^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+\.(near|testnet)$/.test(address)) return true;
 
     // 8. Initia (INIT) - Bech32 init1 prefix

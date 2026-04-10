@@ -1,4 +1,9 @@
-import { getStarknetConfig } from './config';
+import {
+  getStarknetConfig,
+  getStrkTokenAddressForChainId,
+  STARKNET_STRK_MAINNET,
+  STARKNET_STRK_SEPOLIA,
+} from './config';
 
 const DECIMALS = BigInt(18);
 
@@ -25,30 +30,95 @@ function toUint256Parts(value: bigint): { low: string; high: string } {
   };
 }
 
-export async function getSTRKBalance(address: string): Promise<number> {
-  const fallbackRpcEndpoints = [
-    'https://rpc.starknet.lava.build',
-    'https://starknet-mainnet.public.blastapi.io/rpc/v0_8',
-  ];
+function balanceFromCallResult(result: string[]): number {
+  const low = result[0] ?? '0';
+  const high = result[1] ?? '0';
+  const balanceWei = uint256ToBigInt(low, high);
+  return Number(balanceWei) / 10 ** Number(DECIMALS);
+}
 
+type MinimalProvider = {
+  callContract: (params: {
+    contractAddress: string;
+    entrypoint: string;
+    calldata: string[];
+  }) => Promise<string[]>;
+  getChainId?: () => Promise<string>;
+};
+
+export async function getSTRKBalance(address: string): Promise<number> {
   try {
     const { RpcProvider } = await import('starknet');
-    const { rpcEndpoint, strkTokenAddress } = getStarknetConfig();
-    const triedEndpoints = Array.from(new Set([rpcEndpoint, ...fallbackRpcEndpoints]));
+    const cfg = getStarknetConfig();
+
+    // Prefer the injected wallet's RPC — matches Sepolia vs mainnet automatically.
+    if (typeof window !== 'undefined') {
+      const stark = (window as unknown as {
+        starknet?: { provider?: MinimalProvider; account?: { provider?: MinimalProvider } };
+      }).starknet;
+      const wp = stark?.provider ?? stark?.account?.provider;
+      if (wp?.callContract) {
+        let chainHex: string | undefined;
+        if (typeof wp.getChainId === 'function') {
+          try {
+            chainHex = await wp.getChainId();
+          } catch {
+            chainHex = undefined;
+          }
+        }
+        const primaryToken =
+          chainHex != null
+            ? getStrkTokenAddressForChainId(chainHex)
+            : cfg.strkTokenAddress;
+        const altToken =
+          primaryToken.toLowerCase() === STARKNET_STRK_SEPOLIA.toLowerCase()
+            ? STARKNET_STRK_MAINNET
+            : STARKNET_STRK_SEPOLIA;
+        const tokenOrder =
+          chainHex != null ? [primaryToken] : [primaryToken, altToken];
+        try {
+          for (const token of tokenOrder) {
+            try {
+              const result = await wp.callContract({
+                contractAddress: token,
+                entrypoint: 'balance_of',
+                calldata: [address],
+              });
+              return balanceFromCallResult(result);
+            } catch {
+              if (tokenOrder.length === 1) throw new Error('balance_of failed');
+              continue;
+            }
+          }
+        } catch (e) {
+          console.warn('[getSTRKBalance] wallet provider balance call failed, trying config RPC', e);
+        }
+      }
+    }
+
+    const fallbackRpcEndpoints =
+      cfg.network === 'sepolia'
+        ? [
+            cfg.rpcEndpoint,
+            'https://starknet-sepolia.public.blastapi.io/rpc/v0_8',
+          ]
+        : [
+            cfg.rpcEndpoint,
+            'https://rpc.starknet.lava.build',
+            'https://starknet-mainnet.public.blastapi.io/rpc/v0_8',
+          ];
+
+    const triedEndpoints = Array.from(new Set(fallbackRpcEndpoints.filter(Boolean)));
 
     for (const endpoint of triedEndpoints) {
       try {
         const provider = new RpcProvider({ nodeUrl: endpoint });
         const result = await provider.callContract({
-          contractAddress: strkTokenAddress,
+          contractAddress: cfg.strkTokenAddress,
           entrypoint: 'balance_of',
           calldata: [address],
         });
-
-        const low = result[0] ?? '0';
-        const high = result[1] ?? '0';
-        const balanceWei = uint256ToBigInt(low, high);
-        return Number(balanceWei) / 10 ** Number(DECIMALS);
+        return balanceFromCallResult(result);
       } catch {
         continue;
       }

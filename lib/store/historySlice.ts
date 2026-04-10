@@ -8,6 +8,7 @@
 
 import { StateCreator } from "zustand";
 import { BetRecord } from "@/types/bet";
+import { balanceMutationHeaders } from "@/lib/balance/balanceClientHeaders";
 
 export interface HistoryState {
   // State
@@ -45,7 +46,9 @@ export const createHistorySlice: StateCreator<HistoryState> = (set, get) => ({
 
       // Try fetching from Supabase first
       try {
-        const res = await fetch(`/api/bets/history?wallet=${encodeURIComponent(playerAddress)}&limit=50`);
+        const res = await fetch(`/api/bets/history?wallet=${encodeURIComponent(playerAddress)}&limit=50`, {
+          headers: { ...balanceMutationHeaders() },
+        });
         if (res.ok) {
           const { bets: serverBets } = await res.json();
           if (serverBets && serverBets.length > 0) {

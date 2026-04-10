@@ -96,7 +96,8 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
             content: isConnected
                 ? 'Deposit funds on your selected chain. Your house balance is updated instantly.'
                 : 'After connecting, you can manage your deposits and withdrawals right here.',
-            position: 'top' as const
+            // Prefer below the wallet stack so the card is not pushed off-screen (sidebar is tall).
+            position: 'bottom' as const
         }
     ], [isConnected]);
 
@@ -149,7 +150,10 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
             setTimeout(() => {
                 const element = document.querySelector(step?.target || '');
                 if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Tall wallet column: "center" can scroll the viewport such that the tooltip clips; "nearest" keeps more UI in view.
+                    const block =
+                        step?.target === '[data-tour="deposit-section"]' ? 'nearest' : 'center';
+                    element.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' });
                     updateTargetRect();
                 }
             }, 300); // Increased timeout for panel animations
@@ -168,38 +172,54 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     const currentStepData = steps[currentStep];
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
     const tooltipWidth = isMobile ? Math.min(window.innerWidth - 40, 280) : 300;
-    const tooltipHeight = isMobile ? 180 : 160;
+    // Layout estimate for viewport math (real card is taller; must not under-estimate or the bottom clips).
+    const tooltipLayoutHeight = isMobile ? 280 : 300;
 
     // Calculate clamped position
     const calculatePosition = () => {
+        const padding = 16;
+        const gap = 16;
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+
         let left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-        let top = currentStepData.position === 'bottom' ? targetRect.bottom + 20 : targetRect.top - tooltipHeight - 20;
+        let preferBottom = currentStepData.position === 'bottom';
+        let top = preferBottom ? targetRect.bottom + gap : targetRect.top - tooltipLayoutHeight - gap;
 
         if (currentStepData.position === 'right' && !isMobile) {
-            left = targetRect.right + 20;
+            left = targetRect.right + gap;
             top = targetRect.top;
         } else if (currentStepData.position === 'left' && !isMobile) {
-            left = targetRect.left - tooltipWidth - 20;
+            left = targetRect.left - tooltipWidth - gap;
             top = targetRect.top;
         }
 
-        // Mobile specific: If targeted element is too low or too high, adjust tooltip
+        // Mobile: pick side with more room
         if (isMobile) {
-            if (targetRect.top > window.innerHeight / 2) {
-                // Target is in bottom half, show tooltip above
-                top = targetRect.top - tooltipHeight - 20;
-            } else {
-                // Target is in top half, show tooltip below
-                top = targetRect.bottom + 20;
+            const spaceAbove = targetRect.top - padding;
+            const spaceBelow = vh - padding - targetRect.bottom;
+            preferBottom = spaceBelow >= spaceAbove;
+            top = preferBottom ? targetRect.bottom + gap : targetRect.top - tooltipLayoutHeight - gap;
+        }
+
+        // If "top" placement would go above viewport, flip below (and vice versa when possible).
+        if (!preferBottom && top < padding) {
+            top = targetRect.bottom + gap;
+            preferBottom = true;
+        }
+        if (preferBottom && top + tooltipLayoutHeight > vh - padding) {
+            const above = targetRect.top - tooltipLayoutHeight - gap;
+            if (above >= padding) {
+                top = above;
+                preferBottom = false;
             }
         }
 
-        // Viewport clamping
-        const padding = 16;
         left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding));
-        top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding));
+        top = Math.max(padding, Math.min(top, vh - tooltipLayoutHeight - padding));
 
-        return { left, top };
+        // Arrow sits on the edge of the tooltip that faces the highlight.
+        const tooltipBelowTarget = preferBottom;
+        return { left, top, tooltipBelowTarget };
     };
 
     const pos = calculatePosition();
@@ -268,23 +288,23 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                     top: pos.top,
                 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="absolute bg-[#0d0d0d] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl pointer-events-auto backdrop-blur-2xl"
+                className="absolute bg-[#0d0d0d] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl pointer-events-auto backdrop-blur-2xl flex flex-col max-h-[min(420px,calc(100vh-2rem))]"
                 style={{ width: tooltipWidth }}
             >
-                <div className="flex justify-between items-start mb-2 sm:mb-3">
-                    <h3 className="text-purple-400 font-bold text-[11px] sm:text-sm uppercase tracking-wider">
+                <div className="flex justify-between items-start mb-2 sm:mb-3 shrink-0">
+                    <h3 className="text-purple-400 font-bold text-[11px] sm:text-sm uppercase tracking-wider pr-2">
                         {currentStepData.title}
                     </h3>
-                    <span className="text-[9px] sm:text-[10px] text-gray-500 font-mono">
+                    <span className="text-[9px] sm:text-[10px] text-gray-500 font-mono shrink-0">
                         {currentStep + 1} / {steps.length}
                     </span>
                 </div>
 
-                <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed mb-4 sm:mb-6">
+                <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed mb-4 sm:mb-6 min-h-0 overflow-y-auto overscroll-contain">
                     {currentStepData.content}
                 </p>
 
-                <div className="flex justify-between items-center mt-auto">
+                <div className="flex justify-between items-center mt-auto shrink-0 pt-1">
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-colors"
@@ -313,9 +333,8 @@ export const QuickTour: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                 {/* Arrow - Only show on desktop */}
                 {!isMobile && (
                     <div
-                        className={`absolute w-3 h-3 bg-[#0d0d0d] border-white/10 transform rotate-45
-                ${currentStepData.position === 'bottom' ? '-top-1.5 left-1/2 -translate-x-1/2 border-t border-l' : ''}
-                ${currentStepData.position === 'top' ? '-bottom-1.5 left-1/2 -translate-x-1/2 border-b border-r' : ''}
+                        className={`absolute w-3 h-3 bg-[#0d0d0d] border-white/10 transform rotate-45 left-1/2 -translate-x-1/2
+                ${pos.tooltipBelowTarget ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r'}
               `}
                     />
                 )}

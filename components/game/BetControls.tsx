@@ -20,7 +20,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
 }) => {
   const {
     houseBalance,
-    walletBalance,
+    demoBalance,
     network,
     activeRound,
     targetCells,
@@ -38,7 +38,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'XTZ': return 'XTZ';
       case 'NEAR': return 'NEAR';
       case 'STRK': return 'STRK';
-      case 'SUI': return 'USDC';
+      case 'SUI': return selectedCurrency === 'USDC' ? 'USDC' : 'SUI';
       case 'PUSH': return 'PC';
       case 'SOMNIA': return 'STT';
       case 'OCT': return 'OCT';
@@ -46,13 +46,10 @@ export const BetControls: React.FC<BetControlsProps> = ({
       case 'INIT': return 'INIT';
       case 'XLM': return 'XLM';
       case 'APT': return 'APT';
-      case 'SOL': {
-        const state = useStore.getState() as any;
-        return state.selectedCurrency || 'SOL';
-      }
+      case 'SOL': return selectedCurrency || 'SOL';
       default: return 'BNB';
     }
-  }, [network]);
+  }, [network, selectedCurrency]);
 
   const currencyLogo = useMemo(() => {
     if (network === 'SOL' && currencySymbol === 'BYNOMO') {
@@ -112,11 +109,14 @@ export const BetControls: React.FC<BetControlsProps> = ({
       return false;
     }
 
-    const isDirectMode = (network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB';
-    const effectiveBalance = (isDirectMode && accountType === 'real') ? walletBalance : houseBalance;
+    const effectiveBalance = accountType === 'demo' ? demoBalance : houseBalance;
 
     if (amount > effectiveBalance) {
-      setError(`Insufficient ${isDirectMode && accountType === 'real' ? 'wallet' : 'house'} balance. You have ${effectiveBalance.toFixed(4)} ${currencySymbol}. Please ${isDirectMode ? 'top up your wallet' : 'deposit more'}.`);
+      setError(
+        accountType === 'demo'
+          ? `Insufficient practice balance. You have ${effectiveBalance.toFixed(4)} ${currencySymbol}.`
+          : `Insufficient house balance. You have ${effectiveBalance.toFixed(4)} ${currencySymbol}. Open the Wallet tab and deposit ${currencySymbol} to your house credits, then bet.`
+      );
       return false;
     }
 
@@ -144,14 +144,10 @@ export const BetControls: React.FC<BetControlsProps> = ({
             <div className="bg-gray-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                  {((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') && accountType === 'real' 
-                    ? 'Wallet Balance' 
-                    : 'House Balance'}
+                  {accountType === 'demo' ? 'Practice Balance' : 'House Balance'}
                 </p>
                 <p className="text-white text-xl font-black mt-1">
-                  {(((network === 'SOL' && selectedCurrency !== 'BYNOMO') || network === 'BNB') && accountType === 'real' 
-                    ? walletBalance 
-                    : houseBalance).toFixed(4)} {currencySymbol}
+                  {(accountType === 'demo' ? demoBalance : houseBalance).toFixed(4)} {currencySymbol}
                 </p>
               </div>
               <img src={currencyLogo} alt={currencySymbol} className="w-8 h-8 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.1)]" />

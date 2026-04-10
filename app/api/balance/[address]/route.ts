@@ -14,7 +14,7 @@ import { walletAddressSearchVariants } from '@/lib/admin/walletAddressVariants';
 import { isWalletGloballyBanned } from '@/lib/bans/walletBan';
 import { supabaseService as supabase } from '@/lib/supabase/serviceClient';
 import { canonicalHouseUserAddress } from '@/lib/wallet/canonicalAddress';
-import { ethers } from 'ethers';
+import { isValidAddress } from '@/lib/utils/address';
 
 export async function GET(
   request: NextRequest,
@@ -27,41 +27,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const currency = searchParams.get('currency') || 'BNB';
 
-    // Validate address (support BNB, Solana, Sui, Starknet, Stellar and Tezos)
-    let isValid = false;
-
-    // Check if it's a valid EVM address (BNB)
-    if (ethers.isAddress(address)) {
-      isValid = true;
-    } else if (/^0x[0-9a-fA-F]{64}$/.test(address)) {
-      // Check if it's a valid Sui address
-      isValid = true;
-    } else if (/^0x[0-9a-fA-F]{1,64}$/.test(address)) {
-      // Check if it's a valid Starknet address
-      isValid = true;
-    } else if (/^(tz1|tz2|tz3|KT1)[a-zA-Z0-9]{33}$/.test(address)) {
-      // Check if it's a valid Tezos address
-      isValid = true;
-    } else if (/^init1[a-z0-9]{38}$/.test(address)) {
-      // Initia (INIT) bech32 address
-      isValid = true;
-    } else {
-      // Check if it's a valid Solana address
-      try {
-        const { PublicKey } = await import('@solana/web3.js');
-        const pk = new PublicKey(address);
-        isValid = pk.toBuffer().length === 32;
-      } catch (e) {
-        // Check if it's a valid Stellar address (starts with G, 56 characters)
-        if (/^G[A-Z2-7]{55}$/.test(address)) {
-          isValid = true;
-        } else if (/^(([a-z\d]+[-_])*[a-z\d]+\.)+[a-z\d]+\.(near|testnet)$/.test(address as string)) {
-          isValid = true;
-        } else {
-          isValid = false;
-        }
-      }
-    }
+    const isValid = await isValidAddress(address);
 
     if (!isValid) {
       return NextResponse.json(
