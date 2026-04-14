@@ -812,14 +812,6 @@ export default function LitepaperPage() {
             <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="footer-meta-item">
               Discord
             </a>
-            <a
-              href="https://bags.fm/Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-meta-item"
-            >
-              Bags
-            </a>
           </div>
 
           <div className="footer-link-group">

@@ -7,7 +7,6 @@ import GridScan from '@/components/ui/GridScan';
 import HowItWorksSteps from '@/components/landing/HowItWorksSteps';
 import DemoVideoSection from '@/components/landing/DemoVideoSection';
 import LogosMarqueeSection from '@/components/landing/LogosMarqueeSection';
-import DexscreenerEmbedSection from '@/components/landing/DexscreenerEmbedSection';
 import { AdvisorsRevealSection } from '@/components/landing/AdvisorsRevealSection';
 import { PartnershipsRevealSection } from '@/components/landing/PartnershipsRevealSection';
 import LiveStatsSection from '@/components/landing/LiveStatsSection';
@@ -351,9 +350,6 @@ export default function WaitlistPage() {
             {/* LIVE PLATFORM STATS */}
             <LiveStatsSection />
 
-            {/* DEXSCREENER EMBED SECTION */}
-            <DexscreenerEmbedSection />
-
             {/* ADVISORS + PARTNERSHIPS — marquee rows */}
             <section className="relative overflow-hidden border-t border-white/[0.06] bg-[#02040a]">
                 <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[700px] -translate-x-1/2 rounded-full bg-purple-600/[0.05] blur-[130px]" />
@@ -501,7 +497,6 @@ export default function WaitlistPage() {
                         <a href="https://github.com/AmaanSayyad/Bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">GitHub</a>
                         <a href="https://t.me/bynomo" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Telegram</a>
                         <a href="https://discord.gg/5MAHQpWZ7b" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Discord</a>
-                        <a href="https://bags.fm/Faw8wwB6MnyAm9xG3qeXgN1isk9agXBoaRZX9Ma8BAGS" target="_blank" rel="noopener noreferrer" className="footer-meta-item">Bags</a>
                     </div>
 
                     <div className="footer-link-group">
